@@ -1,5 +1,5 @@
 {
-  "name": "prisma-nextjs-serverlessnextjs",
+  "name": "identities",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -15,20 +15,20 @@
     "react-dom": "^17.0.2"
   },
   "devDependencies": {
-    "prisma": "^2.22.0",
     "@types/node": "^15.0.2",
-    "@types/react": "^17.0.5",
-    "typescript": "^4.2.3",
+    "@types/react": "^17.0.75",
+    "@typescript-eslint/eslint-plugin": "^4.22.1",
+    "esbuild-loader": "^2.13.0",
     "eslint": "^7.26.0",
+    "eslint-config-airbnb-typescript": "^12.3.1",
     "eslint-plugin-fp": "^2.3.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-jsx-a11y": "^6.4.1",
+    "eslint-plugin-modules-newline": "^0.0.6",
     "eslint-plugin-react": "^7.23.2",
     "eslint-plugin-react-hooks": "^4.2.0",
-    "eslint-plugin-modules-newline": "^0.0.6",
-    "@typescript-eslint/eslint-plugin": "^4.22.1",
-    "eslint-config-airbnb-typescript": "^12.3.1",
-    "esbuild-loader": "^2.13.0",
+    "prisma": "^2.22.0",
+    "typescript": "^4.2.3",
     "webpack": "^5.37.0"
   }
 }

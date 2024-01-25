@@ -1,22 +1,41 @@
 generator client {
-  provider = "prisma-client-js"
-  binaryTargets = ["native", "rhel-openssl-1.0.x"]
+    provider      = "prisma-client-js"
+    binaryTargets = ["native", "rhel-openssl-1.0.x"]
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
 }
 
 model User {
-  id                        Int                   @id @default(autoincrement())
-  name                      String
-  email                     String                @unique
-  emailVerified             DateTime?             @map(name: "email_verified")
-  image                     String?
-  createdAt                 DateTime              @default(now()) @map(name: "created_at")
-  updatedAt                 DateTime              @default(now()) @map(name: "updated_at")
+    id        Int    @id @unique @default(autoincrement())
+    discordId BigInt
 
-  @@map(name: "users")
+    passports Int[]
+
+    virtualPassword   String
+    physicalPasswords String[]
+
+    @@map(name: "Users")
 }
 
+model Passport {
+    id      Int @id @unique @default(autoincrement())
+    version Int
+
+    owner Int
+
+    surname String
+    name    String
+
+    dateOfBirth DateTime
+    dateOfIssue DateTime
+
+    placeOfOrigin String
+
+    hasVirtualAccess Boolean
+    hasPhyiscalAccess Boolean
+
+    @@map(name: "Passports")
+}
