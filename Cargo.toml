@@ -1,5 +1,5 @@
 [package]
-name = "my-vercel-api"
+name = "id"
 version = "0.1.0"
 edition = "2021"
 
@@ -8,15 +8,25 @@ tokio = { version = "1", features = ["macros"] }
 serde_json = { version = "1", features = ["raw_value"] }
 # Documentation: https://docs.rs/vercel_runtime/latest/vercel_runtime
 vercel_runtime = { version = "1.1.0" }
+oxide-auth = "0.5.4"
+serde = { version = "1.0.196", features = ["derive"] }
+url = "2.5.0"
+form_urlencoded = "1.2.1"
 
 # You can specify a library for shared logic here (optional)
-# [lib]
-# path = "src-rs/lib.rs"
+[lib]
+path = "src/lib.rs"
 
 # Each handler has to be specified as [[bin]]
 [[bin]]
 name = "rust"
 path = "api/rust.rs"
+[[bin]]
+name = "authorize"
+path = "api/authorize.rs"
+[[bin]]
+name = "token"
+path = "api/token.rs"
 
 # Note that you need to provide unique names for each binary:
 # [[bin]]
