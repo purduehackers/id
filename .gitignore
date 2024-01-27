@@ -43,3 +43,5 @@ yarn-error.log*
 # generated
 .serverless
 .serverless_nextjs
+
+target/
