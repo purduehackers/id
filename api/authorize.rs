@@ -1,20 +1,17 @@
-use std::{borrow::Cow, collections::HashMap, str::FromStr};
+use std::{borrow::Cow, str::FromStr};
 
 use http::Method;
 use id::{client_registry, APIError};
 use oxide_auth::{
-    endpoint::{OwnerConsent, Registrar, Scope},
-    frontends::simple::endpoint::FnSolicitor,
+    endpoint::{Registrar},
     primitives::{
-        authorizer::AuthMap,
-        generator::RandomGenerator,
-        registrar::{Client, ClientUrl, ExactUrl},
+        registrar::{ClientUrl, ExactUrl},
     },
 };
-use serde_json::json;
+
 use vercel_runtime::{
-    http::{bad_request, internal_server_error, unauthorized},
-    run, Body, Error, Request, Response, StatusCode,
+    http::{bad_request, internal_server_error},
+    run, Body, Error, Request, Response,
 };
 
 #[tokio::main]
@@ -32,7 +29,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
             message: "Send a valid request pls",
             code: "400",
         }),
-        Body::Text(t) => {
+        Body::Text(_t) => {
             // let mut query = HashMap::new();
             //
             // for (k, v) in uri.query_pairs() {
