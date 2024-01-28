@@ -1,5 +1,6 @@
 use serde::Serialize;
 use std::str::FromStr;
+use vercel_runtime::{http::internal_server_error, Error};
 
 use oxide_auth::{
     frontends::dev::Url,
@@ -11,13 +12,13 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         "dashboard",
         RegisteredUrl::Semantic(Url::from_str("http://localhost:8080/callback").unwrap()),
-        "default-scope".parse().unwrap(),
+        "read".parse().unwrap(),
     ));
     clients
 }
 
 #[derive(Serialize)]
-pub struct APIError {
-    pub message: &'static str,
-    pub code: &'static str,
+pub struct APIError<'a> {
+    pub message: &'a str,
+    pub code: &'a str,
 }
