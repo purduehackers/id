@@ -1,11 +1,155 @@
+use lambda_http::{http::{header::{CONTENT_TYPE, WWW_AUTHENTICATE, LOCATION}, HeaderValue}};
 use serde::Serialize;
-use std::str::FromStr;
-
+use vercel_runtime::{Response, StatusCode, Request, Body};
+use std::{str::FromStr, ops::DerefMut, borrow::Cow, collections::HashMap};
+use core::ops::Deref;
 
 use oxide_auth::{
-    frontends::dev::Url,
-    primitives::registrar::{Client, ClientMap, RegisteredUrl},
+    frontends::{
+        dev::Url,
+        simple::endpoint::{Generic, Vacant},
+    },
+    primitives::{
+        authorizer::AuthMap,
+        generator::RandomGenerator,
+        issuer::TokenMap,
+        registrar::{Client, ClientMap, RegisteredUrl},
+    }, endpoint::{Scope, WebRequest, WebResponse, QueryParameter, NormalizedParameter},
 };
+
+use thiserror::Error;
+
+#[derive(Debug, Error)]
+pub enum Error {
+    #[error("Invalid body type")]
+    InvalidBodyType,
+}
+
+#[derive(Debug, Default)]
+pub struct ResponseCompat(pub Response<vercel_runtime::Body>);
+
+impl Deref for ResponseCompat {
+    type Target = Response<vercel_runtime::Body>;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for ResponseCompat {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<ResponseCompat> for Response<vercel_runtime::Body> {
+    fn from(value: ResponseCompat) -> Self {
+        value.0
+    }
+}
+
+impl WebResponse for ResponseCompat {
+    type Error = vercel_runtime::Error;
+
+    fn ok(&mut self) -> Result<(), Self::Error> {
+        *self.status_mut() = StatusCode::OK;
+        Ok(())
+    }
+
+    fn body_text(&mut self, text: &str) -> Result<(), Self::Error> {
+        self.headers_mut().insert(CONTENT_TYPE, HeaderValue::from_str("text/plain").expect("header to be valid"));
+        *self.body_mut() = Body::Text(text.to_owned());
+
+        Ok(())
+    }
+
+    fn body_json(&mut self, data: &str) -> Result<(), Self::Error> {
+        self.headers_mut().insert(CONTENT_TYPE, HeaderValue::from_str("application/json").expect("header to be valid"));
+        *self.body_mut() = Body::Text(data.to_owned());
+
+        Ok(())
+    }
+
+    fn redirect(&mut self, url: Url) -> Result<(), Self::Error> {
+        self.headers_mut().insert(LOCATION, HeaderValue::from_str(url.as_ref()).expect("header to be valid"));
+        *self.status_mut() = StatusCode::SEE_OTHER;
+
+        Ok(())
+    }
+
+    fn client_error(&mut self) -> Result<(), Self::Error> {
+        *self.status_mut() = StatusCode::BAD_REQUEST;
+
+        Ok(())
+    }
+
+    fn unauthorized(&mut self, header_value: &str) -> Result<(), Self::Error> {
+        self.headers_mut().insert(WWW_AUTHENTICATE, HeaderValue::from_str(header_value).expect("header to be valid"));
+        *self.status_mut() = StatusCode::UNAUTHORIZED;
+
+        Ok(())
+    }
+}
+
+#[derive(Debug)]
+pub struct RequestCompat(pub Request);
+
+impl Deref for RequestCompat {
+    type Target = Request;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for RequestCompat {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<RequestCompat> for Request {
+   fn from(value: RequestCompat) -> Self {
+        value.0
+    } 
+}
+
+impl WebRequest for RequestCompat {
+    type Error = vercel_runtime::Error;
+    type Response = ResponseCompat;
+    fn authheader(&mut self) -> Result<Option<std::borrow::Cow<str>>, Self::Error> {
+        Ok(self.headers().iter().find_map(|(k, v)| if k == "Authorization" { Some(Cow::Borrowed(v.to_str().expect("head to be valid string")))} else { None }))
+    }
+
+    fn urlbody(&mut self) -> Result<std::borrow::Cow<dyn oxide_auth::endpoint::QueryParameter + 'static>, Self::Error> {
+        let body: &Body = self.body();
+
+        match body {
+            Body::Empty | Body::Binary(_) => Err(Box::new(Error::InvalidBodyType)),
+            Body::Text(t) => {
+                let encoded = form_urlencoded::parse(t.as_bytes());
+
+                let mut body = NormalizedParameter::new();
+
+                for (k, v) in encoded {
+                    body.insert_or_poison(Cow::Owned(k.to_string()), Cow::Owned(v.to_string()));
+                }
+
+                Ok(Cow::Owned(body))
+            }
+        }
+    }
+
+    fn query(&mut self) -> Result<std::borrow::Cow<dyn oxide_auth::endpoint::QueryParameter + 'static>, Self::Error> {
+        let url = url::Url::parse(&self.uri().to_string())?;
+
+        let mut params = NormalizedParameter::new();
+        
+        for (k, v) in url.query_pairs() {
+            params.insert_or_poison(Cow::Owned(k.to_string()), Cow::Owned(v.to_string()));
+        }
+
+        Ok(Cow::Owned(params))
+    }
+}
 
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
@@ -15,6 +159,17 @@ pub fn client_registry() -> ClientMap {
         "read".parse().unwrap(),
     ));
     clients
+}
+
+pub fn generic_endpoint<S>(solicitor: S) -> Generic<ClientMap, AuthMap<RandomGenerator>, TokenMap<RandomGenerator>, S, Vec<Scope>, Vacant> {
+    Generic {
+        registrar: client_registry(),
+        authorizer: AuthMap::new(RandomGenerator::new(16)),
+        issuer: TokenMap::new(RandomGenerator::new(16)),
+        solicitor,
+        scopes: vec!["read".parse().expect("scope to be valid")],
+        response: Vacant,
+    }
 }
 
 #[derive(Serialize)]
