@@ -4,7 +4,7 @@ use lambda_http::http::{
     HeaderValue,
 };
 use serde::Serialize;
-use std::{borrow::Cow, ops::DerefMut, str::FromStr};
+use std::{borrow::Cow, env, ops::DerefMut, str::FromStr};
 use vercel_runtime::{Body, Request, Response, StatusCode};
 
 use oxide_auth::{
@@ -207,4 +207,11 @@ pub fn generic_endpoint<S>(
 pub struct APIError<'a> {
     pub message: &'a str,
     pub code: &'a str,
+}
+
+pub async fn kv() -> Result<redis::aio::Connection, vercel_runtime::Error> {
+    let c = redis::Client::open(env::var("KV_URL").expect("KV_URL env var to be present"))?
+        .get_async_connection()
+        .await?;
+    Ok(c)
 }

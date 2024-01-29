@@ -1,6 +1,6 @@
 use id::{generic_endpoint, RequestCompat, ResponseCompat};
 use oxide_auth::{
-    endpoint::{OwnerConsent, Solicitation, WebResponse},
+    endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
 };
 
@@ -18,10 +18,25 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     }
 
     let res = generic_endpoint(FnSolicitor(
-        move |_: &mut RequestCompat, _: Solicitation| {
+        move |req: &mut RequestCompat, _: Solicitation| {
             // TODO: Auth stuff with redis I think???
             // Basically need to figure out if user has tapped passport at this time. If they have,
             // great! If not (or they denied the login), too bad I guess
+
+            // Login denied
+            if req
+                .query()
+                .expect("query to be valid")
+                .unique_value("deny")
+                .is_some()
+            {
+                return OwnerConsent::Denied;
+            }
+
+            // Is there a passport in the database that matches the number?
+            let res = tokio::task::spawn_blocking(|| async move {
+                todo!()
+            });
             todo!()
         },
     ))
