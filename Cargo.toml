@@ -16,7 +16,7 @@ urlencoding = "2.1.3"
 lambda_http = "0.8.1"
 thiserror = "1.0.56"
 redis = { version = "0.24.0", features = ["aio", "tokio-comp"] }
-prisma-client-rust = { git = "https://github.com/Brendonovich/prisma-client-rust", tag = "0.6.11" }
+sea-orm = { version = "0.12", features = [ "sqlx-postgres", "runtime-tokio-rustls", "with-chrono", "with-json", "macros" ] }
 
 # You can specify a library for shared logic here (optional)
 [lib]

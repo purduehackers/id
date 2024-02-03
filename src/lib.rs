@@ -3,6 +3,7 @@ use lambda_http::http::{
     header::{CONTENT_TYPE, LOCATION, WWW_AUTHENTICATE},
     HeaderValue,
 };
+use sea_orm::{Database, DatabaseConnection};
 use serde::Serialize;
 use std::{borrow::Cow, env, ops::DerefMut, str::FromStr};
 use vercel_runtime::{Body, Request, Response, StatusCode};
@@ -214,4 +215,9 @@ pub async fn kv() -> Result<redis::aio::Connection, vercel_runtime::Error> {
         .get_async_connection()
         .await?;
     Ok(c)
+}
+pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
+    let db = Database::connect(env::var("DATABASE_URL").expect("Database URL var to be present")).await?;
+
+    Ok(db)
 }
