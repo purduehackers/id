@@ -184,9 +184,16 @@ pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
     clients.register_client(Client::public(
         "dashboard",
-        RegisteredUrl::Semantic(Url::from_str("http://localhost:8080/callback").unwrap()),
+        RegisteredUrl::Semantic(Url::from_str("https://dash.purduehackers.com/callback").unwrap()),
         "read".parse().unwrap(),
     ));
+
+    clients.register_client(Client::public(
+        "passports",
+        RegisteredUrl::Semantic(Url::from_str("https://passports.purduehackers.com/callback").unwrap()),
+        "read write".parse().unwrap(),
+    ));
+
     clients
 }
 
