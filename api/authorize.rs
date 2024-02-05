@@ -1,11 +1,17 @@
-use id::{generic_endpoint, RequestCompat, ResponseCompat};
+use entity::passport;
+use id::{generic_endpoint, RequestCompat, ResponseCompat, db, kv};
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
 };
 
 use lambda_http::http::Method;
+use redis::AsyncCommands;
+use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
+use entity::prelude::*;
+use sea_orm::prelude::*;
+use redis::Commands;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -18,26 +24,44 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     }
 
     let res = generic_endpoint(FnSolicitor(
-        move |req: &mut RequestCompat, _: Solicitation| {
+        move |req: &mut RequestCompat, s: Solicitation| {
             // TODO: Auth stuff with redis I think???
             // Basically need to figure out if user has tapped passport at this time. If they have,
             // great! If not (or they denied the login), too bad I guess
 
             // Login denied
-            if req
-                .query()
-                .expect("query to be valid")
-                .unique_value("deny")
-                .is_some()
-            {
+            if s.state().is_some_and(|s| s == "denied") {
                 return OwnerConsent::Denied;
             }
 
+            let passport_id: i32 = req.urlbody().expect("URLBody to exist").unique_value("id").expect("Passport ID to be given").parse().expect("ID to be valid integer");
+
             // Is there a passport in the database that matches the number?
-            let res = tokio::task::spawn_blocking(|| async move {
-                todo!()
+            let res: Result<(), Error> = Handle::current().block_on(async move {
+                let db = db().await?;
+                
+                let passport: passport::Model = Passport::find_by_id(passport_id).one(&db).await.map_err(|e| format!("DB Error: {e}"))?.ok_or("No valid passport found".to_string())?;
+                if !passport.activated {
+                    return Err("Passport is not activated!".to_string().into());
+                }
+
+                // If it exists, now try to find in the Redis KV
+                let mut kv = kv().await?;
+                if !kv.exists(passport_id).await? {
+                    return Err("Passport has not been scanned!".to_string().into());
+                }
+
+                let secret: String = kv.get_del(passport_id).await?;
+
+                if secret != passport.secret {
+                    return Err("Passport secret doesn't match!".to_string().into());
+                }
+
+                Ok(())
             });
-            todo!()
+
+            res.expect("DB and KV ops to succeed");
+            OwnerConsent::Authorized("yippee".to_string())
         },
     ))
     .authorization_flow()

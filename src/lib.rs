@@ -218,6 +218,8 @@ pub async fn kv() -> Result<redis::aio::Connection, vercel_runtime::Error> {
 }
 pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
     let db = Database::connect(env::var("DATABASE_URL").expect("Database URL var to be present")).await?;
+    use migration::{Migrator, MigratorTrait};
+    Migrator::up(&db, None).await?;
 
     Ok(db)
 }
