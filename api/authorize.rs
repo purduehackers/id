@@ -1,17 +1,17 @@
 use entity::passport;
-use id::{generic_endpoint, RequestCompat, ResponseCompat, db, kv};
+use id::{db, generic_endpoint, kv, RequestCompat, ResponseCompat};
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
 };
 
+use entity::prelude::*;
 use lambda_http::http::Method;
 use redis::AsyncCommands;
+use redis::Commands;
+use sea_orm::prelude::*;
 use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
-use entity::prelude::*;
-use sea_orm::prelude::*;
-use redis::Commands;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -34,13 +34,23 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 return OwnerConsent::Denied;
             }
 
-            let passport_id: i32 = req.urlbody().expect("URLBody to exist").unique_value("id").expect("Passport ID to be given").parse().expect("ID to be valid integer");
+            let passport_id: i32 = req
+                .urlbody()
+                .expect("URLBody to exist")
+                .unique_value("id")
+                .expect("Passport ID to be given")
+                .parse()
+                .expect("ID to be valid integer");
 
             // Is there a passport in the database that matches the number?
             let res: Result<(), Error> = Handle::current().block_on(async move {
                 let db = db().await?;
-                
-                let passport: passport::Model = Passport::find_by_id(passport_id).one(&db).await.map_err(|e| format!("DB Error: {e}"))?.ok_or("No valid passport found".to_string())?;
+
+                let passport: passport::Model = Passport::find_by_id(passport_id)
+                    .one(&db)
+                    .await
+                    .map_err(|e| format!("DB Error: {e}"))?
+                    .ok_or("No valid passport found".to_string())?;
                 if !passport.activated {
                     return Err("Passport is not activated!".to_string().into());
                 }

@@ -37,6 +37,9 @@ path = "api/authorize.rs"
 [[bin]]
 name = "token"
 path = "api/token.rs"
+[[bin]]
+name = "scan"
+path = "api/scan.rs"
 
 # Note that you need to provide unique names for each binary:
 # [[bin]]

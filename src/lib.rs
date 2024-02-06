@@ -190,7 +190,9 @@ pub fn client_registry() -> ClientMap {
 
     clients.register_client(Client::public(
         "passports",
-        RegisteredUrl::Semantic(Url::from_str("https://passports.purduehackers.com/callback").unwrap()),
+        RegisteredUrl::Semantic(
+            Url::from_str("https://passports.purduehackers.com/callback").unwrap(),
+        ),
         "read write".parse().unwrap(),
     ));
 
@@ -224,7 +226,8 @@ pub async fn kv() -> Result<redis::aio::Connection, vercel_runtime::Error> {
     Ok(c)
 }
 pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
-    let db = Database::connect(env::var("DATABASE_URL").expect("Database URL var to be present")).await?;
+    let db = Database::connect(env::var("DATABASE_URL").expect("Database URL var to be present"))
+        .await?;
     use migration::{Migrator, MigratorTrait};
     Migrator::up(&db, None).await?;
 

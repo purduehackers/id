@@ -11,6 +11,7 @@ pub struct Model {
     #[sea_orm(unique)]
     pub discord_id: i64,
     pub role: RoleEnum,
+    pub totp: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
