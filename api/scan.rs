@@ -52,7 +52,7 @@ pub async fn get_handler(req: Request) -> Result<Response<Body>, Error> {
     let passport: passport::Model = Passport::find_by_id(id).one(&db).await?.expect("Passport to exist");
 
     if secret == passport.secret {
-        let user: user::Model = User::find_by_id(passport.owner_id).one(&db).await?.expect("Passport to have an owner");
+        let user: user::Model = passport.find_related(User).one(&db).await?.expect("Passport to have an owner");
         
         #[derive(Debug, serde::Serialize)]
         struct GetReturn {

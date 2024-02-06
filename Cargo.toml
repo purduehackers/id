@@ -23,6 +23,7 @@ thiserror = "1.0.56"
 redis = { version = "0.24.0", features = ["aio", "tokio-comp", "rustls"] }
 sea-orm = { version = "0.12", features = [ "sqlx-postgres", "runtime-tokio-rustls", "with-chrono", "with-json", "macros" ] }
 fred = { version = "8.0.1", features = ["enable-rustls"] }
+rand = "0.8.5"
 
 # You can specify a library for shared logic here (optional)
 [lib]
@@ -41,6 +42,9 @@ path = "api/token.rs"
 [[bin]]
 name = "scan"
 path = "api/scan.rs"
+[[bin]]
+name = "new"
+path = "api/new.rs"
 
 # Note that you need to provide unique names for each binary:
 # [[bin]]
