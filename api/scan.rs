@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use id::{kv, db};
+use id::{kv, db, map_error_to_readable};
 use lambda_http::http::Method;
 use redis::AsyncCommands;
 use serde_json::json;
@@ -14,11 +14,13 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    if req.method() == Method::POST {
+    let res = if req.method() == Method::POST {
         post_handler(req).await
     } else {
         get_handler(req).await
-    }
+    };
+
+    Ok(map_error_to_readable(res))
 }
 
 /// Returns whether the passport is in the KV and is 

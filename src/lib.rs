@@ -5,7 +5,7 @@ use lambda_http::http::{
 };
 use sea_orm::{Database, DatabaseConnection};
 use serde::Serialize;
-use std::{borrow::Cow, env, ops::DerefMut, str::FromStr};
+use std::{borrow::Cow, env, ops::DerefMut, str::FromStr, fmt::Display};
 use vercel_runtime::{Body, Request, Response, StatusCode};
 
 use oxide_auth::{
@@ -232,4 +232,16 @@ pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
     Migrator::up(&db, None).await?;
 
     Ok(db)
+}
+
+/// Vercel makes me do this
+pub fn map_error_to_readable<E: Display>(r: Result<Response<Body>, E>) -> Response<Body> {
+    match r {
+        Ok(r) => r,
+        Err(e) => {
+            let mut resp = Response::new(Body::Text(format!("Server Error: {e}")));
+            *resp.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
+            resp
+        }
+    }
 }
