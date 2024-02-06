@@ -20,8 +20,9 @@ form_urlencoded = "1.2.1"
 urlencoding = "2.1.3"
 lambda_http = "0.8.1"
 thiserror = "1.0.56"
-redis = { version = "0.24.0", features = ["aio", "tokio-comp"] }
+redis = { version = "0.24.0", features = ["aio", "tokio-comp", "rustls"] }
 sea-orm = { version = "0.12", features = [ "sqlx-postgres", "runtime-tokio-rustls", "with-chrono", "with-json", "macros" ] }
+fred = { version = "8.0.1", features = ["enable-rustls"] }
 
 # You can specify a library for shared logic here (optional)
 [lib]

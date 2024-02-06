@@ -7,11 +7,10 @@ use oxide_auth::{
 
 use entity::prelude::*;
 use lambda_http::http::Method;
-use redis::AsyncCommands;
-use redis::Commands;
 use sea_orm::prelude::*;
 use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
+use fred::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -56,12 +55,12 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 }
 
                 // If it exists, now try to find in the Redis KV
-                let mut kv = kv().await?;
+                let kv = kv().await?;
                 if !kv.exists(passport_id).await? {
                     return Err("Passport has not been scanned!".to_string().into());
                 }
 
-                let secret: String = kv.get_del(passport_id).await?;
+                let secret: String = kv.getdel(passport_id).await?;
 
                 if secret != passport.secret {
                     return Err("Passport secret doesn't match!".to_string().into());

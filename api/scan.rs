@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 use id::{kv, db, map_error_to_readable};
 use lambda_http::http::Method;
-use redis::AsyncCommands;
 use serde_json::json;
 use vercel_runtime::{run, Body, Error, Request, Response, StatusCode};
 use sea_orm::prelude::*;
 use entity::{prelude::*, passport, user, sea_orm_active_enums::RoleEnum};
+use fred::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -31,7 +31,7 @@ pub async fn get_handler(req: Request) -> Result<Response<Body>, Error> {
         .find_map(|(k, v)| if k == "id" { Some(v) } else { None })
         .ok_or("No ID provided!".to_string())?.parse().map_err(|e| format!("Failed to convert to passport number! {e}"))?;
 
-    let mut kv = kv().await?;
+    let kv = kv().await?;
 
     if !kv.exists(id).await? {
         let mut resp = Response::new(Body::Text("Passport not found".to_string()));

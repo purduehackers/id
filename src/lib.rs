@@ -7,6 +7,7 @@ use sea_orm::{Database, DatabaseConnection};
 use serde::Serialize;
 use std::{borrow::Cow, env, ops::DerefMut, str::FromStr, fmt::Display};
 use vercel_runtime::{Body, Request, Response, StatusCode};
+use fred::prelude::*;
 
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
@@ -219,10 +220,10 @@ pub struct APIError<'a> {
     pub code: &'a str,
 }
 
-pub async fn kv() -> Result<redis::aio::Connection, vercel_runtime::Error> {
-    let c = redis::Client::open(env::var("KV_URL").expect("KV_URL env var to be present"))?
-        .get_async_connection()
-        .await?;
+pub async fn kv() -> Result<RedisClient, vercel_runtime::Error> { 
+    let config = RedisConfig::from_url(&env::var("KV_URL").expect("KV_URL env var to be present").replace("redis://", "rediss://"))?;
+    let c = Builder::from_config(config).build()?;
+    c.init().await?;
     Ok(c)
 }
 pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
