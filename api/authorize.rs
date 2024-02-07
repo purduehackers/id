@@ -6,7 +6,7 @@ use oxide_auth::{
 };
 
 use entity::prelude::*;
-use lambda_http::http::Method;
+use lambda_http::{http::Method, RequestExt};
 use sea_orm::prelude::*;
 use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
@@ -23,13 +23,13 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     }
 
     let res = generic_endpoint(FnSolicitor(
-        move |req: &mut RequestCompat, s: Solicitation| {
+        move |req: &mut RequestCompat, _: Solicitation| {
             // TODO: Auth stuff with redis I think???
             // Basically need to figure out if user has tapped passport at this time. If they have,
             // great! If not (or they denied the login), too bad I guess
 
             // Login denied
-            if s.state().is_some_and(|s| s == "denied") {
+            if req.urlbody().expect("URLBody to exist").unique_value("allow").expect("allow to be in body").parse().expect("allow to be bool") {
                 return OwnerConsent::Denied;
             }
 

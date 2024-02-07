@@ -18,6 +18,9 @@ const Authorize = () => {
         // Send a request to initiate lock
         let res = await fetch(`/api/scan`, {
             'method': 'POST',
+            'headers': {
+                'Content-Type': 'application/json'
+            },
             'body': JSON.stringify({
                 'id': id,
                 'secret': ''
@@ -30,7 +33,23 @@ const Authorize = () => {
         }
 
          setState(AuthState.WaitForScan)
-    };
+    }
+
+    const respond = async (allow: boolean) => {
+        const urldata = new URLSearchParams(window.location.search)
+        urldata.set('allow', allow.toString())
+        let res = await fetch('/authorize', {
+            'method': 'POST',
+            'headers': {
+                'Content-Type': 'x-www-form-urlencoded'
+            },
+            'body': urldata,
+        })
+
+        if (res.ok) {
+            setState(AuthState.Done)
+        }
+    }
 
     React.useEffect(() => {
         if (state != AuthState.WaitForScan) {
@@ -77,6 +96,13 @@ const Authorize = () => {
             {
                 state == AuthState.Authorize && <div>
                     <p>Authorize?</p>
+                    <button onClick={_ => { respond(false) }}>DENY</button>
+                    <button onClick={_ => { respond(true) }}>ACCEPT</button>
+                </div>
+            }
+            {
+                state == AuthState.Done && <div>
+                    <p>All done! ✅</p>
                 </div>
             }
         </div>
