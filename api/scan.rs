@@ -85,6 +85,12 @@ pub async fn post_handler(req: Request) -> Result<Response<Body>, Error> {
             
             let passport: passport::Model = Passport::find_by_id(record.id).one(&db).await?.ok_or("Invalid passport ID".to_string())?;
 
+            if !passport.activated {
+                let mut resp = Response::new(Body::Text("Passport disabled".to_string()));
+                *resp.status_mut() = StatusCode::FORBIDDEN;
+                return Ok(resp);
+            }
+
             // No record currently, so add a record with whatever the secret is supposed to be
             if !kv.exists(passport.id).await? {
                 kv.set(passport.id, false, Some(Expiration::EX(300)), None, false).await?;
