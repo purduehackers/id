@@ -66,15 +66,16 @@ pub async fn get_handler(req: Request) -> Result<Response<Body>, Error> {
 /// Puts data in the KV, with or without a secret
 pub async fn post_handler(req: Request) -> Result<Response<Body>, Error> {
     match req.body() {
-        Body::Binary(_) | Body::Empty => Err("Invalid method".to_string().into()),
-        Body::Text(t) => {
+        Body::Text(_) | Body::Empty => Err("Invalid method".to_string().into()),
+        Body::Binary(b) => {
+            let t = String::from_utf8(b.to_vec())?;
             #[derive(Debug, serde::Deserialize)]
             struct PassportRecord {
                 id: i32,
                 secret: String,
             }
 
-            let record: PassportRecord = serde_json::from_str(t)?;
+            let record: PassportRecord = serde_json::from_str(&t)?;
 
             let db = db().await?;
             let kv = kv().await?;

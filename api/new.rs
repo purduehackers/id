@@ -30,9 +30,10 @@ const CURRENT_PASSPORT_VERSION: i32 = 0;
 
 pub async fn handle(req: Request) -> Result<Response<Body>, Error> {
     match req.body() {
-        Body::Binary(_) | Body::Empty => Err("Invalid body".to_string().into()),
-        Body::Text(t) => {
-            let new: NewPassport = serde_json::from_str(t)?;
+        Body::Text(_) | Body::Empty => Err("Invalid body".to_string().into()),
+        Body::Binary(b) => {
+            let t = String::from_utf8(b.to_vec())?;
+            let new: NewPassport = serde_json::from_str(&t)?;
 
             let db = db().await?;
 
