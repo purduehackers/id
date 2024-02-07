@@ -12,21 +12,30 @@ const Authorize = () => {
     const [state, setState] = React.useState(AuthState.EnterNumber)
     const [totpNeeded, setTotpNeeded] = React.useState(false)
 
-    React.useEffect(() => {
-        if (state != AuthState.WaitForScan) {
-            return
-        }
+    const id = parseInt(passport.split('.')[1] ?? '0')
 
-        const id = passport.split('.')[1]
-
+    const onChoosePassport = async () => {
         // Send a request to initiate lock
-        fetch(`/api/scan`, {
+        let res = await fetch(`/api/scan`, {
             'method': 'POST',
             'body': JSON.stringify({
                 'id': id,
                 'secret': ''
             })
         })
+
+        if (!res.ok) {
+            console.log(`Bad scan open: ${res.status} ${await res.text()}`)
+            return
+        }
+
+         setState(AuthState.WaitForScan)
+    };
+
+    React.useEffect(() => {
+        if (state != AuthState.WaitForScan) {
+            return
+        } 
 
         const interval = setInterval(async () => {
             const resp = await fetch(`/api/scan?id=${id}`)
@@ -55,8 +64,8 @@ const Authorize = () => {
             {
                 state == AuthState.EnterNumber && <div>
                     <p>Enter passport number:</p>
-                    <input value={passport} onChange={(ev) => { setPassport(ev.target.value) }}/>
-                    <button onClick={(_) => { setState(AuthState.WaitForScan) }} disabled={passport.length === 0 || !/\d+\.\d+/.test(passport)}>Submit</button>
+                    <input value={passport} onChange={(ev) => { setPassport(ev.target.value) }} disabled={state != AuthState.EnterNumber}/>
+                    <button onClick={(_) => { onChoosePassport() }} disabled={passport.length === 0 || !/\d+\.\d+/.test(passport)}>Submit</button>
                 </div>
             }
             {
