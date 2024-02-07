@@ -24,6 +24,7 @@ const Authorize = () => {
                     const { totp_needed } = await resp.json()
                     setTotpNeeded(totp_needed)
                     setState(AuthState.Authorize)
+                    clearInterval(interval)
                     break;
                 case 201:
                     break;
@@ -51,6 +52,11 @@ const Authorize = () => {
                 state == AuthState.WaitForScan && <div>
                     <p>WAITING FOR SCAN...</p>
                     <p>Polling once every approximately 3 seconds...</p>
+                </div>
+            }
+            {
+                state == AuthState.Authorize && <div>
+                    <p>Authorize?</p>
                 </div>
             }
         </div>
