@@ -221,13 +221,13 @@ pub struct APIError<'a> {
 }
 
 pub async fn kv() -> Result<RedisClient, vercel_runtime::Error> { 
-    let config = RedisConfig::from_url(&env::var("KV_URL").expect("KV_URL env var to be present").replace("redis://", "rediss://"))?;
+    let config = RedisConfig::from_url(&env!("KV_URL").to_string().replace("redis://", "rediss://"))?;
     let c = Builder::from_config(config).build()?;
     c.init().await?;
     Ok(c)
 }
 pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
-    let db = Database::connect(env::var("DATABASE_URL").expect("Database URL var to be present"))
+    let db = Database::connect(env!("DATABASE_URL"))
         .await?;
     use migration::{Migrator, MigratorTrait};
     Migrator::up(&db, None).await?;
