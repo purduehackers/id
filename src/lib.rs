@@ -1,6 +1,3 @@
-#![feature(async_closure)]
-#![feature(unboxed_closures)]
-
 use core::ops::Deref;
 use lambda_http::http::{
     header::{CONTENT_TYPE, LOCATION, WWW_AUTHENTICATE},
