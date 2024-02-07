@@ -17,8 +17,19 @@ const Authorize = () => {
             return
         }
 
+        const id = passport.split('.')[1]
+
+        // Send a request to initiate lock
+        fetch(`/api/scan`, {
+            'method': 'POST',
+            'body': JSON.stringify({
+                'id': id,
+                'secret': ''
+            })
+        })
+
         const interval = setInterval(async () => {
-            const resp = await fetch(`/api/scan?id=${passport.split('.')[1]}`)
+            const resp = await fetch(`/api/scan?id=${id}`)
             switch (resp.status) {
                 case 200:
                     const { totp_needed } = await resp.json()
