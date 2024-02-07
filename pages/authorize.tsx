@@ -39,7 +39,7 @@ const Authorize = () => {
         const urldata = new URLSearchParams(window.location.search)
         urldata.set('allow', allow.toString())
         urldata.set('id', id.toString())
-        let res = await fetch('/authorize', {
+        let res = await fetch('/api/authorize', {
             'method': 'POST',
             'headers': {
                 'Content-Type': 'x-www-form-urlencoded'
