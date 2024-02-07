@@ -1,3 +1,6 @@
+#![feature(async_closure)]
+#![feature(unboxed_closures)]
+
 use core::ops::Deref;
 use lambda_http::http::{
     header::{CONTENT_TYPE, LOCATION, WWW_AUTHENTICATE},
@@ -5,7 +8,7 @@ use lambda_http::http::{
 };
 use sea_orm::{Database, DatabaseConnection};
 use serde::Serialize;
-use std::{borrow::Cow, env, ops::DerefMut, str::FromStr, fmt::Display};
+use std::{borrow::Cow, env, ops::DerefMut, str::FromStr, fmt::Display, future::Future, pin::Pin};
 use vercel_runtime::{Body, Request, Response, StatusCode};
 use fred::prelude::*;
 
@@ -245,4 +248,22 @@ pub fn map_error_to_readable<E: Display>(r: Result<Response<Body>, E>) -> Respon
             resp
         }
     }
+}
+
+#[derive(Debug, serde::Deserialize)]
+pub struct PassportRecord {
+    pub id: i32,
+    pub secret: String,
+}
+
+#[macro_export]
+macro_rules! wrap_error {
+    ($fn:ident) => {
+        move |r| {
+            Box::pin(async move {
+                let res = $fn(r).await;
+                Ok($crate::map_error_to_readable(res))
+            })
+        }
+    };
 }

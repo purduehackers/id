@@ -1,8 +1,7 @@
 use std::str::FromStr;
 
-use id::{kv, db, map_error_to_readable};
+use id::{kv, db, wrap_error, PassportRecord};
 use lambda_http::http::Method;
-use serde_json::json;
 use vercel_runtime::{run, Body, Error, Request, Response, StatusCode};
 use sea_orm::prelude::*;
 use entity::{prelude::*, passport, user, sea_orm_active_enums::RoleEnum};
@@ -10,17 +9,15 @@ use fred::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(handler).await
+    run(wrap_error!(handler)).await
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    let res = if req.method() == Method::POST {
+    if req.method() == Method::POST {
         post_handler(req).await
     } else {
         get_handler(req).await
-    };
-
-    Ok(map_error_to_readable(res))
+    }
 }
 
 /// Returns whether the passport is in the KV and is 
@@ -69,12 +66,6 @@ pub async fn post_handler(req: Request) -> Result<Response<Body>, Error> {
         Body::Text(_) | Body::Empty => Err("Invalid method".to_string().into()),
         Body::Binary(b) => {
             let t = String::from_utf8(b.to_vec())?;
-            #[derive(Debug, serde::Deserialize)]
-            struct PassportRecord {
-                id: i32,
-                secret: String,
-            }
-
             let record: PassportRecord = serde_json::from_str(&t)?;
 
             let db = db().await?;

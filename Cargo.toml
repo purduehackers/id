@@ -45,6 +45,9 @@ path = "api/scan.rs"
 [[bin]]
 name = "new"
 path = "api/new.rs"
+[[bin]]
+name = "door"
+path = "api/door.rs"
 
 # Note that you need to provide unique names for each binary:
 # [[bin]]

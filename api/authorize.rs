@@ -1,5 +1,5 @@
 use entity::passport;
-use id::{db, generic_endpoint, kv, RequestCompat, ResponseCompat};
+use id::{db, generic_endpoint, kv, RequestCompat, ResponseCompat, wrap_error};
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
@@ -14,7 +14,7 @@ use fred::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(handler).await
+    run(wrap_error!(handler)).await
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {

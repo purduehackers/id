@@ -1,7 +1,6 @@
 use std::str::FromStr;
 
-use id::{map_error_to_readable, db};
-use serde_json::json;
+use id::{db, wrap_error};
 use vercel_runtime::{run, Body, Error, Request, Response, StatusCode};
 use sea_orm::{prelude::*, ActiveValue};
 use entity::{prelude::*, passport, user, sea_orm_active_enums::RoleEnum};
@@ -9,11 +8,7 @@ use rand::distributions::{Alphanumeric, DistString};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    run(handler).await
-}
-
-pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    Ok(map_error_to_readable(handle(req).await))
+    run(wrap_error!(handler)).await
 }
 
 #[derive(Debug, serde::Deserialize)]
@@ -28,7 +23,7 @@ struct NewPassport {
 
 const CURRENT_PASSPORT_VERSION: i32 = 0;
 
-pub async fn handle(req: Request) -> Result<Response<Body>, Error> {
+pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     match req.body() {
         Body::Text(_) | Body::Empty => Err("Invalid body".to_string().into()),
         Body::Binary(b) => {
