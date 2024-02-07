@@ -71,5 +71,46 @@ pub async fn get_handler(req: Request) -> Result<Response<Body>, Error> {
 
 /// Puts data in the KV, with or without a secret
 pub async fn post_handler(req: Request) -> Result<Response<Body>, Error> {
-    todo!()
+    match req.body() {
+        Body::Binary(_) | Body::Empty => Err("Invalid method".to_string().into()),
+        Body::Text(t) => {
+            #[derive(Debug, serde::Deserialize)]
+            struct PassportRecord {
+                id: i32,
+                secret: String,
+            }
+
+            let record: PassportRecord = serde_json::from_str(t)?;
+
+            let db = db().await?;
+            let kv = kv().await?;
+
+            // If the KV has a record with an empty string, someone is trying to auth
+            // You may only set the record to the correct secret once its set to an empty record
+            
+            let passport: passport::Model = Passport::find_by_id(record.id).one(&db).await?.ok_or("Invalid passport ID".to_string())?;
+
+            // No record currently, so add a record with whatever the secret is supposed to be
+            if !kv.exists(passport.id).await? {
+                kv.set(passport.id, false, Some(Expiration::EX(300)), None, false).await?;
+                return Ok(Response::new(Body::Empty));
+            }
+
+            // There is a passport, so figure out what it is
+            // If it's empty, the only thing it can be updated with is the valid secret of the
+            // passport
+            // If it's not or there is already a valid secret in the KV, return error
+            let current_value: bool = kv.get(passport.id).await?;
+            if !current_value && record.secret == passport.secret {
+                kv.set(passport.id, true, Some(Expiration::EX(60)), None, false).await?;
+
+                Ok(Response::new(Body::Empty))
+            } else {
+                let mut resp = Response::new(Body::Text("Invalid KV request".to_string()));
+                *resp.status_mut() = StatusCode::BAD_REQUEST;
+                Ok(resp)
+            }
+        },
+    }
 }
+

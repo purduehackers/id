@@ -60,10 +60,10 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                     return Err("Passport has not been scanned!".to_string().into());
                 }
 
-                let secret: String = kv.getdel(passport_id).await?;
+                let ready: bool = kv.getdel(passport_id).await?;
 
-                if secret != passport.secret {
-                    return Err("Passport secret doesn't match!".to_string().into());
+                if !ready {
+                    return Err("Passport not ready for auth!".to_string().into());
                 }
 
                 Ok(())
