@@ -1,13 +1,13 @@
 use core::ops::Deref;
+use fred::prelude::*;
 use lambda_http::http::{
     header::{CONTENT_TYPE, LOCATION, WWW_AUTHENTICATE},
     HeaderValue,
 };
 use sea_orm::{Database, DatabaseConnection};
 use serde::Serialize;
-use std::{borrow::Cow, env, ops::DerefMut, str::FromStr, fmt::Display, future::Future, pin::Pin};
+use std::{borrow::Cow, env, fmt::Display, future::Future, ops::DerefMut, pin::Pin, str::FromStr};
 use vercel_runtime::{Body, Request, Response, StatusCode};
-use fred::prelude::*;
 
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
@@ -220,15 +220,21 @@ pub struct APIError<'a> {
     pub code: &'a str,
 }
 
-pub async fn kv() -> Result<RedisClient, vercel_runtime::Error> { 
-    let config = RedisConfig::from_url(&env::var("KV_URL").expect("KV_URL env var to be present").replace("redis://", "rediss://"))?;
+pub async fn kv() -> Result<RedisClient, vercel_runtime::Error> {
+    let config = RedisConfig::from_url(
+        &env::var("KV_URL")
+            .expect("KV_URL env var to be present")
+            .replace("redis://", "rediss://"),
+    )?;
     let c = Builder::from_config(config).build()?;
     c.init().await?;
     Ok(c)
 }
 pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
-    let db = Database::connect(env::var("POSTGRES_URL_NON_POOLING").expect("Database URL var to be present"))
-        .await?;
+    let db = Database::connect(
+        env::var("POSTGRES_URL_NON_POOLING").expect("Database URL var to be present"),
+    )
+    .await?;
     use migration::{Migrator, MigratorTrait};
     Migrator::up(&db, None).await?;
 

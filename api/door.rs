@@ -1,8 +1,8 @@
 use entity::passport;
-use id::{wrap_error, PassportRecord, db};
-use vercel_runtime::{run, Body, Error, Request, Response, StatusCode};
 use entity::prelude::*;
+use id::{db, wrap_error, PassportRecord};
 use sea_orm::prelude::*;
+use vercel_runtime::{run, Body, Error, Request, Response, StatusCode};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -17,7 +17,8 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
 
             // Check if the passport exists and is valid
             let db = db().await?;
-            let passport: Option<passport::Model> = Passport::find_by_id(record.id).one(&db).await?;
+            let passport: Option<passport::Model> =
+                Passport::find_by_id(record.id).one(&db).await?;
 
             match passport {
                 Some(passport) => {
@@ -26,13 +27,14 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                         *resp.status_mut() = StatusCode::FORBIDDEN;
                         Ok(resp)
                     } else if passport.secret != record.secret {
-                        let mut resp = Response::new(Body::Text("Passport secret incorrect".to_string()));
+                        let mut resp =
+                            Response::new(Body::Text("Passport secret incorrect".to_string()));
                         *resp.status_mut() = StatusCode::UNAUTHORIZED;
                         Ok(resp)
                     } else {
                         Ok(Response::new(Body::Empty))
                     }
-                },
+                }
                 None => {
                     let mut resp = Response::new(Body::Text("Passport does not exist".to_string()));
                     *resp.status_mut() = StatusCode::NOT_FOUND;

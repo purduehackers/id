@@ -1,16 +1,16 @@
 use entity::passport;
-use id::{db, generic_endpoint, kv, RequestCompat, ResponseCompat, wrap_error};
+use id::{db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat};
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
 };
 
 use entity::prelude::*;
+use fred::prelude::*;
 use lambda_http::{http::Method, RequestExt};
 use sea_orm::prelude::*;
 use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
-use fred::prelude::*;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -29,7 +29,14 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
             // great! If not (or they denied the login), too bad I guess
 
             // Login denied
-            if req.urlbody().expect("URLBody to exist").unique_value("allow").expect("allow to be in body").parse().expect("allow to be bool") {
+            if !req
+                .urlbody()
+                .expect("URLBody to exist")
+                .unique_value("allow")
+                .expect("allow to be in body")
+                .parse::<bool>()
+                .expect("allow to be bool")
+            {
                 return OwnerConsent::Denied;
             }
 

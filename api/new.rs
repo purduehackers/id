@@ -1,10 +1,10 @@
 use std::str::FromStr;
 
+use entity::{passport, prelude::*, sea_orm_active_enums::RoleEnum, user};
 use id::{db, wrap_error};
-use vercel_runtime::{run, Body, Error, Request, Response, StatusCode};
-use sea_orm::{prelude::*, ActiveValue};
-use entity::{prelude::*, passport, user, sea_orm_active_enums::RoleEnum};
 use rand::distributions::{Alphanumeric, DistString};
+use sea_orm::{prelude::*, ActiveValue};
+use vercel_runtime::{run, Body, Error, Request, Response, StatusCode};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -32,7 +32,10 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
 
             let db = db().await?;
 
-            let user: Option<user::Model> = User::find().filter(user::Column::DiscordId.eq(new.discord_id)).one(&db).await?;
+            let user: Option<user::Model> = User::find()
+                .filter(user::Column::DiscordId.eq(new.discord_id))
+                .one(&db)
+                .await?;
 
             let user = match user {
                 Some(u) => u,
@@ -60,7 +63,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 place_of_origin: ActiveValue::Set(new.place_of_origin),
                 version: ActiveValue::Set(CURRENT_PASSPORT_VERSION),
                 activated: ActiveValue::Set(false),
-                secret: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32))
+                secret: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
             };
 
             passport.insert(&db).await?;
