@@ -39,19 +39,13 @@ pub async fn get_handler(req: Request) -> Result<Response<Body>, Error> {
         return Ok(resp);
     }
 
-    let secret: String = kv.get(id).await?;
-
-    if secret.is_empty() {
-        let mut resp = Response::new(Body::Empty);
-        *resp.status_mut() = StatusCode::NO_CONTENT;
-        return Ok(resp);
-    }
+    let ready: bool = kv.get(id).await?;
 
     let db = db().await?;
 
     let passport: passport::Model = Passport::find_by_id(id).one(&db).await?.expect("Passport to exist");
 
-    if secret == passport.secret {
+    if ready {
         let user: user::Model = passport.find_related(User).one(&db).await?.expect("Passport to have an owner");
         
         #[derive(Debug, serde::Serialize)]
