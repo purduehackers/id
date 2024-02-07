@@ -227,7 +227,7 @@ pub async fn kv() -> Result<RedisClient, vercel_runtime::Error> {
     Ok(c)
 }
 pub async fn db() -> Result<DatabaseConnection, vercel_runtime::Error> {
-    let db = Database::connect(env::var("POSTGRES_URL").expect("Database URL var to be present"))
+    let db = Database::connect(env::var("POSTGRES_URL_NON_POOLING").expect("Database URL var to be present"))
         .await?;
     use migration::{Migrator, MigratorTrait};
     Migrator::up(&db, None).await?;
