@@ -98,6 +98,7 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
                     ("client_id", &pg.client_id),
                     ("redirect_uri", &pg.redirect_uri.to_string()),
                     ("scope", &pg.scope.to_string()),
+                    ("response_type", &"code".to_string()),
                 ],
             )
             .expect("const URL to be valid");
