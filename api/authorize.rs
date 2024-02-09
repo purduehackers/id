@@ -30,10 +30,9 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
 
             // Login denied
             if !req
-                .urlbody()
-                .expect("URLBody to exist")
-                .unique_value("allow")
-                .expect("allow to be in body")
+                .query_string_parameters()
+                .first("allow")
+                .expect("allow to be in query")
                 .parse::<bool>()
                 .expect("allow to be bool")
             {
@@ -41,9 +40,8 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
             }
 
             let passport_id: i32 = req
-                .urlbody()
-                .expect("URLBody to exist")
-                .unique_value("id")
+                .query_string_parameters()
+                .first("id")
                 .expect("Passport ID to be given")
                 .parse()
                 .expect("ID to be valid integer");
