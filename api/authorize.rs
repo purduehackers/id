@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use entity::passport;
 use id::{db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat};
 use oxide_auth::{
@@ -27,11 +29,13 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
             // TODO: Auth stuff with redis I think???
             // Basically need to figure out if user has tapped passport at this time. If they have,
             // great! If not (or they denied the login), too bad I guess
+            
+            let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
 
             // Login denied
-            if !req
-                .query_string_parameters()
-                .first("allow")
+            if !url.query_pairs()
+                .into_iter()
+                .find_map(|(k,v)| if k == "allow" { Some(v) } else { None })
                 .expect("allow to be in query")
                 .parse::<bool>()
                 .expect("allow to be bool")
@@ -39,9 +43,9 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 return OwnerConsent::Denied;
             }
 
-            let passport_id: i32 = req
-                .query_string_parameters()
-                .first("id")
+            let passport_id: i32 = url.query_pairs()
+                .into_iter()
+                .find_map(|(k,v)| if k == "id" { Some(v) } else { None })
                 .expect("Passport ID to be given")
                 .parse()
                 .expect("ID to be valid integer");
