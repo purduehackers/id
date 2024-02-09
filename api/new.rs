@@ -29,6 +29,13 @@ struct NewPassport {
 
 const CURRENT_PASSPORT_VERSION: i32 = 0;
 
+fn parse_date(s: &str) -> Result<ChronoDate, Error> {
+    if let Ok(date) = ChronoDate::from_str(s) {
+        return Ok(date);
+    }
+    Ok(ChronoDateTime::from_str(s)?.date())
+}
+
 async fn create_new_passport(
     db: &DatabaseConnection,
     user: &user::Model,
@@ -39,8 +46,8 @@ async fn create_new_passport(
         owner_id: ActiveValue::Set(user.id),
         name: ActiveValue::Set(new.name),
         surname: ActiveValue::Set(new.surname),
-        date_of_birth: ActiveValue::Set(ChronoDate::from_str(&new.date_of_birth)?),
-        date_of_issue: ActiveValue::Set(ChronoDate::from_str(&new.date_of_issue)?),
+        date_of_birth: ActiveValue::Set(parse_date(&new.date_of_birth)?),
+        date_of_issue: ActiveValue::Set(parse_date(&new.date_of_issue)?),
         place_of_origin: ActiveValue::Set(new.place_of_origin),
         version: ActiveValue::Set(CURRENT_PASSPORT_VERSION),
         activated: ActiveValue::Set(false),
@@ -57,7 +64,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         Body::Text(_) | Body::Empty => Err("Invalid body".to_string().into()),
         Body::Binary(b) => {
             let t = String::from_utf8(b.to_vec()).map_err(|e| format!("Bad UTF-8 encoding! Couldn't convert to text: {e}"))?;
-            let new: NewPassport = serde_json::from_str(&t).map_err(|e| format!("Bad JSON encoding! Couldn't convert to text: [{e}]: {t}"))?;
+            let new: NewPassport = serde_json::from_str(&t).map_err(|e| format!("Bad JSON encoding! Couldn't convert to passport data: [{e}]: {t}"))?;
             let discord_id = new.discord_id.parse().map_err(|e| format!("Couldn't parse Discord ID! [{e}] {}", new.discord_id))?;
 
             let db = db().await?;
@@ -96,8 +103,8 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 } else {
                     found_passport.name = new.name;
                     found_passport.surname = new.surname;
-                    found_passport.date_of_birth = ChronoDate::from_str(&new.date_of_birth)?;
-                    found_passport.date_of_issue = ChronoDate::from_str(&new.date_of_issue)?;
+                    found_passport.date_of_birth = parse_date(&new.date_of_birth)?;
+                    found_passport.date_of_issue = parse_date(&new.date_of_issue)?;
                     found_passport.place_of_origin = new.place_of_origin;
 
                     let active_passport = found_passport.into_active_model();
