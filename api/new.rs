@@ -56,9 +56,9 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     match req.body() {
         Body::Text(_) | Body::Empty => Err("Invalid body".to_string().into()),
         Body::Binary(b) => {
-            let t = String::from_utf8(b.to_vec())?;
-            let new: NewPassport = serde_json::from_str(&t)?;
-            let discord_id = new.discord_id.parse()?;
+            let t = String::from_utf8(b.to_vec()).map_err(|e| format!("Bad UTF-8 encoding! Couldn't convert to text: {e}"))?;
+            let new: NewPassport = serde_json::from_str(&t).map_err(|e| format!("Bad JSON encoding! Couldn't convert to text: [{e}]: {t}"))?;
+            let discord_id = new.discord_id.parse().map_err(|e| format!("Couldn't parse Discord ID! [{e}] {}", new.discord_id))?;
 
             let db = db().await?;
 
