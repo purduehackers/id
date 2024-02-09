@@ -1,9 +1,15 @@
 use std::str::FromStr;
 
-use entity::{passport::{self}, prelude::*, sea_orm_active_enums::RoleEnum, user};
+use entity::{
+    passport::{self},
+    prelude::*,
+    sea_orm_active_enums::RoleEnum,
+    user,
+};
 use id::{db, wrap_error};
 use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue, IntoActiveModel, QueryOrder};
+use serde_json::json;
 use vercel_runtime::{run, Body, Error, Request, Response};
 
 #[tokio::main]
@@ -23,7 +29,11 @@ struct NewPassport {
 
 const CURRENT_PASSPORT_VERSION: i32 = 0;
 
-async fn create_new_passport(db: &DatabaseConnection, user: &user::Model, new: NewPassport) -> Result<passport::Model, Error> {
+async fn create_new_passport(
+    db: &DatabaseConnection,
+    user: &user::Model,
+    new: NewPassport,
+) -> Result<passport::Model, Error> {
     let passport = passport::ActiveModel {
         id: ActiveValue::NotSet,
         owner_id: ActiveValue::Set(user.id),
@@ -91,7 +101,8 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                         found_passport.date_of_issue = ChronoDate::from_str(&new.date_of_issue)?;
                         found_passport.place_of_origin = new.place_of_origin;
                         found_passport.activated = false;
-                        found_passport.secret = Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
+                        found_passport.secret =
+                            Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
 
                         let active_passport = found_passport.into_active_model();
                         let updated_passport = active_passport.update(&db).await?;
@@ -104,8 +115,15 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 }
             };
 
-            let response_body = serde_json::to_string(&passport_id)?;
-            Ok(Response::new(Body::Text(response_body)))
+            Ok(Response::builder()
+                .header("Content-Type", "application/json")
+                .body(
+                    json!({
+                      "passportNumber": passport_id
+                    })
+                    .to_string()
+                    .into(),
+                )?)
         }
     }
 }
