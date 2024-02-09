@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, thread};
 
 use entity::passport;
 use id::{db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat};
@@ -51,7 +51,9 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 .expect("ID to be valid integer");
 
             // Is there a passport in the database that matches the number?
-            let res: Result<(), Error> = Handle::current().block_on(async move {
+            // This conversion is gross, but I'm just gonna have to deal with it unless I rewrite
+            // the library to be async
+            let res: thread::JoinHandle<Result<(), Error>> = thread::spawn(move || Handle::current().block_on(async move {
                 let db = db().await?;
 
                 let passport: passport::Model = Passport::find_by_id(passport_id)
@@ -76,9 +78,9 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 }
 
                 Ok(())
-            });
+            }));
 
-            res.expect("DB and KV ops to succeed");
+            let _ = res.join().expect("DB and KV ops to succeed");
             OwnerConsent::Authorized("yippee".to_string())
         },
     ))
