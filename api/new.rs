@@ -19,7 +19,7 @@ async fn main() -> Result<(), Error> {
 
 #[derive(Debug, serde::Deserialize)]
 struct NewPassport {
-    discord_id: i64,
+    discord_id: String,
     name: String,
     surname: String,
     date_of_birth: String,
@@ -58,11 +58,12 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         Body::Binary(b) => {
             let t = String::from_utf8(b.to_vec())?;
             let new: NewPassport = serde_json::from_str(&t)?;
+            let discord_id = new.discord_id.parse()?;
 
             let db = db().await?;
 
             let user: Option<user::Model> = User::find()
-                .filter(user::Column::DiscordId.eq(new.discord_id))
+                .filter(user::Column::DiscordId.eq(discord_id))
                 .one(&db)
                 .await?;
 
@@ -71,7 +72,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 None => {
                     let model = user::ActiveModel {
                         id: ActiveValue::NotSet,
-                        discord_id: ActiveValue::Set(new.discord_id),
+                        discord_id: ActiveValue::Set(discord_id),
                         role: ActiveValue::Set(RoleEnum::Hacker),
                         totp: ActiveValue::NotSet,
                     };
