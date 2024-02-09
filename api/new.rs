@@ -89,7 +89,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 .await?;
 
             let passport_id = match latest_passport {
-                Some(mut found_passport) => if passport.activated {
+                Some(mut found_passport) => if found_passport.activated {
                     let new_passport = create_new_passport(&db, &user, new).await?;
                     new_passport.id
                 } else {
