@@ -119,7 +119,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 .header("Content-Type", "application/json")
                 .body(
                     json!({
-                      "passportNumber": passport_id
+                      "id": passport_id
                     })
                     .to_string()
                     .into(),
