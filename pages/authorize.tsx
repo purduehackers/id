@@ -35,15 +35,12 @@ const Authorize = () => {
          setState(AuthState.WaitForScan)
     }
 
-    const respond = async (allow: boolean) => {
+    const formAction = (allow: boolean) => {
         const urldata = new URLSearchParams(window.location.search)
         urldata.set('allow', allow.toString())
         urldata.set('id', id.toString())
-        let res = await fetch(`/api/authorize?${urldata.toString()}`)
 
-        if (res.ok) {
-            setState(AuthState.Done)
-        }
+        return `/api/authorize?${urldata.toString()}`
     }
 
     React.useEffect(() => {
@@ -91,8 +88,10 @@ const Authorize = () => {
             {
                 state == AuthState.Authorize && <div>
                     <p>Authorize?</p>
-                    <button onClick={_ => { respond(false) }}>DENY</button>
-                    <button onClick={_ => { respond(true) }}>ACCEPT</button>
+                    <form>
+                    <button type="submit" formAction={formAction(false)}>DENY</button>
+                    <button type="submit" formAction={formAction(true)}>ACCEPT</button>
+                    </form>
                 </div>
             }
             {
