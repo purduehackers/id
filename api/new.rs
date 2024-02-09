@@ -33,7 +33,7 @@ fn parse_date(s: &str) -> Result<ChronoDate, Error> {
     if let Ok(date) = ChronoDate::from_str(s) {
         return Ok(date);
     }
-    Ok(ChronoDateTime::from_str(s)?.date())
+    Ok(ChronoDateTime::parse_from_str(s, "%+")?.date())
 }
 
 async fn create_new_passport(
