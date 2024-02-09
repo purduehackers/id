@@ -89,30 +89,25 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 .await?;
 
             let passport_id = match latest_passport {
-                Some(passport) if passport.activated => {
+                Some(mut found_passport) => if passport.activated {
                     let new_passport = create_new_passport(&db, &user, new).await?;
                     new_passport.id
-                }
-                _ => {
-                    if let Some(mut found_passport) = latest_passport {
-                        found_passport.name = new.name;
-                        found_passport.surname = new.surname;
-                        found_passport.date_of_birth = ChronoDate::from_str(&new.date_of_birth)?;
-                        found_passport.date_of_issue = ChronoDate::from_str(&new.date_of_issue)?;
-                        found_passport.place_of_origin = new.place_of_origin;
-                        found_passport.activated = false;
-                        found_passport.secret =
-                            Alphanumeric.sample_string(&mut rand::thread_rng(), 32);
+                } else {
+                    found_passport.name = new.name;
+                    found_passport.surname = new.surname;
+                    found_passport.date_of_birth = ChronoDate::from_str(&new.date_of_birth)?;
+                    found_passport.date_of_issue = ChronoDate::from_str(&new.date_of_issue)?;
+                    found_passport.place_of_origin = new.place_of_origin;
 
-                        let active_passport = found_passport.into_active_model();
-                        let updated_passport = active_passport.update(&db).await?;
+                    let active_passport = found_passport.into_active_model();
+                    let updated_passport = active_passport.update(&db).await?;
 
-                        updated_passport.id
-                    } else {
-                        let new_passport = create_new_passport(&db, &user, new).await?;
-                        new_passport.id
-                    }
-                }
+                    updated_passport.id
+                },
+                None => {
+                    let new_passport = create_new_passport(&db, &user, new).await?;
+                    new_passport.id
+                },
             };
 
             Ok(Response::builder()
