@@ -246,7 +246,9 @@ pub fn map_error_to_readable<E: Display>(r: Result<Response<Body>, E>) -> Respon
     match r {
         Ok(r) => r,
         Err(e) => {
-            let mut resp = Response::new(Body::Text(format!("Server Error: {e}")));
+            let error = format!("Server Error: {e}");
+            println!("{}", &error);
+            let mut resp = Response::new(Body::Text(error));
             *resp.status_mut() = StatusCode::INTERNAL_SERVER_ERROR;
             resp
         }
