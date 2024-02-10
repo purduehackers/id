@@ -1338,6 +1338,7 @@ dependencies = [
  "lambda_http",
  "migration",
  "oxide-auth",
+ "oxide-auth-async",
  "rand",
  "redis",
  "sea-orm",
@@ -1784,6 +1785,19 @@ dependencies = [
  "serde_json",
  "sha2",
  "subtle",
+ "url",
+]
+
+[[package]]
+name = "oxide-auth-async"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4ebdb8051929b4e41ef4b7fc5635b3321dfb19a71c6feeeec582dd8b59a7be1"
+dependencies = [
+ "async-trait",
+ "base64 0.13.1",
+ "chrono",
+ "oxide-auth",
  "url",
 ]
 
