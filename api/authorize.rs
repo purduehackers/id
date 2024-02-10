@@ -3,7 +3,7 @@ use std::{str::FromStr, thread};
 use entity::passport;
 use id::{db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat, client_registry};
 use oxide_auth::{
-    endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse},
+    endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse, ResponseStatus},
     frontends::{self, simple::endpoint::FnSolicitor}, primitives::{authorizer::AuthMap, generator::RandomGenerator, issuer::TokenMap, registrar::ClientMap},
 };
 use oxide_auth_async::{endpoint::{OwnerSolicitor, Endpoint}, code_grant::authorization::authorization_code};
@@ -65,7 +65,14 @@ impl Endpoint<RequestCompat> for AuthorizeEndpoint {
     fn response(
             &mut self, request: &mut RequestCompat, mut kind: oxide_auth::endpoint::Template,
         ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
-        Ok(ResponseCompat(Response::new(Body::Text(kind.authorization_error().map(|e| format!("Auth error: {e:?}")).unwrap_or("Unknown auth error".to_string())))))
+        if let Some(e) = kind.authorization_error() {
+            return Err(format!("Auth error: {e:?}").into());
+        }
+        // Ok(ResponseCompat(Response::new(Body::Text(kind.authorization_error().map(|e| format!("Auth error: {e:?}")).unwrap_or("Unknown auth error".to_string())))))
+        match kind.status() {
+            ResponseStatus::Ok => Ok(ResponseCompat(Response::new(Body::Empty))),
+            _ => Err(format!("Status error: Received {:?}", kind.status()).into())
+        }
     }
 
     fn registrar(&self) -> Option<&(dyn oxide_auth_async::primitives::Registrar + Sync)> {
