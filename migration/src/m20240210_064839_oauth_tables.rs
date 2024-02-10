@@ -55,7 +55,7 @@ impl MigrationTrait for Migration {
                 )
                 .col(
                     ColumnDef::new(AuthGrant::Until)
-                        .timestamp()
+                        .timestamp_with_time_zone()
                         .not_null()
                 )
                 .col(
@@ -106,7 +106,7 @@ impl MigrationTrait for Migration {
                 )
                 .col(
                     ColumnDef::new(AuthToken::Until)
-                        .timestamp()
+                        .timestamp_with_time_zone()
                         .not_null()
                 )
                 .foreign_key(

@@ -59,7 +59,15 @@ impl Authorizer for DbAuthorizer {
             .one(&db)
             .await
             .expect("db op to not fail");
-        todo!()
+
+        Ok(grant.map(|g| oxide_auth::primitives::grant::Grant {
+            client_id: g.client_id,
+            extensions: Default::default(),
+            owner_id: g.owner_id.to_string(),
+            scope: serde_json::from_value(g.scope).expect("scope to be deserializable"),
+            redirect_uri: serde_json::from_value(g.redirect_uri).expect("redirect uri to be deserializable"),
+            until: g.until,
+        }))
     }
 }
 
