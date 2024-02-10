@@ -71,7 +71,7 @@ export default function Authorize() {
   }, [id, state]);
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center">
+    <div className="min-h-screen flex flex-col justify-center items-center font-main">
       {state == AuthState.EnterNumber && (
         <div className="flex flex-col items-center gap-2">
           <p className="font-bold text-2xl">Enter passport number</p>
@@ -100,9 +100,9 @@ export default function Authorize() {
         </div>
       )}
       {state == AuthState.WaitForScan && (
-        <div>
-          <p>WAITING FOR SCAN...</p>
-          <p>Polling once every approximately 3 seconds...</p>
+        <div className="p-12 border-2 rounded border-black shadow-blocks-sm bg-amber-100 justify-center items-center flex flex-col gap-2">
+          <p className="font-bold text-3xl">SCAN YOUR PASSPORT NOW</p>
+          <p>Polling every 3 seconds...</p>
         </div>
       )}
       {state == AuthState.Authorize && (
