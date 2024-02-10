@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub grant_id: i32,
     pub token: String,
-    pub until: DateTime,
+    pub until: DateTimeWithTimeZone,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -42,7 +42,7 @@ impl Authorizer for DbAuthorizer {
             owner_id: ActiveValue::Set(grant.owner_id.parse().expect("failed to parse owner_id as int")),
             client_id: ActiveValue::Set(grant.client_id),
             redirect_uri: ActiveValue::Set(serde_json::to_value(grant.redirect_uri).expect("url value error")),
-            until: ActiveValue::Set(grant.until.naive_utc()),
+            until: ActiveValue::Set(grant.until.into()),
             scope: ActiveValue::Set(serde_json::to_value(grant.scope).expect("scope to be serializable")),
             code: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
         };
@@ -66,7 +66,7 @@ impl Authorizer for DbAuthorizer {
             owner_id: g.owner_id.to_string(),
             scope: serde_json::from_value(g.scope).expect("scope to be deserializable"),
             redirect_uri: serde_json::from_value(g.redirect_uri).expect("redirect uri to be deserializable"),
-            until: g.until,
+            until: g.until.into(),
         }))
     }
 }

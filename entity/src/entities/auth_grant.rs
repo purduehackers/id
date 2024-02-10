@@ -9,7 +9,7 @@ pub struct Model {
     pub id: i32,
     pub owner_id: i32,
     pub redirect_uri: Json,
-    pub until: DateTime,
+    pub until: DateTimeWithTimeZone,
     pub scope: Json,
     pub client_id: String,
     pub code: String,
