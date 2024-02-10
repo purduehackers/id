@@ -88,7 +88,7 @@ const Authorize = () => {
             {
                 state == AuthState.Authorize && <div>
                     <p>Authorize?</p>
-                    <form>
+                    <form method="post">
                     <button type="submit" formAction={formAction(false)}>DENY</button>
                     <button type="submit" formAction={formAction(true)}>ACCEPT</button>
                     </form>

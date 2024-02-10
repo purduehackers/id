@@ -63,7 +63,7 @@ impl Endpoint<RequestCompat> for AuthorizeEndpoint {
     }
 
     fn response(
-            &mut self, request: &mut RequestCompat, mut kind: oxide_auth::endpoint::Template,
+            &mut self, _request: &mut RequestCompat, mut kind: oxide_auth::endpoint::Template,
         ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
         if let Some(e) = kind.authorization_error() {
             return Err(format!("Auth error: {e:?}").into());
