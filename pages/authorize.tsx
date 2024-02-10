@@ -4,7 +4,6 @@ enum AuthState {
     EnterNumber,
     WaitForScan,
     Authorize,
-    Done,
 }
 
 const Authorize = () => {
@@ -92,11 +91,6 @@ const Authorize = () => {
                     <button type="submit" formAction={formAction(false)}>DENY</button>
                     <button type="submit" formAction={formAction(true)}>ACCEPT</button>
                     </form>
-                </div>
-            }
-            {
-                state == AuthState.Done && <div>
-                    <p>All done! ✅</p>
                 </div>
             }
         </div>

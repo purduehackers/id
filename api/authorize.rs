@@ -22,6 +22,8 @@ async fn main() -> Result<(), Error> {
     run(wrap_error!(handler)).await
 }
 
+
+
 struct AuthorizeEndpoint {
     solicitor: PostSolicitor,
     scopes: Vec<Scope>,
