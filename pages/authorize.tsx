@@ -1,4 +1,4 @@
-import React from "react";
+import { useState, useEffect } from "react";
 
 enum AuthState {
   EnterNumber,
@@ -7,9 +7,9 @@ enum AuthState {
 }
 
 const Authorize = () => {
-  const [passport, setPassport] = React.useState("");
-  const [state, setState] = React.useState(AuthState.EnterNumber);
-  const [totpNeeded, setTotpNeeded] = React.useState(false);
+  const [passport, setPassport] = useState("");
+  const [state, setState] = useState(AuthState.EnterNumber);
+  const [totpNeeded, setTotpNeeded] = useState(false);
 
   const id = parseInt(passport.split(".")[1] ?? "0", 10);
 
@@ -42,7 +42,7 @@ const Authorize = () => {
     return `/api/authorize?${urldata.toString()}`;
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (state != AuthState.WaitForScan) {
       return;
     }
@@ -51,7 +51,6 @@ const Authorize = () => {
       const resp = await fetch(`/api/scan?id=${id}`);
       switch (resp.status) {
         case 200:
-          // eslint-disable-next-line no-case-declarations
           const { totp_needed } = await resp.json();
           setTotpNeeded(totp_needed);
           setState(AuthState.Authorize);
