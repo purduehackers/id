@@ -99,15 +99,52 @@ impl OwnerSolicitor<RequestCompat> for PostSolicitor {
         &mut self, req: &mut RequestCompat, solicitation: Solicitation<'_>,
     ) -> OwnerConsent<ResponseCompat> {
         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
+
+        let passport_id: i32 = url.query_pairs()
+            .into_iter()
+            .find_map(|(k,v)| if k == "id" { Some(v) } else { None })
+            .expect("Passport ID to be given")
+            .parse()
+            .expect("ID to be valid integer");
+
+        let db = db().await.expect("db to be accessible");
+
+        let passport: Option<passport::Model> = Passport::find_by_id(passport_id)
+            .one(&db)
+            .await
+            .expect("db op to succeed");
+
+        let passport = match passport {
+            Some(p) => p,
+            None => return OwnerConsent::Error("passport doesn't exist!".to_string().into())
+        };
+
+        if !passport.activated {
+            return OwnerConsent::Error("passport isn't activated!".to_string().into());
+        }
+
+        // If it exists, now try to find in the Redis KV
+        let kv = kv().await.expect("redis client to be valid");
+        if kv.exists::<u32, i32>(passport_id).await.expect("redis op to succeed") == 0 {
+            return OwnerConsent::Error("Passport has not been scanned!".to_string().into());
+        }
+
+        let ready: bool = kv.getdel(passport_id).await.expect("redis getdel op to succeed");
+
+        if !ready {
+            return OwnerConsent::Error("Passport not ready for auth!".to_string().into());
+        }
+
         if !url.query_pairs()
             .find_map(|(k, v)| if k == "allow" {Some(v)} else { None })
             .expect("allow param required")
             .parse::<bool>()
             .expect("failed to parse allow")
         {
-            return OwnerConsent::Denied;
+            OwnerConsent::Denied
+        } else {
+            OwnerConsent::Authorized(passport.owner_id.to_string())
         }
-        OwnerConsent::Authorized("yippee".to_string())
     }
 }
 
@@ -124,12 +161,6 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     //         
     //         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid"); 
     //
-    //         let passport_id: i32 = url.query_pairs()
-    //             .into_iter()
-    //             .find_map(|(k,v)| if k == "id" { Some(v) } else { None })
-    //             .expect("Passport ID to be given")
-    //             .parse()
-    //             .expect("ID to be valid integer");
     //
     //         // Is there a passport in the database that matches the number?
     //         // This conversion is gross, but I'm just gonna have to deal with it unless I rewrite
@@ -146,17 +177,6 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     //                 return Err("Passport is not activated!".to_string().into());
     //             }
     //
-    //             // If it exists, now try to find in the Redis KV
-    //             let kv = kv().await?;
-    //             if !kv.exists(passport_id).await? {
-    //                 return Err("Passport has not been scanned!".to_string().into());
-    //             }
-    //
-    //             let ready: bool = kv.getdel(passport_id).await?;
-    //
-    //             if !ready {
-    //                 return Err("Passport not ready for auth!".to_string().into());
-    //             }
     //
     //             Ok(())
     //         }));
