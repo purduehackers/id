@@ -6,7 +6,7 @@ enum AuthState {
   Authorize,
 }
 
-const Authorize = () => {
+export default function Authorize() {
   const [passport, setPassport] = useState("");
   const [state, setState] = useState(AuthState.EnterNumber);
   const [totpNeeded, setTotpNeeded] = useState(false);
@@ -69,26 +69,29 @@ const Authorize = () => {
   }, [state]);
 
   return (
-    <div>
-      <h1>AUTHORIZATION PAGE</h1>
+    <div className="min-h-screen flex flex-col justify-center items-center">
       {state == AuthState.EnterNumber && (
         <div>
           <p>Enter passport number:</p>
-          <input
-            value={passport}
-            onChange={(ev) => {
-              setPassport(ev.target.value);
-            }}
-            disabled={state != AuthState.EnterNumber}
-          />
-          <button
-            onClick={(_) => {
-              onChoosePassport();
-            }}
-            disabled={passport.length === 0 || !/\d+\.\d+/.test(passport)}
-          >
-            Submit
-          </button>
+          <div className="flex flex-row gap-2">
+            <input
+              className="border-2 border-black"
+              value={passport}
+              onChange={(ev) => {
+                setPassport(ev.target.value);
+              }}
+              disabled={state != AuthState.EnterNumber}
+            />
+            <button
+              className="p-1 bg-amber-400 border-2 border-black shadow-blocks-tiny disabled:bg-gray-300"
+              onClick={() => {
+                onChoosePassport();
+              }}
+              disabled={passport.length === 0 || !/\d+\.\d+/.test(passport)}
+            >
+              Submit
+            </button>
+          </div>
         </div>
       )}
       {state == AuthState.WaitForScan && (
@@ -112,6 +115,4 @@ const Authorize = () => {
       )}
     </div>
   );
-};
-
-export default Authorize;
+}
