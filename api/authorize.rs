@@ -70,8 +70,9 @@ impl Endpoint<RequestCompat> for AuthorizeEndpoint {
         }
         // Ok(ResponseCompat(Response::new(Body::Text(kind.authorization_error().map(|e| format!("Auth error: {e:?}")).unwrap_or("Unknown auth error".to_string())))))
         match kind.status() {
-            ResponseStatus::Ok => Ok(ResponseCompat(Response::new(Body::Empty))),
-            _ => Err(format!("Status error: Received {:?}", kind.status()).into())
+            ResponseStatus::Ok | ResponseStatus::Redirect => Ok(ResponseCompat(Response::new(Body::Empty))),
+            ResponseStatus::BadRequest => Err("Bad request".to_string().into()),
+            ResponseStatus::Unauthorized => Err("Unauthorized".to_string().into()),
         }
     }
 
