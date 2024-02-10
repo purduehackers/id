@@ -63,9 +63,15 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     match req.body() {
         Body::Text(_) | Body::Empty => Err("Invalid body".to_string().into()),
         Body::Binary(b) => {
-            let t = String::from_utf8(b.to_vec()).map_err(|e| format!("Bad UTF-8 encoding! Couldn't convert to text: {e}"))?;
-            let new: NewPassport = serde_json::from_str(&t).map_err(|e| format!("Bad JSON encoding! Couldn't convert to passport data: [{e}]: {t}"))?;
-            let discord_id = new.discord_id.parse().map_err(|e| format!("Couldn't parse Discord ID! [{e}] {}", new.discord_id))?;
+            let t = String::from_utf8(b.to_vec())
+                .map_err(|e| format!("Bad UTF-8 encoding! Couldn't convert to text: {e}"))?;
+            let new: NewPassport = serde_json::from_str(&t).map_err(|e| {
+                format!("Bad JSON encoding! Couldn't convert to passport data: [{e}]: {t}")
+            })?;
+            let discord_id = new
+                .discord_id
+                .parse()
+                .map_err(|e| format!("Couldn't parse Discord ID! [{e}] {}", new.discord_id))?;
 
             let db = db().await?;
 
@@ -97,25 +103,27 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 .await?;
 
             let passport_id = match latest_passport {
-                Some(mut found_passport) => if found_passport.activated {
-                    let new_passport = create_new_passport(&db, &user, new).await?;
-                    new_passport.id
-                } else {
-                    found_passport.name = new.name;
-                    found_passport.surname = new.surname;
-                    found_passport.date_of_birth = parse_date(&new.date_of_birth)?;
-                    found_passport.date_of_issue = parse_date(&new.date_of_issue)?;
-                    found_passport.place_of_origin = new.place_of_origin;
+                Some(mut found_passport) => {
+                    if found_passport.activated {
+                        let new_passport = create_new_passport(&db, &user, new).await?;
+                        new_passport.id
+                    } else {
+                        found_passport.name = new.name;
+                        found_passport.surname = new.surname;
+                        found_passport.date_of_birth = parse_date(&new.date_of_birth)?;
+                        found_passport.date_of_issue = parse_date(&new.date_of_issue)?;
+                        found_passport.place_of_origin = new.place_of_origin;
 
-                    let active_passport = found_passport.into_active_model();
-                    let updated_passport = active_passport.update(&db).await?;
+                        let active_passport = found_passport.into_active_model();
+                        let updated_passport = active_passport.update(&db).await?;
 
-                    updated_passport.id
-                },
+                        updated_passport.id
+                    }
+                }
                 None => {
                     let new_passport = create_new_passport(&db, &user, new).await?;
                     new_passport.id
-                },
+                }
             };
 
             Ok(Response::builder()

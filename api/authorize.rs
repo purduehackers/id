@@ -1,14 +1,20 @@
 use std::{str::FromStr, thread};
 
 use entity::passport;
-use id::{db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat, client_registry};
-use oxide_auth::{
-    endpoint::{OwnerConsent, Solicitation, WebRequest, WebResponse, ResponseStatus},
-    frontends::{self, simple::endpoint::FnSolicitor}, primitives::{authorizer::AuthMap, generator::RandomGenerator, issuer::TokenMap, registrar::ClientMap},
-};
-use oxide_auth_async::{endpoint::{OwnerSolicitor, Endpoint}, code_grant::authorization::authorization_code};
-use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
+use id::{client_registry, db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat};
 use oxide_auth::primitives::scope::Scope;
+use oxide_auth::{
+    endpoint::{OwnerConsent, ResponseStatus, Solicitation, WebRequest, WebResponse},
+    frontends::{self, simple::endpoint::FnSolicitor},
+    primitives::{
+        authorizer::AuthMap, generator::RandomGenerator, issuer::TokenMap, registrar::ClientMap,
+    },
+};
+use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
+use oxide_auth_async::{
+    code_grant::authorization::authorization_code,
+    endpoint::{Endpoint, OwnerSolicitor},
+};
 
 use entity::prelude::*;
 use fred::prelude::*;
@@ -21,8 +27,6 @@ use vercel_runtime::{run, Body, Error, Request, Response};
 async fn main() -> Result<(), Error> {
     run(wrap_error!(handler)).await
 }
-
-
 
 struct AuthorizeEndpoint {
     solicitor: PostSolicitor,
@@ -65,14 +69,18 @@ impl Endpoint<RequestCompat> for AuthorizeEndpoint {
     }
 
     fn response(
-            &mut self, _request: &mut RequestCompat, mut kind: oxide_auth::endpoint::Template,
-        ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
+        &mut self,
+        _request: &mut RequestCompat,
+        mut kind: oxide_auth::endpoint::Template,
+    ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
         if let Some(e) = kind.authorization_error() {
             return Err(format!("Auth error: {e:?}").into());
         }
         // Ok(ResponseCompat(Response::new(Body::Text(kind.authorization_error().map(|e| format!("Auth error: {e:?}")).unwrap_or("Unknown auth error".to_string())))))
         match kind.status() {
-            ResponseStatus::Ok | ResponseStatus::Redirect => Ok(ResponseCompat(Response::new(Body::Empty))),
+            ResponseStatus::Ok | ResponseStatus::Redirect => {
+                Ok(ResponseCompat(Response::new(Body::Empty)))
+            }
             ResponseStatus::BadRequest => Err("Bad request".to_string().into()),
             ResponseStatus::Unauthorized => Err("Unauthorized".to_string().into()),
         }
@@ -88,7 +96,9 @@ impl Endpoint<RequestCompat> for AuthorizeEndpoint {
     }
 
     // TODO: Replace with db impl
-    fn authorizer_mut(&mut self) -> Option<&mut (dyn oxide_auth_async::primitives::Authorizer + Send)> {
+    fn authorizer_mut(
+        &mut self,
+    ) -> Option<&mut (dyn oxide_auth_async::primitives::Authorizer + Send)> {
         Some(&mut self.authorizer)
     }
 }
@@ -98,13 +108,16 @@ struct PostSolicitor;
 #[async_trait::async_trait]
 impl OwnerSolicitor<RequestCompat> for PostSolicitor {
     async fn check_consent(
-        &mut self, req: &mut RequestCompat, solicitation: Solicitation<'_>,
+        &mut self,
+        req: &mut RequestCompat,
+        solicitation: Solicitation<'_>,
     ) -> OwnerConsent<ResponseCompat> {
         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
 
-        let passport_id: i32 = url.query_pairs()
+        let passport_id: i32 = url
+            .query_pairs()
             .into_iter()
-            .find_map(|(k,v)| if k == "id" { Some(v) } else { None })
+            .find_map(|(k, v)| if k == "id" { Some(v) } else { None })
             .expect("Passport ID to be given")
             .parse()
             .expect("ID to be valid integer");
@@ -118,7 +131,7 @@ impl OwnerSolicitor<RequestCompat> for PostSolicitor {
 
         let passport = match passport {
             Some(p) => p,
-            None => return OwnerConsent::Error("passport doesn't exist!".to_string().into())
+            None => return OwnerConsent::Error("passport doesn't exist!".to_string().into()),
         };
 
         if !passport.activated {
@@ -127,18 +140,27 @@ impl OwnerSolicitor<RequestCompat> for PostSolicitor {
 
         // If it exists, now try to find in the Redis KV
         let kv = kv().await.expect("redis client to be valid");
-        if kv.exists::<u32, i32>(passport_id).await.expect("redis op to succeed") == 0 {
+        if kv
+            .exists::<u32, i32>(passport_id)
+            .await
+            .expect("redis op to succeed")
+            == 0
+        {
             return OwnerConsent::Error("Passport has not been scanned!".to_string().into());
         }
 
-        let ready: bool = kv.getdel(passport_id).await.expect("redis getdel op to succeed");
+        let ready: bool = kv
+            .getdel(passport_id)
+            .await
+            .expect("redis getdel op to succeed");
 
         if !ready {
             return OwnerConsent::Error("Passport not ready for auth!".to_string().into());
         }
 
-        if !url.query_pairs()
-            .find_map(|(k, v)| if k == "allow" {Some(v)} else { None })
+        if !url
+            .query_pairs()
+            .find_map(|(k, v)| if k == "allow" { Some(v) } else { None })
             .expect("allow param required")
             .parse::<bool>()
             .expect("failed to parse allow")
@@ -160,8 +182,8 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     //         // TODO: Auth stuff with redis I think???
     //         // Basically need to figure out if user has tapped passport at this time. If they have,
     //         // great! If not (or they denied the login), too bad I guess
-    //         
-    //         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid"); 
+    //
+    //         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
     //
     //
     //         // Is there a passport in the database that matches the number?
@@ -203,7 +225,12 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     // .authorization_flow()
     // .execute(RequestCompat(req))
     // .map_err(|e| format!("Error on auth flow: {:?}", e))?;
-    Ok(AuthorizationFlow::prepare(AuthorizeEndpoint::default()).map_err(|e| format!("Auth prep error: {e}"))?.execute(RequestCompat(req)).await.map_err(|e| format!("Auth exec error: {e}"))?.0)
+    Ok(AuthorizationFlow::prepare(AuthorizeEndpoint::default())
+        .map_err(|e| format!("Auth prep error: {e}"))?
+        .execute(RequestCompat(req))
+        .await
+        .map_err(|e| format!("Auth exec error: {e}"))?
+        .0)
 }
 
 async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
