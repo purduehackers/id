@@ -76,7 +76,7 @@ struct AuthorizeEndpoint {
     scopes: Vec<Scope>,
     registry: ClientMap,
     issuer: TokenMap,
-    authorizer: AuthMap,
+    authorizer: DbAuthorizer,
 }
 
 impl Default for AuthorizeEndpoint {
@@ -86,7 +86,7 @@ impl Default for AuthorizeEndpoint {
             scopes: vec!["read".parse().expect("unable to parse scope")],
             registry: client_registry(),
             issuer: TokenMap::new(Box::new(RandomGenerator::new(16))),
-            authorizer: AuthMap::new(Box::new(RandomGenerator::new(16))),
+            authorizer: DbAuthorizer,
         }
     }
 }
