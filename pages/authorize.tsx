@@ -11,7 +11,9 @@ export default function Authorize() {
   const [state, setState] = useState(AuthState.EnterNumber);
   const [totpNeeded, setTotpNeeded] = useState(false);
 
-  const id = parseInt(passport.split(".")[1] ?? "0", 10);
+  const id = passport.includes(".")
+    ? parseInt(passport.split(".")[1] ?? "0")
+    : passport;
 
   const onChoosePassport = async () => {
     // Send a request to initiate lock
@@ -66,16 +68,16 @@ export default function Authorize() {
     return () => {
       clearInterval(interval);
     };
-  }, [state]);
+  }, [id, state]);
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center">
       {state == AuthState.EnterNumber && (
-        <div>
-          <p>Enter passport number:</p>
+        <div className="flex flex-col items-center gap-2">
+          <p className="font-bold text-2xl">Enter passport number</p>
           <div className="flex flex-row gap-2">
             <input
-              className="border-2 border-black"
+              className="border-2 border-black w-24 p-1 rounded-sm font-mono"
               type="number"
               value={passport}
               onChange={(ev) => {
@@ -84,7 +86,7 @@ export default function Authorize() {
               disabled={state != AuthState.EnterNumber}
             />
             <button
-              className="p-1 bg-amber-400 border-2 border-black shadow-blocks-tiny disabled:bg-gray-300"
+              className="py-1 px-2 font-bold bg-amber-400 hover:bg-amber-500 transition duration-100 border-2 border-black shadow-blocks-tiny disabled:bg-gray-300"
               onClick={() => {
                 onChoosePassport();
               }}

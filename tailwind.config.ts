@@ -22,6 +22,10 @@ const config: Config = {
         "footer-btn": "0px 6px",
         "email-btn": "2px 3px",
       },
+      fontFamily: {
+        main: "var(--font-space-grotesk)",
+        mono: "var(--font-space-mono)",
+      },
     },
   },
   plugins: [],
