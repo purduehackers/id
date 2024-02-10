@@ -1,4 +1,4 @@
-import React from "react";
+import { useState, useEffect } from "react";
 
 enum AuthState {
   EnterNumber,
@@ -6,12 +6,14 @@ enum AuthState {
   Authorize,
 }
 
-const Authorize = () => {
-  const [passport, setPassport] = React.useState("");
-  const [state, setState] = React.useState(AuthState.EnterNumber);
-  const [totpNeeded, setTotpNeeded] = React.useState(false);
+export default function Authorize() {
+  const [passport, setPassport] = useState("");
+  const [state, setState] = useState(AuthState.EnterNumber);
+  const [totpNeeded, setTotpNeeded] = useState(false);
 
-  const id = parseInt(passport.split(".")[1] ?? "0", 10);
+  const id = passport.includes(".")
+    ? parseInt(passport.split(".")[1] ?? "0")
+    : Number(passport);
 
   const onChoosePassport = async () => {
     // Send a request to initiate lock
@@ -42,7 +44,7 @@ const Authorize = () => {
     return `/api/authorize?${urldata.toString()}`;
   };
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (state != AuthState.WaitForScan) {
       return;
     }
@@ -51,7 +53,6 @@ const Authorize = () => {
       const resp = await fetch(`/api/scan?id=${id}`);
       switch (resp.status) {
         case 200:
-          // eslint-disable-next-line no-case-declarations
           const { totp_needed } = await resp.json();
           setTotpNeeded(totp_needed);
           setState(AuthState.Authorize);
@@ -67,52 +68,66 @@ const Authorize = () => {
     return () => {
       clearInterval(interval);
     };
-  }, [state]);
+  }, [id, state]);
 
   return (
-    <div>
-      <h1>AUTHORIZATION PAGE</h1>
+    <div className="min-h-screen flex flex-col justify-center items-center font-main">
       {state == AuthState.EnterNumber && (
-        <div>
-          <p>Enter passport number:</p>
-          <input
-            value={passport}
-            onChange={(ev) => {
-              setPassport(ev.target.value);
-            }}
-            disabled={state != AuthState.EnterNumber}
-          />
-          <button
-            onClick={(_) => {
-              onChoosePassport();
-            }}
-            disabled={passport.length === 0 || !/\d+\.\d+/.test(passport)}
-          >
-            Submit
-          </button>
+        <div className="flex flex-col items-center gap-2">
+          <p className="font-bold text-2xl">Enter passport number</p>
+          <div className="flex flex-row gap-2">
+            <input
+              className="border-2 border-black w-24 p-1 rounded-sm font-mono"
+              type="number"
+              value={passport}
+              onChange={(ev) => {
+                setPassport(ev.target.value);
+              }}
+              disabled={state != AuthState.EnterNumber}
+            />
+            <button
+              className="py-1 px-2 font-bold bg-amber-400 hover:bg-amber-500 transition duration-100 border-2 border-black shadow-blocks-tiny disabled:bg-gray-300"
+              onClick={() => {
+                onChoosePassport();
+              }}
+              disabled={
+                passport.length === 0 || !/^(?:\d\.)?(\d{1,4})$/.test(passport)
+              }
+            >
+              Submit
+            </button>
+          </div>
         </div>
       )}
       {state == AuthState.WaitForScan && (
-        <div>
-          <p>WAITING FOR SCAN...</p>
-          <p>Polling once every approximately 3 seconds...</p>
+        <div className="p-12 border-2 rounded border-black shadow-blocks-sm bg-amber-100 justify-center items-center flex flex-col gap-2">
+          <p className="font-bold text-3xl">SCAN YOUR PASSPORT NOW</p>
+          <p>Polling every 3 seconds...</p>
         </div>
       )}
       {state == AuthState.Authorize && (
-        <div>
-          <p>Authorize?</p>
+        <div className="flex flex-col justify-center items-center gap-2">
+          <p className="text-3xl font-bold">Authorize?</p>
           <form method="post">
-            <button type="submit" formAction={formAction(false)}>
-              DENY
-            </button>
-            <button type="submit" formAction={formAction(true)}>
-              ACCEPT
-            </button>
+            <div className="flex flex-row gap-2">
+              <button
+                className="border-2 px-3 shadow-blocks-tiny border-red-600 shadow-red-500 hover:bg-red-100 transition"
+                type="submit"
+                formAction={formAction(false)}
+              >
+                DENY
+              </button>
+              <button
+                className="border-2 border-green-600 px-3 shadow-blocks-tiny shadow-green-500 hover:bg-green-100 transition"
+                type="submit"
+                formAction={formAction(true)}
+              >
+                ACCEPT
+              </button>
+            </div>
           </form>
         </div>
       )}
     </div>
   );
-};
-
-export default Authorize;
+}
