@@ -76,6 +76,7 @@ export default function Authorize() {
           <div className="flex flex-row gap-2">
             <input
               className="border-2 border-black"
+              type="number"
               value={passport}
               onChange={(ev) => {
                 setPassport(ev.target.value);
@@ -87,7 +88,9 @@ export default function Authorize() {
               onClick={() => {
                 onChoosePassport();
               }}
-              disabled={passport.length === 0 || !/\d+\.\d+/.test(passport)}
+              disabled={
+                passport.length === 0 || !/^(?:\d\.)?(\d{1,4})$/.test(passport)
+              }
             >
               Submit
             </button>
