@@ -30,18 +30,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
             // Basically need to figure out if user has tapped passport at this time. If they have,
             // great! If not (or they denied the login), too bad I guess
             
-            let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
-
-            // Login denied
-            if !url.query_pairs()
-                .into_iter()
-                .find_map(|(k,v)| if k == "allow" { Some(v) } else { None })
-                .expect("allow to be in query")
-                .parse::<bool>()
-                .expect("allow to be bool")
-            {
-                return OwnerConsent::Denied;
-            }
+            let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid"); 
 
             let passport_id: i32 = url.query_pairs()
                 .into_iter()
@@ -81,6 +70,18 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
             }));
 
             let _ = res.join().expect("DB and KV ops to succeed");
+
+            // Login denied
+            if !url.query_pairs()
+                .into_iter()
+                .find_map(|(k,v)| if k == "allow" { Some(v) } else { None })
+                .expect("allow to be in query")
+                .parse::<bool>()
+                .expect("allow to be bool")
+            {
+                return OwnerConsent::Denied;
+            }
+
             OwnerConsent::Authorized("yippee".to_string())
         },
     ))
