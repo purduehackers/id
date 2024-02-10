@@ -65,7 +65,8 @@ impl Endpoint<RequestCompat> for AuthorizeEndpoint {
     fn response(
             &mut self, request: &mut RequestCompat, kind: oxide_auth::endpoint::Template,
         ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
-        panic!("idk what this wants {request:?} {kind:?}")
+        panic!("idk what this wants {request:?} {kind:?}");
+        Ok(ResponseCompat(Response::new(Body::Text(kind.authorization_error().map(|e| format!("Auth error: {e:?}")).unwrap_or("Unknown auth error".to_string())))))
     }
 
     fn registrar(&self) -> Option<&(dyn oxide_auth_async::primitives::Registrar + Sync)> {
