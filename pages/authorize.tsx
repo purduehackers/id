@@ -106,15 +106,25 @@ export default function Authorize() {
         </div>
       )}
       {state == AuthState.Authorize && (
-        <div>
-          <p>Authorize?</p>
+        <div className="flex flex-col justify-center items-center gap-2">
+          <p className="text-3xl font-bold">Authorize?</p>
           <form method="post">
-            <button type="submit" formAction={formAction(false)}>
-              DENY
-            </button>
-            <button type="submit" formAction={formAction(true)}>
-              ACCEPT
-            </button>
+            <div className="flex flex-row gap-2">
+              <button
+                className="border-2 px-3 shadow-blocks-tiny border-red-600 shadow-red-500 hover:bg-red-100 transition"
+                type="submit"
+                formAction={formAction(false)}
+              >
+                DENY
+              </button>
+              <button
+                className="border-2 border-green-600 px-3 shadow-blocks-tiny shadow-green-500 hover:bg-green-100 transition"
+                type="submit"
+                formAction={formAction(true)}
+              >
+                ACCEPT
+              </button>
+            </div>
           </form>
         </div>
       )}
