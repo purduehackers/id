@@ -95,7 +95,7 @@ impl OwnerSolicitor<RequestCompat> for PostSolicitor {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    if req.method().to_string() == Method::GET.to_string() {
+    if req.method() == Method::GET {
         return handle_get(req).await;
     }
 
