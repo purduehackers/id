@@ -13,7 +13,7 @@ export default function Authorize() {
 
   const id = passport.includes(".")
     ? parseInt(passport.split(".")[1] ?? "0")
-    : passport;
+    : Number(passport);
 
   const onChoosePassport = async () => {
     // Send a request to initiate lock
