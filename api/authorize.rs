@@ -98,6 +98,15 @@ impl OwnerSolicitor<RequestCompat> for PostSolicitor {
     async fn check_consent(
         &mut self, req: &mut RequestCompat, solicitation: Solicitation<'_>,
     ) -> OwnerConsent<ResponseCompat> {
+        let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
+        if !url.query_pairs()
+            .find_map(|(k, v)| if k == "allow" {Some(v)} else { None })
+            .expect("allow param required")
+            .parse::<bool>()
+            .expect("failed to parse allow")
+        {
+            return OwnerConsent::Denied;
+        }
         OwnerConsent::Authorized("yippee".to_string())
     }
 }
