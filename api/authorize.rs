@@ -1,6 +1,6 @@
 use std::{str::FromStr, thread};
 
-use entity::passport;
+use entity::{passport, auth_grant};
 use id::{client_registry, db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat};
 use oxide_auth::primitives::scope::Scope;
 use oxide_auth::{
@@ -11,21 +11,56 @@ use oxide_auth::{
     },
 };
 use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
+use oxide_auth_async::primitives::Authorizer;
 use oxide_auth_async::{
     code_grant::authorization::authorization_code,
     endpoint::{Endpoint, OwnerSolicitor},
 };
 
+use rand::distributions::{Alphanumeric, DistString};
 use entity::prelude::*;
 use fred::prelude::*;
 use lambda_http::{http::Method, RequestExt};
-use sea_orm::prelude::*;
+use sea_orm::{prelude::*, ActiveValue};
 use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     run(wrap_error!(handler)).await
+}
+
+struct DbAuthorizer;
+
+#[async_trait::async_trait]
+impl Authorizer for DbAuthorizer {
+    async fn authorize(&mut self, grant: oxide_auth::primitives::grant::Grant) -> Result<String, ()> {
+        let db = db().await.expect("db to be accessible");
+
+        let model = auth_grant::ActiveModel {
+            id: ActiveValue::NotSet,
+            owner_id: ActiveValue::Set(grant.owner_id.parse().expect("failed to parse owner_id as int")),
+            client_id: ActiveValue::Set(grant.client_id),
+            redirect_uri: ActiveValue::Set(serde_json::to_value(grant.redirect_uri).expect("url value error")),
+            until: ActiveValue::Set(grant.until.naive_utc()),
+            scope: ActiveValue::Set(serde_json::to_value(grant.scope).expect("scope to be serializable")),
+            code: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
+        };
+
+        let grant = model.insert(&db).await.expect("insert to work");
+        Ok(grant.code)
+    }
+
+    async fn extract(&mut self, token: &str) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+        let db = db().await.expect("db to be accessible");
+
+        let grant: Option<auth_grant::Model> = AuthGrant::find()
+            .filter(auth_grant::Column::Code.eq(token.to_string()))
+            .one(&db)
+            .await
+            .expect("db op to not fail");
+        todo!()
+    }
 }
 
 struct AuthorizeEndpoint {

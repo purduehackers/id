@@ -2,6 +2,8 @@
 
 pub mod prelude;
 
+pub mod auth_grant;
+pub mod auth_token;
 pub mod passport;
 pub mod sea_orm_active_enums;
 pub mod user;
