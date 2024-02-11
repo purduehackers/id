@@ -114,9 +114,9 @@ export default function Authorize() {
           </form>
           {numberFormError ? (
             <p className="text-red-400 max-w-md mt-2">
-              Scan failed. Either this passport doesn't exist or there's another
-              active session. If you're sure this passport number exists, try
-              again in 90 seconds.
+              Scan failed. Either this passport doesn&#39;t exist or there&#39;s
+              another active session. If you&#39;re sure this passport number
+              exists, try again in 90 seconds.
             </p>
           ) : null}
         </div>
