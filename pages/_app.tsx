@@ -17,7 +17,7 @@ const spaceMono = Space_Mono({
 export default function App({ Component, pageProps }: AppProps) {
   return (
     <main className={`${spaceGrotesk.variable} ${spaceMono.variable}`}>
-      <Component {...pageProps} />;
+      <Component {...pageProps} />
     </main>
   );
 }
