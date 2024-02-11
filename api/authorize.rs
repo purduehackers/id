@@ -13,8 +13,8 @@ use oxide_auth::{
 use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
 use oxide_auth_async::primitives::Authorizer;
 use oxide_auth_async::{
-    code_grant::authorization::authorization_code,
     endpoint::{Endpoint, OwnerSolicitor},
+    primitives::Issuer,
 };
 
 use rand::distributions::{Alphanumeric, DistString};
@@ -24,10 +24,36 @@ use lambda_http::{http::Method, RequestExt};
 use sea_orm::{prelude::*, ActiveValue};
 use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
+use sea_orm::{Condition, IntoActiveModel};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     run(wrap_error!(handler)).await
+}
+
+struct DbIssuer;
+
+#[async_trait::async_trait]
+impl Issuer for DbIssuer {
+    async fn issue(&mut self, g: oxide_auth::primitives::grant::Grant) -> Result<oxide_auth::primitives::prelude::IssuedToken, ()> {
+        
+        todo!()
+    }
+
+    async fn refresh(&mut self, _: &str, _: oxide_auth::primitives::grant::Grant) -> Result<oxide_auth::primitives::issuer::RefreshedToken, ()> {
+        // No refresh tokens
+        Err(())
+    }
+
+    async fn recover_token(&mut self, t: &str) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+
+        todo!()
+    }
+
+    async fn recover_refresh(&mut self, _: &str) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+        // No refresh tokens
+        Err(())
+    }
 }
 
 struct DbAuthorizer;
@@ -36,6 +62,24 @@ struct DbAuthorizer;
 impl Authorizer for DbAuthorizer {
     async fn authorize(&mut self, grant: oxide_auth::primitives::grant::Grant) -> Result<String, ()> {
         let db = db().await.expect("db to be accessible");
+
+        let existing: Option<auth_grant::Model> = AuthGrant::find()
+            .filter(
+                Condition::all()
+                    .add(auth_grant::Column::OwnerId.eq(grant.owner_id.parse::<i32>().expect("failed to parse owner_id as int")))
+                    .add(auth_grant::Column::ClientId.eq(grant.client_id.clone()))
+            )
+            .one(&db)
+            .await
+            .expect("db op to succeed");
+
+        if let Some(existing) = existing {
+            let mut active = existing.into_active_model();
+            active.until = ActiveValue::Set(grant.until.into());
+
+            let active = active.update(&db).await.expect("db update op to succeed");
+            return Ok(active.code)
+        }
 
         let model = auth_grant::ActiveModel {
             id: ActiveValue::NotSet,
