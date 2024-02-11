@@ -98,7 +98,7 @@ pub async fn post_handler(req: Request) -> Result<Response<Body>, Error> {
 
             // No record currently, so add a record with whatever the secret is supposed to be
             if !kv.exists(passport.id).await? {
-                kv.set(passport.id, false, Some(Expiration::EX(300)), None, false)
+                kv.set(passport.id, false, Some(Expiration::EX(90)), None, false)
                     .await?;
                 return Ok(Response::new(Body::Empty));
             }

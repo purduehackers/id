@@ -11,6 +11,7 @@ export default function Authorize() {
   const [state, setState] = useState(AuthState.EnterNumber);
   const [totpNeeded, setTotpNeeded] = useState(false);
   const [numberFormPending, setNumberFormPending] = useState(false);
+  const [numberFormError, setNumberFormError] = useState(false);
 
   const id = passport.includes(".")
     ? parseInt(passport.split(".")[1] ?? "0")
@@ -30,6 +31,11 @@ export default function Authorize() {
         secret: "",
       }),
     });
+
+    if (res.status === 400) {
+      setNumberFormPending(false);
+      setNumberFormError(true);
+    }
 
     if (!res.ok) {
       console.log(`Bad scan open: ${res.status} ${await res.text()}`);
@@ -78,6 +84,7 @@ export default function Authorize() {
       {state == AuthState.EnterNumber && (
         <div className="flex flex-col items-center gap-2">
           <p className="font-bold text-2xl">Enter passport number</p>
+
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -105,6 +112,13 @@ export default function Authorize() {
               {numberFormPending ? "Submitting..." : "Submit"}
             </button>
           </form>
+          {numberFormError ? (
+            <p className="text-red-400 max-w-xs mt-2">
+              Scan failed. Either this passport doesn't exist or there's another
+              active session. If you're sure this passport number exists, try
+              again in 90 seconds.
+            </p>
+          ) : null}
         </div>
       )}
       {state == AuthState.WaitForScan && (
