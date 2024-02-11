@@ -108,9 +108,11 @@ export default function Authorize() {
         </div>
       )}
       {state == AuthState.WaitForScan && (
-        <div className="p-12 border-2 rounded border-black shadow-blocks-sm bg-amber-100 justify-center items-center flex flex-col gap-2">
-          <p className="font-bold text-3xl">SCAN YOUR PASSPORT NOW</p>
-          <p>Polling every 3 seconds...</p>
+        <div className="w-11/12 sm:w-auto p-4 sm:p-12 border-2 rounded border-black shadow-blocks-sm bg-gradient-to-tr from-amber-100 to-amber-200 flex flex-col gap-2">
+          <p className="font-bold text-2xl sm:text-3xl text-center">
+            SCAN YOUR PASSPORT NOW
+          </p>
+          <p className="text-center">Polling every 3 seconds...</p>
         </div>
       )}
       {state == AuthState.Authorize && (
