@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use entity::{auth_grant, auth_token, passport};
 use id::{
-    client_registry, db, generic_endpoint, kv, wrap_error, DbAuthorizer, DbIssuer, RequestCompat,
-    ResponseCompat, OAuthEndpoint,
+    client_registry, db, generic_endpoint, kv, wrap_error, DbAuthorizer, DbIssuer, OAuthEndpoint,
+    RequestCompat, ResponseCompat,
 };
 use oxide_auth::primitives::scope::Scope;
 use oxide_auth::{
@@ -103,12 +103,14 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         return handle_get(req).await;
     }
 
-    Ok(AuthorizationFlow::prepare(OAuthEndpoint::new(AuthorizeSolicitor))
-        .map_err(|e| format!("Auth prep error: {e}"))?
-        .execute(RequestCompat(req))
-        .await
-        .map_err(|e| format!("Auth exec error: {e}"))?
-        .0)
+    Ok(
+        AuthorizationFlow::prepare(OAuthEndpoint::new(AuthorizeSolicitor))
+            .map_err(|e| format!("Auth prep error: {e}"))?
+            .execute(RequestCompat(req))
+            .await
+            .map_err(|e| format!("Auth exec error: {e}"))?
+            .0,
+    )
 }
 
 async fn handle_get(req: Request) -> Result<Response<Body>, Error> {

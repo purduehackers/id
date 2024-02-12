@@ -14,6 +14,7 @@ use vercel_runtime::{Body, Request, Response, StatusCode};
 use chrono::{Months, Utc};
 use entity::prelude::*;
 use entity::{auth_grant, auth_token, passport};
+use oxide_auth::{endpoint::ResponseStatus, frontends};
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
     frontends::{
@@ -28,14 +29,10 @@ use oxide_auth::{
     },
 };
 use oxide_auth_async::primitives::{Authorizer, Issuer};
+use oxide_auth_async::{endpoint::Endpoint, endpoint::OwnerSolicitor};
 use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue};
 use sea_orm::{Condition, IntoActiveModel};
-use oxide_auth::{
-    endpoint::ResponseStatus,
-    frontends,
-};
-use oxide_auth_async::{endpoint::Endpoint, endpoint::OwnerSolicitor};
 
 use thiserror::Error;
 
@@ -512,7 +509,7 @@ impl<T: OwnerSolicitor<RequestCompat> + Send> Endpoint<RequestCompat> for OAuthE
         if let Some(e) = kind.authorization_error() {
             return Err(format!("Auth error: {e:?}").into());
         } else if let Some(e) = kind.access_token_error() {
-            return Err(format!("Access token error: {e:?}").into())
+            return Err(format!("Access token error: {e:?}").into());
         }
 
         match kind.status() {
