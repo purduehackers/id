@@ -33,9 +33,6 @@ path = "src/lib.rs"
 
 # Each handler has to be specified as [[bin]]
 [[bin]]
-name = "rust"
-path = "api/rust.rs"
-[[bin]]
 name = "authorize"
 path = "api/authorize.rs"
 [[bin]]
