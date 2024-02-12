@@ -1334,6 +1334,7 @@ dependencies = [
 name = "id"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "entity",
  "form_urlencoded",

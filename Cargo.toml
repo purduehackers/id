@@ -26,6 +26,7 @@ fred = { version = "8.0.1", features = ["enable-rustls"] }
 rand = "0.8.5"
 oxide-auth-async = "0.1.1"
 chrono = "0.4.34"
+async-trait = "0.1.77"
 
 # You can specify a library for shared logic here (optional)
 [lib]
