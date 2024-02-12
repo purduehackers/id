@@ -1,6 +1,6 @@
 use std::{str::FromStr, thread};
 
-use entity::{passport, auth_grant};
+use entity::{auth_grant, auth_token, passport};
 use id::{client_registry, db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat};
 use oxide_auth::primitives::scope::Scope;
 use oxide_auth::{
@@ -17,14 +17,15 @@ use oxide_auth_async::{
     primitives::Issuer,
 };
 
-use rand::distributions::{Alphanumeric, DistString};
+use chrono::{Months, Utc};
 use entity::prelude::*;
 use fred::prelude::*;
 use lambda_http::{http::Method, RequestExt};
+use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue};
+use sea_orm::{Condition, IntoActiveModel};
 use tokio::runtime::Handle;
 use vercel_runtime::{run, Body, Error, Request, Response};
-use sea_orm::{Condition, IntoActiveModel};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -35,22 +36,92 @@ struct DbIssuer;
 
 #[async_trait::async_trait]
 impl Issuer for DbIssuer {
-    async fn issue(&mut self, g: oxide_auth::primitives::grant::Grant) -> Result<oxide_auth::primitives::prelude::IssuedToken, ()> {
-        
-        todo!()
+    async fn issue(
+        &mut self,
+        grant: oxide_auth::primitives::grant::Grant,
+    ) -> Result<oxide_auth::primitives::prelude::IssuedToken, ()> {
+        let db = db().await.expect("db connection to exist");
+
+        let grant: auth_grant::Model = AuthGrant::find()
+            .filter(
+                Condition::all()
+                    .add(
+                        auth_grant::Column::OwnerId.eq(grant
+                            .owner_id
+                            .parse::<i32>()
+                            .expect("failed to parse owner_id as int")),
+                    )
+                    .add(auth_grant::Column::ClientId.eq(grant.client_id.clone())),
+            )
+            .one(&db)
+            .await
+            .expect("db op to succeed")
+            .expect("grant to be there already");
+
+        let new = auth_token::ActiveModel {
+            id: ActiveValue::NotSet,
+            grant_id: ActiveValue::Set(grant.id),
+            token: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
+            until: ActiveValue::Set((Utc::now() + Months::new(1)).into()),
+        };
+
+        let new = new.insert(&db).await.expect("insert op to succeed");
+        Ok(oxide_auth::primitives::issuer::IssuedToken {
+            refresh: None,
+            token: new.token,
+            token_type: oxide_auth::primitives::issuer::TokenType::Bearer,
+            until: new.until.into(),
+        })
     }
 
-    async fn refresh(&mut self, _: &str, _: oxide_auth::primitives::grant::Grant) -> Result<oxide_auth::primitives::issuer::RefreshedToken, ()> {
+    async fn refresh(
+        &mut self,
+        _: &str,
+        _: oxide_auth::primitives::grant::Grant,
+    ) -> Result<oxide_auth::primitives::issuer::RefreshedToken, ()> {
         // No refresh tokens
         Err(())
     }
 
-    async fn recover_token(&mut self, t: &str) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+    async fn recover_token(
+        &mut self,
+        t: &str,
+    ) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+        let db = db().await.expect("db to be available");
 
-        todo!()
+        let token: Option<auth_token::Model> = AuthToken::find()
+            .filter(auth_token::Column::Token.eq(t))
+            .one(&db)
+            .await
+            .expect("db op to succeed");
+
+        Ok(match token {
+            Some(t) => {
+                let grant: auth_grant::Model = t
+                    .find_related(AuthGrant)
+                    .one(&db)
+                    .await
+                    .expect("db op to succeed")
+                    .expect("token to have grant parent");
+
+                Some(oxide_auth::primitives::grant::Grant {
+                    owner_id: grant.owner_id.to_string(),
+                    client_id: grant.client_id,
+                    scope: serde_json::from_value(grant.scope).expect("scope to be valid object"),
+                    extensions: Default::default(),
+                    redirect_uri: serde_json::from_value(grant.redirect_uri)
+                        .expect("redirect_uri to be valid object"),
+                    until: grant.until.into(),
+                })
+            }
+            None => None,
+        })
     }
 
-    async fn recover_refresh(&mut self, _: &str) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+    async fn recover_refresh(
+        &mut self,
+        _: &str,
+    ) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
         // No refresh tokens
         Err(())
     }
@@ -60,14 +131,22 @@ struct DbAuthorizer;
 
 #[async_trait::async_trait]
 impl Authorizer for DbAuthorizer {
-    async fn authorize(&mut self, grant: oxide_auth::primitives::grant::Grant) -> Result<String, ()> {
+    async fn authorize(
+        &mut self,
+        grant: oxide_auth::primitives::grant::Grant,
+    ) -> Result<String, ()> {
         let db = db().await.expect("db to be accessible");
 
         let existing: Option<auth_grant::Model> = AuthGrant::find()
             .filter(
                 Condition::all()
-                    .add(auth_grant::Column::OwnerId.eq(grant.owner_id.parse::<i32>().expect("failed to parse owner_id as int")))
-                    .add(auth_grant::Column::ClientId.eq(grant.client_id.clone()))
+                    .add(
+                        auth_grant::Column::OwnerId.eq(grant
+                            .owner_id
+                            .parse::<i32>()
+                            .expect("failed to parse owner_id as int")),
+                    )
+                    .add(auth_grant::Column::ClientId.eq(grant.client_id.clone())),
             )
             .one(&db)
             .await
@@ -78,16 +157,25 @@ impl Authorizer for DbAuthorizer {
             active.until = ActiveValue::Set(grant.until.into());
 
             let active = active.update(&db).await.expect("db update op to succeed");
-            return Ok(active.code)
+            return Ok(active.code);
         }
 
         let model = auth_grant::ActiveModel {
             id: ActiveValue::NotSet,
-            owner_id: ActiveValue::Set(grant.owner_id.parse().expect("failed to parse owner_id as int")),
+            owner_id: ActiveValue::Set(
+                grant
+                    .owner_id
+                    .parse()
+                    .expect("failed to parse owner_id as int"),
+            ),
             client_id: ActiveValue::Set(grant.client_id),
-            redirect_uri: ActiveValue::Set(serde_json::to_value(grant.redirect_uri).expect("url value error")),
+            redirect_uri: ActiveValue::Set(
+                serde_json::to_value(grant.redirect_uri).expect("url value error"),
+            ),
             until: ActiveValue::Set(grant.until.into()),
-            scope: ActiveValue::Set(serde_json::to_value(grant.scope).expect("scope to be serializable")),
+            scope: ActiveValue::Set(
+                serde_json::to_value(grant.scope).expect("scope to be serializable"),
+            ),
             code: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
         };
 
@@ -95,7 +183,10 @@ impl Authorizer for DbAuthorizer {
         Ok(grant.code)
     }
 
-    async fn extract(&mut self, token: &str) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+    async fn extract(
+        &mut self,
+        token: &str,
+    ) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
         let db = db().await.expect("db to be accessible");
 
         let grant: Option<auth_grant::Model> = AuthGrant::find()
@@ -109,7 +200,8 @@ impl Authorizer for DbAuthorizer {
             extensions: Default::default(),
             owner_id: g.owner_id.to_string(),
             scope: serde_json::from_value(g.scope).expect("scope to be deserializable"),
-            redirect_uri: serde_json::from_value(g.redirect_uri).expect("redirect uri to be deserializable"),
+            redirect_uri: serde_json::from_value(g.redirect_uri)
+                .expect("redirect uri to be deserializable"),
             until: g.until.into(),
         }))
     }

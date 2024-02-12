@@ -1,3 +1,5 @@
+#![deny(clippy::unwrap_used)]
+
 use core::ops::Deref;
 use fred::prelude::*;
 use lambda_http::http::{
@@ -185,16 +187,18 @@ pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
     clients.register_client(Client::public(
         "dashboard",
-        RegisteredUrl::Semantic(Url::from_str("https://dash.purduehackers.com/callback").unwrap()),
-        "read".parse().unwrap(),
+        RegisteredUrl::Semantic(
+            Url::from_str("https://dash.purduehackers.com/callback").expect("url to be valid"),
+        ),
+        "read".parse().expect("scope to be valid"),
     ));
 
     clients.register_client(Client::public(
         "passports",
         RegisteredUrl::Semantic(
-            Url::from_str("https://passports.purduehackers.com/callback").unwrap(),
+            Url::from_str("https://passports.purduehackers.com/callback").expect("url to be valid"),
         ),
-        "read write".parse().unwrap(),
+        "read write".parse().expect("scopes to be valid"),
     ));
 
     clients
