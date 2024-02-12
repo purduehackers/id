@@ -211,7 +211,7 @@ struct AuthorizeEndpoint {
     solicitor: PostSolicitor,
     scopes: Vec<Scope>,
     registry: ClientMap,
-    issuer: TokenMap,
+    issuer: DbIssuer,
     authorizer: DbAuthorizer,
 }
 
@@ -221,7 +221,7 @@ impl Default for AuthorizeEndpoint {
             solicitor: PostSolicitor,
             scopes: vec!["read".parse().expect("unable to parse scope")],
             registry: client_registry(),
-            issuer: TokenMap::new(Box::new(RandomGenerator::new(16))),
+            issuer: DbIssuer,
             authorizer: DbAuthorizer,
         }
     }
