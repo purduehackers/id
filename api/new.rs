@@ -27,7 +27,7 @@ struct NewPassport {
     place_of_origin: String,
 }
 
-const CURRENT_PASSPORT_VERSION: i32 = 0;
+const CURRENT_PASSPORT_VERSION: i32 = 1;
 
 fn parse_date(s: &str) -> Result<ChronoDate, Error> {
     if let Ok(date) = ChronoDate::from_str(s) {
