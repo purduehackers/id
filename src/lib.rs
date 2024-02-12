@@ -8,7 +8,7 @@ use lambda_http::http::{
 };
 use sea_orm::{Database, DatabaseConnection};
 use serde::Serialize;
-use std::{borrow::Cow, env, fmt::Display, future::Future, ops::DerefMut, pin::Pin, str::FromStr};
+use std::{borrow::Cow, env, fmt::Display, ops::DerefMut, str::FromStr};
 use vercel_runtime::{Body, Request, Response, StatusCode};
 
 use oxide_auth::{

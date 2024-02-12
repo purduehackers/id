@@ -1,4 +1,4 @@
-use std::{str::FromStr, thread};
+use std::{str::FromStr};
 
 use entity::{auth_grant, auth_token, passport};
 use id::{client_registry, db, generic_endpoint, kv, wrap_error, RequestCompat, ResponseCompat};
@@ -7,7 +7,7 @@ use oxide_auth::{
     endpoint::{OwnerConsent, ResponseStatus, Solicitation, WebRequest, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
     primitives::{
-        authorizer::AuthMap, generator::RandomGenerator, issuer::TokenMap, registrar::ClientMap,
+        generator::RandomGenerator, issuer::TokenMap, registrar::ClientMap,
     },
 };
 use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
@@ -20,11 +20,11 @@ use oxide_auth_async::{
 use chrono::{Months, Utc};
 use entity::prelude::*;
 use fred::prelude::*;
-use lambda_http::{http::Method, RequestExt};
+use lambda_http::{http::Method};
 use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue};
 use sea_orm::{Condition, IntoActiveModel};
-use tokio::runtime::Handle;
+
 use vercel_runtime::{run, Body, Error, Request, Response};
 
 #[tokio::main]
