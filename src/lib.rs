@@ -31,6 +31,11 @@ use oxide_auth_async::primitives::{Authorizer, Issuer};
 use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue};
 use sea_orm::{Condition, IntoActiveModel};
+use oxide_auth::{
+    endpoint::ResponseStatus,
+    frontends,
+};
+use oxide_auth_async::{endpoint::Endpoint, endpoint::OwnerSolicitor};
 
 use thiserror::Error;
 
@@ -456,5 +461,80 @@ impl Authorizer for DbAuthorizer {
                 .expect("redirect uri to be deserializable"),
             until: g.until.into(),
         }))
+    }
+}
+
+pub struct OAuthEndpoint<T: OwnerSolicitor<RequestCompat>> {
+    solicitor: T,
+    scopes: Vec<Scope>,
+    registry: ClientMap,
+    issuer: DbIssuer,
+    authorizer: DbAuthorizer,
+}
+
+impl<T: OwnerSolicitor<RequestCompat>> OAuthEndpoint<T> {
+    pub fn new(solicitor: T) -> Self {
+        Self {
+            solicitor,
+            scopes: vec!["read".parse().expect("unable to parse scope")],
+            registry: client_registry(),
+            issuer: DbIssuer,
+            authorizer: DbAuthorizer,
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl<T: OwnerSolicitor<RequestCompat> + Send> Endpoint<RequestCompat> for OAuthEndpoint<T> {
+    type Error = vercel_runtime::Error;
+
+    fn web_error(&mut self, err: <RequestCompat as WebRequest>::Error) -> Self::Error {
+        format!("OAuth Web Error: {err}").into()
+    }
+
+    fn error(&mut self, err: frontends::dev::OAuthError) -> Self::Error {
+        format!("OAuth Error: {err}").into()
+    }
+
+    fn owner_solicitor(&mut self) -> Option<&mut (dyn OwnerSolicitor<RequestCompat> + Send)> {
+        Some(&mut self.solicitor)
+    }
+
+    fn scopes(&mut self) -> Option<&mut dyn oxide_auth::endpoint::Scopes<RequestCompat>> {
+        Some(&mut self.scopes)
+    }
+
+    fn response(
+        &mut self,
+        _request: &mut RequestCompat,
+        mut kind: oxide_auth::endpoint::Template,
+    ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
+        if let Some(e) = kind.authorization_error() {
+            return Err(format!("Auth error: {e:?}").into());
+        } else if let Some(e) = kind.access_token_error() {
+            return Err(format!("Access token error: {e:?}").into())
+        }
+
+        match kind.status() {
+            ResponseStatus::Ok | ResponseStatus::Redirect => {
+                Ok(ResponseCompat(Response::new(Body::Empty)))
+            }
+            ResponseStatus::BadRequest => Err("Bad request".to_string().into()),
+            ResponseStatus::Unauthorized => Err("Unauthorized".to_string().into()),
+        }
+    }
+
+    fn registrar(&self) -> Option<&(dyn oxide_auth_async::primitives::Registrar + Sync)> {
+        Some(&self.registry)
+    }
+
+    fn issuer_mut(&mut self) -> Option<&mut (dyn oxide_auth_async::primitives::Issuer + Send)> {
+        Some(&mut self.issuer)
+    }
+
+    fn authorizer_mut(
+        &mut self,
+    ) -> Option<&mut (dyn oxide_auth_async::primitives::Authorizer + Send)> {
+        Some(&mut self.authorizer)
     }
 }

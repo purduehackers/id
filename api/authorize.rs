@@ -3,7 +3,7 @@ use std::str::FromStr;
 use entity::{auth_grant, auth_token, passport};
 use id::{
     client_registry, db, generic_endpoint, kv, wrap_error, DbAuthorizer, DbIssuer, RequestCompat,
-    ResponseCompat,
+    ResponseCompat, OAuthEndpoint,
 };
 use oxide_auth::primitives::scope::Scope;
 use oxide_auth::{
@@ -29,89 +29,14 @@ async fn main() -> Result<(), Error> {
     run(wrap_error!(handler)).await
 }
 
-struct AuthorizeEndpoint {
-    solicitor: PostSolicitor,
-    scopes: Vec<Scope>,
-    registry: ClientMap,
-    issuer: DbIssuer,
-    authorizer: DbAuthorizer,
-}
-
-impl Default for AuthorizeEndpoint {
-    fn default() -> Self {
-        Self {
-            solicitor: PostSolicitor,
-            scopes: vec!["read".parse().expect("unable to parse scope")],
-            registry: client_registry(),
-            issuer: DbIssuer,
-            authorizer: DbAuthorizer,
-        }
-    }
-}
+struct AuthorizeSolicitor;
 
 #[async_trait::async_trait]
-impl Endpoint<RequestCompat> for AuthorizeEndpoint {
-    type Error = Error;
-
-    fn web_error(&mut self, err: <RequestCompat as WebRequest>::Error) -> Self::Error {
-        format!("OAuth Web Error: {err}").into()
-    }
-
-    fn error(&mut self, err: frontends::dev::OAuthError) -> Self::Error {
-        format!("OAuth Error: {err}").into()
-    }
-
-    fn owner_solicitor(&mut self) -> Option<&mut (dyn OwnerSolicitor<RequestCompat> + Send)> {
-        Some(&mut self.solicitor)
-    }
-
-    fn scopes(&mut self) -> Option<&mut dyn oxide_auth::endpoint::Scopes<RequestCompat>> {
-        Some(&mut self.scopes)
-    }
-
-    fn response(
-        &mut self,
-        _request: &mut RequestCompat,
-        mut kind: oxide_auth::endpoint::Template,
-    ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
-        if let Some(e) = kind.authorization_error() {
-            return Err(format!("Auth error: {e:?}").into());
-        }
-        // Ok(ResponseCompat(Response::new(Body::Text(kind.authorization_error().map(|e| format!("Auth error: {e:?}")).unwrap_or("Unknown auth error".to_string())))))
-        match kind.status() {
-            ResponseStatus::Ok | ResponseStatus::Redirect => {
-                Ok(ResponseCompat(Response::new(Body::Empty)))
-            }
-            ResponseStatus::BadRequest => Err("Bad request".to_string().into()),
-            ResponseStatus::Unauthorized => Err("Unauthorized".to_string().into()),
-        }
-    }
-
-    fn registrar(&self) -> Option<&(dyn oxide_auth_async::primitives::Registrar + Sync)> {
-        Some(&self.registry)
-    }
-
-    // TODO: Replace with db impl
-    fn issuer_mut(&mut self) -> Option<&mut (dyn oxide_auth_async::primitives::Issuer + Send)> {
-        Some(&mut self.issuer)
-    }
-
-    // TODO: Replace with db impl
-    fn authorizer_mut(
-        &mut self,
-    ) -> Option<&mut (dyn oxide_auth_async::primitives::Authorizer + Send)> {
-        Some(&mut self.authorizer)
-    }
-}
-
-struct PostSolicitor;
-
-#[async_trait::async_trait]
-impl OwnerSolicitor<RequestCompat> for PostSolicitor {
+impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
     async fn check_consent(
         &mut self,
         req: &mut RequestCompat,
-        solicitation: Solicitation<'_>,
+        _solicitation: Solicitation<'_>,
     ) -> OwnerConsent<ResponseCompat> {
         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
 
@@ -178,55 +103,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         return handle_get(req).await;
     }
 
-    // let res = generic_endpoint(FnSolicitor(
-    //     move |req: &mut RequestCompat, _: Solicitation| {
-    //         // TODO: Auth stuff with redis I think???
-    //         // Basically need to figure out if user has tapped passport at this time. If they have,
-    //         // great! If not (or they denied the login), too bad I guess
-    //
-    //         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
-    //
-    //
-    //         // Is there a passport in the database that matches the number?
-    //         // This conversion is gross, but I'm just gonna have to deal with it unless I rewrite
-    //         // the library to be async
-    //         let res: thread::JoinHandle<Result<(), Error>> = thread::spawn(move || Handle::current().block_on(async move {
-    //             let db = db().await?;
-    //
-    //             let passport: passport::Model = Passport::find_by_id(passport_id)
-    //                 .one(&db)
-    //                 .await
-    //                 .map_err(|e| format!("DB Error: {e}"))?
-    //                 .ok_or("No valid passport found".to_string())?;
-    //             if !passport.activated {
-    //                 return Err("Passport is not activated!".to_string().into());
-    //             }
-    //
-    //
-    //             Ok(())
-    //         }));
-    //
-    //         let _ = res.join().expect("DB and KV ops to succeed");
-    //
-    //         // Login denied
-    //         if !url.query_pairs()
-    //             .into_iter()
-    //             .find_map(|(k,v)| if k == "allow" { Some(v) } else { None })
-    //             .expect("allow to be in query")
-    //             .parse::<bool>()
-    //             .expect("allow to be bool")
-    //         {
-    //             return OwnerConsent::Denied;
-    //         }
-    //
-    //         OwnerConsent::Authorized("yippee".to_string())
-    //     },
-    // ))
-    // let res = generic_endpoint(PostSolicitor)
-    // .authorization_flow()
-    // .execute(RequestCompat(req))
-    // .map_err(|e| format!("Error on auth flow: {:?}", e))?;
-    Ok(AuthorizationFlow::prepare(AuthorizeEndpoint::default())
+    Ok(AuthorizationFlow::prepare(OAuthEndpoint::new(AuthorizeSolicitor))
         .map_err(|e| format!("Auth prep error: {e}"))?
         .execute(RequestCompat(req))
         .await
