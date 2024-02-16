@@ -98,7 +98,7 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
                 .find_map(|(k, v)| if k == "code" { Some(v) } else { None })
                 .expect("TOTP code to be given");
 
-            if !tfa::validate_totp(user.id, &totp, &code).expect("TOTP validation to succeed") {
+            if !tfa::validate_totp(user.id, totp, &code).expect("TOTP validation to succeed") {
                 return OwnerConsent::Error("Invalid TOTP code!".to_string().into());
             }
         } else if user.role == RoleEnum::Admin {
