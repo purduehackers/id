@@ -13,7 +13,7 @@ use vercel_runtime::{Body, Request, Response, StatusCode};
 
 use chrono::{Months, Utc};
 use entity::prelude::*;
-use entity::{auth_grant, auth_token, passport};
+use entity::{auth_grant, auth_token};
 use oxide_auth::{endpoint::ResponseStatus, frontends};
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
@@ -35,6 +35,8 @@ use sea_orm::{prelude::*, ActiveValue};
 use sea_orm::{Condition, IntoActiveModel};
 
 use thiserror::Error;
+
+pub mod tfa;
 
 #[derive(Debug, Error)]
 pub enum Error {

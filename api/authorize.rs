@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
-use entity::{auth_grant, auth_token, passport};
+use entity::{auth_grant, auth_token, passport, user, sea_orm_active_enums::RoleEnum};
 use id::{
     client_registry, db, generic_endpoint, kv, wrap_error, DbAuthorizer, DbIssuer, OAuthEndpoint,
-    RequestCompat, ResponseCompat,
+    RequestCompat, ResponseCompat, tfa,
 };
 use oxide_auth::primitives::scope::Scope;
 use oxide_auth::{
@@ -82,6 +82,28 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
 
         if !ready {
             return OwnerConsent::Error("Passport not ready for auth!".to_string().into());
+        }
+
+        // If the user is an admin or has a 2FA code attached, require it here
+        let user: user::Model = passport
+            .find_related(User)
+            .one(&db)
+            .await
+            .expect("db op to succeed")
+            .expect("Passport to have an owner");
+
+        if let Some(totp) = user.totp {
+            let code = url
+                .query_pairs()
+                .into_iter()
+                .find_map(|(k, v)| if k == "code" { Some(v) } else { None })
+                .expect("TOTP code to be given");
+
+            if !tfa::validate_totp(user.id, &totp, &code).expect("TOTP validation to succeed") {
+                return OwnerConsent::Error("Invalid TOTP code!".to_string().into());
+            }
+        } else if user.role == RoleEnum::Admin {
+            return OwnerConsent::Error("Admin login attempted without TOTP!".to_string().into());
         }
 
         if !url

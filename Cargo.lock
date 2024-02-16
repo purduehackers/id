@@ -395,6 +395,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "base32"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "23ce669cd6c8588f79e15cf450314f9638f967fc5770ff1c7c1deb0925ea7cfa"
+
+[[package]]
 name = "base64"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -464,7 +470,7 @@ checksum = "23285ad32269793932e830392f2fe2f83e26488fd3ec778883a93c8323735780"
 dependencies = [
  "arrayref",
  "arrayvec",
- "constant_time_eq",
+ "constant_time_eq 0.3.0",
 ]
 
 [[package]]
@@ -679,6 +685,12 @@ name = "const-oid"
 version = "0.9.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2459377285ad874054d797f3ccebf984978aa39129f6eafde5cdc8315b612f8"
+
+[[package]]
+name = "constant_time_eq"
+version = "0.2.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "21a53c0a4d288377e7415b53dcfc3c04da5cdc2cc95c8d5ac178b58f0b861ad6"
 
 [[package]]
 name = "constant_time_eq"
@@ -1351,6 +1363,7 @@ dependencies = [
  "serde_json",
  "thiserror",
  "tokio",
+ "totp-rs",
  "url",
  "urlencoding",
  "vercel_runtime",
@@ -2277,7 +2290,7 @@ checksum = "a5885493fdf0be6cdff808d1533ce878d21cfa49c7086fa00c66355cd9141bfc"
 dependencies = [
  "base64 0.21.7",
  "blake2b_simd",
- "constant_time_eq",
+ "constant_time_eq 0.3.0",
  "crossbeam-utils",
 ]
 
@@ -3277,6 +3290,21 @@ dependencies = [
  "indexmap",
  "toml_datetime",
  "winnow",
+]
+
+[[package]]
+name = "totp-rs"
+version = "5.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6c4ae9724c5888c0417d2396037ed3b60665925624766416e3e342b6ba5dbd3f"
+dependencies = [
+ "base32",
+ "constant_time_eq 0.2.6",
+ "hmac",
+ "sha1",
+ "sha2",
+ "url",
+ "urlencoding",
 ]
 
 [[package]]

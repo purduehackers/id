@@ -28,6 +28,7 @@ oxide-auth-async = "0.1.1"
 chrono = "0.4.34"
 async-trait = "0.1.77"
 base64 = "0.21.7"
+totp-rs = { version = "5.5.1", features = ["otpauth"] }
 
 # You can specify a library for shared logic here (optional)
 [lib]
