@@ -10,6 +10,7 @@ export default function Authorize() {
   const [passport, setPassport] = useState("");
   const [state, setState] = useState(AuthState.EnterNumber);
   const [totpNeeded, setTotpNeeded] = useState(false);
+  const [totpCode, setTotpCode] = useState("");
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
 
@@ -49,6 +50,9 @@ export default function Authorize() {
     const urldata = new URLSearchParams(window.location.search);
     urldata.set("allow", allow.toString());
     urldata.set("id", id.toString());
+    if (totpNeeded) {
+        urldata.set("code", totpCode);
+    }
 
     return `/api/authorize?${urldata.toString()}`;
   };
@@ -132,12 +136,19 @@ export default function Authorize() {
       {state == AuthState.Authorize && (
         <div className="flex flex-col justify-center items-center gap-2">
           <p className="text-3xl font-bold">Authorize?</p>
+          {totpNeeded && (
+            <div>
+                <p>Erm whats your code pls :3</p>
+                <input type="text" value={totpCode} onChange={(ev) => {setTotpCode(ev.target.value)}}/>
+            </div>
+          )}
           <form method="post">
             <div className="flex flex-row gap-2">
               <button
                 className="border-2 px-3 shadow-blocks-tiny border-red-600 shadow-red-500 hover:bg-red-100 transition"
                 type="submit"
                 formAction={formAction(false)}
+                disabled={totpNeeded && totpCode.length === 0}
               >
                 DENY
               </button>
@@ -145,6 +156,7 @@ export default function Authorize() {
                 className="border-2 border-green-600 px-3 shadow-blocks-tiny shadow-green-500 hover:bg-green-100 transition"
                 type="submit"
                 formAction={formAction(true)}
+                disabled={totpNeeded && totpCode.length === 0}
               >
                 ACCEPT
               </button>
