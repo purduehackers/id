@@ -26,11 +26,15 @@ impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
         //
         // Check if the Authorization header matches the format: client_id:SECRET
         // where SECRET is a global constant
-        let auth = req
-            .headers()
-            .iter()
-            .find_map(|(k, v)| if *k == "Authorization" { Some(v) } else { None })
-            .expect("Authorization header to be present");
+        let auth =
+            match req
+                .headers()
+                .iter()
+                .find_map(|(k, v)| if *k == "Authorization" { Some(v) } else { None })
+            {
+                Some(h) => h,
+                None => return OwnerConsent::Error("No Authorization header!".into()),
+            };
 
         let auth = BASE64_STANDARD
             .decode(auth.to_str().expect("Valid auth string"))
