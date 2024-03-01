@@ -17,7 +17,7 @@ impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
     async fn check_consent(
         &mut self,
         req: &mut RequestCompat,
-        _solicitation: Solicitation<'_>,
+        solicitation: Solicitation<'_>,
     ) -> OwnerConsent<ResponseCompat> {
         // This will do for now for authentication
         // Yes, this is not secure and is very easy to cause problems with,
@@ -54,7 +54,7 @@ impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
         // }
 
         // TODO: Figure out what needs to go here?
-        OwnerConsent::Authorized("consent_ok".to_string())
+        OwnerConsent::Authorized(solicitation.pre_grant().client_id.clone())
     }
 }
 
