@@ -466,16 +466,18 @@ impl Authorizer for DbAuthorizer {
             .await
             .expect("db op to not fail");
 
-        println!("EXTRACT FUNCTION: {grant:#?}");
-
-        Ok(grant.map(|g| oxide_auth::primitives::grant::Grant {
-            client_id: g.client_id,
-            extensions: Default::default(),
-            owner_id: g.owner_id.to_string(),
-            scope: serde_json::from_value(g.scope).expect("scope to be deserializable"),
-            redirect_uri: serde_json::from_value(g.redirect_uri)
-                .expect("redirect uri to be deserializable"),
-            until: g.until.into(),
+        Ok(grant.map(|g| {
+            let scope: String = serde_json::from_value(g.scope).expect("scope to be deserializable");
+            let uri: String = serde_json::from_value(g.redirect_uri)
+                    .expect("redirect uri to be deserializable");
+            oxide_auth::primitives::grant::Grant {
+                client_id: g.client_id,
+                extensions: Default::default(),
+                owner_id: g.owner_id.to_string(),
+                scope: Scope::from_str(&scope).expect("scope deserialization from string"),
+                redirect_uri: Url::from_str(&uri).expect("url deserialization from string"),
+                until: g.until.into(),
+            }
         }))
     }
 }
