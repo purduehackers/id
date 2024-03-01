@@ -210,7 +210,7 @@ pub fn client_registry() -> ClientMap {
         RegisteredUrl::Semantic(
             Url::from_str("https://dash.purduehackers.com/callback").expect("url to be valid"),
         ),
-        "read".parse().expect("scope to be valid"),
+        "user:read".parse().expect("scope to be valid"),
     ));
 
     clients.register_client(Client::public(
@@ -218,30 +218,16 @@ pub fn client_registry() -> ClientMap {
         RegisteredUrl::Semantic(
             Url::from_str("https://passports.purduehackers.com/callback").expect("url to be valid"),
         ),
-        "read write".parse().expect("scopes to be valid"),
+        "user:read user".parse().expect("scopes to be valid"),
     ));
 
     clients.register_client(Client::public(
         VALID_CLIENTS[2],
         RegisteredUrl::Semantic(Url::from_str("authority://callback").expect("url to be valid")),
-        "read write".parse().expect("scopes to be valid"),
+        "admin:read admin".parse().expect("scopes to be valid"),
     ));
 
     clients
-}
-
-pub fn generic_endpoint<S>(
-    solicitor: S,
-) -> Generic<ClientMap, AuthMap<RandomGenerator>, TokenMap<RandomGenerator>, S, Vec<Scope>, Vacant>
-{
-    Generic {
-        registrar: client_registry(),
-        authorizer: AuthMap::new(RandomGenerator::new(16)),
-        issuer: TokenMap::new(RandomGenerator::new(16)),
-        solicitor,
-        scopes: vec!["read".parse().expect("scope to be valid")],
-        response: Vacant,
-    }
 }
 
 #[derive(Serialize)]
@@ -491,10 +477,10 @@ pub struct OAuthEndpoint<T: OwnerSolicitor<RequestCompat>> {
 }
 
 impl<T: OwnerSolicitor<RequestCompat>> OAuthEndpoint<T> {
-    pub fn new(solicitor: T) -> Self {
+    pub fn new(solicitor: T, scopes: Vec<Scope>) -> Self {
         Self {
             solicitor,
-            scopes: vec!["read".parse().expect("unable to parse scope")],
+            scopes,
             registry: client_registry(),
             issuer: DbIssuer,
             authorizer: DbAuthorizer,

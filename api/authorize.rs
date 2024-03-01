@@ -1,7 +1,7 @@
 use std::str::FromStr;
 
 use entity::{passport, sea_orm_active_enums::RoleEnum, user};
-use id::{db, generic_endpoint, kv, tfa, wrap_error, OAuthEndpoint, RequestCompat, ResponseCompat};
+use id::{db, kv, tfa, wrap_error, OAuthEndpoint, RequestCompat, ResponseCompat};
 
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebResponse},
@@ -30,7 +30,7 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
     async fn check_consent(
         &mut self,
         req: &mut RequestCompat,
-        _solicitation: Solicitation<'_>,
+        solicitation: Solicitation<'_>,
     ) -> OwnerConsent<ResponseCompat> {
         let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
 
@@ -86,6 +86,11 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
             .expect("db op to succeed")
             .expect("Passport to have an owner");
 
+        // Very basic scope control
+        if solicitation.pre_grant().scope.iter().any(|s| s.starts_with("admin")) && user.role != RoleEnum::Admin {
+            return OwnerConsent::Error("You may not access administrator scopes!".to_string().into());
+        }
+
         if let Some(totp) = user.totp {
             let code = url
                 .query_pairs()
@@ -120,7 +125,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     }
 
     Ok(
-        AuthorizationFlow::prepare(OAuthEndpoint::new(AuthorizeSolicitor))
+        AuthorizationFlow::prepare(OAuthEndpoint::new(AuthorizeSolicitor, vec!["user".parse().expect("scope to parse")]))
             .map_err(|e| format!("Auth prep error: {e}"))?
             .execute(RequestCompat(req))
             .await
@@ -130,7 +135,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
 }
 
 async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
-    let res = generic_endpoint(FnSolicitor(
+    let res = AuthorizationFlow::prepare(OAuthEndpoint::new(FnSolicitor(
         move |_: &mut RequestCompat, pre_grant: Solicitation| {
             let mut resp = ResponseCompat::default();
             let pg = pre_grant.pre_grant();
@@ -147,9 +152,10 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
             resp.redirect(url).expect("infallible");
             OwnerConsent::InProgress(resp)
         },
-    ))
-    .authorization_flow()
+    ), vec!["user:read".parse().expect("scope to parse")]))
+    .map_err(|e| format!("Auth prep error: {e}"))?
     .execute(RequestCompat(req))
+    .await
     .map_err(|e| format!("Error on auth flow: {:?}", e))?;
 
     Ok(res.0)

@@ -59,7 +59,7 @@ impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    Ok(AccessTokenFlow::prepare(OAuthEndpoint::new(TokenSolicitor))
+    Ok(AccessTokenFlow::prepare(OAuthEndpoint::new(TokenSolicitor, vec!["user".parse().expect("scope to parse")]))
         .map_err(|e| format!("Access token flow prep error: {e}"))?
         .execute(RequestCompat(req))
         .await
