@@ -162,20 +162,27 @@ impl WebRequest for RequestCompat {
     {
         let body: &Body = self.body();
 
-        match body {
-            Body::Empty | Body::Binary(_) => Err(Box::new(Error::InvalidBodyType)),
+        let encoded = match body {
+            Body::Empty => return Err(Box::new(Error::InvalidBodyType)),
+            Body::Binary(b) => {
+                let encoded = form_urlencoded::parse(b); 
+
+                encoded
+            }
             Body::Text(t) => {
                 let encoded = form_urlencoded::parse(t.as_bytes());
 
-                let mut body = NormalizedParameter::new();
-
-                for (k, v) in encoded {
-                    body.insert_or_poison(Cow::Owned(k.to_string()), Cow::Owned(v.to_string()));
-                }
-
-                Ok(Cow::Owned(body))
+                encoded
             }
+        };
+
+        let mut body = NormalizedParameter::new();
+
+        for (k, v) in encoded {
+            body.insert_or_poison(Cow::Owned(k.to_string()), Cow::Owned(v.to_string()));
         }
+
+        Ok(Cow::Owned(body))
     }
 
     fn query(
