@@ -1,10 +1,7 @@
 use std::str::FromStr;
 
-use entity::{passport, user, sea_orm_active_enums::RoleEnum};
-use id::{
-    db, generic_endpoint, kv, wrap_error, OAuthEndpoint,
-    RequestCompat, ResponseCompat, tfa,
-};
+use entity::{passport, sea_orm_active_enums::RoleEnum, user};
+use id::{db, generic_endpoint, kv, tfa, wrap_error, OAuthEndpoint, RequestCompat, ResponseCompat};
 
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebResponse},
@@ -12,14 +9,12 @@ use oxide_auth::{
 };
 use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
 
-
 use entity::prelude::*;
 use fred::prelude::*;
 use lambda_http::http::Method;
 use oxide_auth_async::endpoint::OwnerSolicitor;
 
 use sea_orm::prelude::*;
-
 
 use vercel_runtime::{run, Body, Error, Request, Response};
 

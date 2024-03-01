@@ -1,4 +1,4 @@
-use totp_rs::{TOTP, Secret};
+use totp_rs::{Secret, TOTP};
 
 fn default_totp(user_id: i32, secret: Vec<u8>) -> TOTP {
     TOTP {
@@ -12,7 +12,16 @@ fn default_totp(user_id: i32, secret: Vec<u8>) -> TOTP {
     }
 }
 
-pub fn validate_totp(user_id: i32, secret: String, code: &str) -> Result<bool, vercel_runtime::Error> {
-    let totp = default_totp(user_id, Secret::Encoded(secret).to_bytes().expect("secret to parse sucessfully"));
+pub fn validate_totp(
+    user_id: i32,
+    secret: String,
+    code: &str,
+) -> Result<bool, vercel_runtime::Error> {
+    let totp = default_totp(
+        user_id,
+        Secret::Encoded(secret)
+            .to_bytes()
+            .expect("secret to parse sucessfully"),
+    );
     Ok(totp.check_current(code)?)
 }

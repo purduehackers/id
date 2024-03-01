@@ -194,7 +194,7 @@ impl WebRequest for RequestCompat {
     }
 }
 
-pub const VALID_CLIENTS: [&str; 2] = ["dashboard", "passports"];
+pub const VALID_CLIENTS: [&str; 3] = ["dashboard", "passports", "authority"];
 
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
@@ -211,6 +211,12 @@ pub fn client_registry() -> ClientMap {
         RegisteredUrl::Semantic(
             Url::from_str("https://passports.purduehackers.com/callback").expect("url to be valid"),
         ),
+        "read write".parse().expect("scopes to be valid"),
+    ));
+
+    clients.register_client(Client::public(
+        VALID_CLIENTS[2],
+        RegisteredUrl::Semantic(Url::from_str("authority://callback").expect("url to be valid")),
         "read write".parse().expect("scopes to be valid"),
     ));
 
