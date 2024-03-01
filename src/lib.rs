@@ -466,6 +466,8 @@ impl Authorizer for DbAuthorizer {
             .await
             .expect("db op to not fail");
 
+        println!("EXTRACT FUNCTION: {grant:#?}");
+
         Ok(grant.map(|g| oxide_auth::primitives::grant::Grant {
             client_id: g.client_id,
             extensions: Default::default(),
