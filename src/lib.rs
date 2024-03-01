@@ -17,16 +17,8 @@ use entity::{auth_grant, auth_token};
 use oxide_auth::{endpoint::ResponseStatus, frontends};
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
-    frontends::{
-        dev::Url,
-        simple::endpoint::{Generic, Vacant},
-    },
-    primitives::{
-        authorizer::AuthMap,
-        generator::RandomGenerator,
-        issuer::TokenMap,
-        registrar::{Client, ClientMap, RegisteredUrl},
-    },
+    frontends::dev::Url,
+    primitives::registrar::{Client, ClientMap, RegisteredUrl},
 };
 use oxide_auth_async::primitives::{Authorizer, Issuer};
 use oxide_auth_async::{endpoint::Endpoint, endpoint::OwnerSolicitor};
@@ -165,7 +157,7 @@ impl WebRequest for RequestCompat {
         let encoded = match body {
             Body::Empty => return Err(Box::new(Error::InvalidBodyType)),
             Body::Binary(b) => {
-                let encoded = form_urlencoded::parse(b); 
+                let encoded = form_urlencoded::parse(b);
 
                 encoded
             }
@@ -453,9 +445,10 @@ impl Authorizer for DbAuthorizer {
             .expect("db op to not fail");
 
         Ok(grant.map(|g| {
-            let scope: String = serde_json::from_value(g.scope).expect("scope to be deserializable");
-            let uri: String = serde_json::from_value(g.redirect_uri)
-                    .expect("redirect uri to be deserializable");
+            let scope: String =
+                serde_json::from_value(g.scope).expect("scope to be deserializable");
+            let uri: String =
+                serde_json::from_value(g.redirect_uri).expect("redirect uri to be deserializable");
             oxide_auth::primitives::grant::Grant {
                 client_id: g.client_id,
                 extensions: Default::default(),

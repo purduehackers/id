@@ -50,6 +50,9 @@ path = "api/new.rs"
 [[bin]]
 name = "door"
 path = "api/door.rs"
+[[bin]]
+name = "passport"
+path = "api/passport.rs"
 
 # Note that you need to provide unique names for each binary:
 # [[bin]]

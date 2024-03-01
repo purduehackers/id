@@ -1,5 +1,4 @@
-use base64::prelude::{Engine as _, BASE64_STANDARD};
-use id::{wrap_error, OAuthEndpoint, RequestCompat, ResponseCompat, VALID_CLIENTS};
+use id::{wrap_error, OAuthEndpoint, RequestCompat, ResponseCompat};
 use oxide_auth::endpoint::{OwnerConsent, Solicitation};
 use oxide_auth_async::endpoint::access_token::AccessTokenFlow;
 use oxide_auth_async::endpoint::OwnerSolicitor;
@@ -16,7 +15,7 @@ struct TokenSolicitor;
 impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
     async fn check_consent(
         &mut self,
-        req: &mut RequestCompat,
+        _req: &mut RequestCompat,
         solicitation: Solicitation<'_>,
     ) -> OwnerConsent<ResponseCompat> {
         // This will do for now for authentication
@@ -59,10 +58,13 @@ impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    Ok(AccessTokenFlow::prepare(OAuthEndpoint::new(TokenSolicitor, vec!["user".parse().expect("scope to parse")]))
-        .map_err(|e| format!("Access token flow prep error: {e}"))?
-        .execute(RequestCompat(req))
-        .await
-        .map_err(|e| format!("Access token flow exec error: {e}"))?
-        .0)
+    Ok(AccessTokenFlow::prepare(OAuthEndpoint::new(
+        TokenSolicitor,
+        vec!["user".parse().expect("scope to parse")],
+    ))
+    .map_err(|e| format!("Access token flow prep error: {e}"))?
+    .execute(RequestCompat(req))
+    .await
+    .map_err(|e| format!("Access token flow exec error: {e}"))?
+    .0)
 }

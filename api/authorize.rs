@@ -87,8 +87,18 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
             .expect("Passport to have an owner");
 
         // Very basic scope control
-        if solicitation.pre_grant().scope.iter().any(|s| s.starts_with("admin")) && user.role != RoleEnum::Admin {
-            return OwnerConsent::Error("You may not access administrator scopes!".to_string().into());
+        if solicitation
+            .pre_grant()
+            .scope
+            .iter()
+            .any(|s| s.starts_with("admin"))
+            && user.role != RoleEnum::Admin
+        {
+            return OwnerConsent::Error(
+                "You may not access administrator scopes!"
+                    .to_string()
+                    .into(),
+            );
         }
 
         if let Some(totp) = user.totp {
@@ -124,19 +134,20 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         return handle_get(req).await;
     }
 
-    Ok(
-        AuthorizationFlow::prepare(OAuthEndpoint::new(AuthorizeSolicitor, vec!["user".parse().expect("scope to parse")]))
-            .map_err(|e| format!("Auth prep error: {e}"))?
-            .execute(RequestCompat(req))
-            .await
-            .map_err(|e| format!("Auth exec error: {e}"))?
-            .0,
-    )
+    Ok(AuthorizationFlow::prepare(OAuthEndpoint::new(
+        AuthorizeSolicitor,
+        vec!["user".parse().expect("scope to parse")],
+    ))
+    .map_err(|e| format!("Auth prep error: {e}"))?
+    .execute(RequestCompat(req))
+    .await
+    .map_err(|e| format!("Auth exec error: {e}"))?
+    .0)
 }
 
 async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
-    let res = AuthorizationFlow::prepare(OAuthEndpoint::new(FnSolicitor(
-        move |_: &mut RequestCompat, pre_grant: Solicitation| {
+    let res = AuthorizationFlow::prepare(OAuthEndpoint::new(
+        FnSolicitor(move |_: &mut RequestCompat, pre_grant: Solicitation| {
             let mut resp = ResponseCompat::default();
             let pg = pre_grant.pre_grant();
             let url = frontends::dev::Url::parse_with_params(
@@ -151,8 +162,9 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
             .expect("const URL to be valid");
             resp.redirect(url).expect("infallible");
             OwnerConsent::InProgress(resp)
-        },
-    ), vec!["user:read".parse().expect("scope to parse")]))
+        }),
+        vec!["user:read".parse().expect("scope to parse")],
+    ))
     .map_err(|e| format!("Auth prep error: {e}"))?
     .execute(RequestCompat(req))
     .await
