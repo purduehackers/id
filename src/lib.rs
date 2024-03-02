@@ -511,7 +511,8 @@ impl<T: OwnerSolicitor<RequestCompat> + Send> Endpoint<RequestCompat> for OAuthE
     ) -> Result<<RequestCompat as WebRequest>::Response, Self::Error> {
         if let Some(e) = kind.authorization_error() {
             return Err(format!("Auth error: {e:?}").into());
-        } else if let Some(e) = kind.access_token_error() {
+        }
+        if let Some(e) = kind.access_token_error() {
             return Err(format!("Access token error: {e:?}").into());
         }
 
