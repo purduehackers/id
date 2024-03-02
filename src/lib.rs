@@ -14,14 +14,14 @@ use vercel_runtime::{Body, Request, Response, StatusCode};
 use chrono::{Months, Utc};
 use entity::prelude::*;
 use entity::{auth_grant, auth_token};
-use oxide_auth::{endpoint::ResponseStatus, frontends};
+use oxide_auth::{endpoint::ResponseStatus, frontends::{self, simple::endpoint::Vacant}};
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
     frontends::dev::Url,
     primitives::registrar::{Client, ClientMap, RegisteredUrl},
 };
 use oxide_auth_async::primitives::{Authorizer, Issuer};
-use oxide_auth_async::{endpoint::Endpoint, endpoint::OwnerSolicitor};
+use oxide_auth_async::{endpoint::Endpoint, endpoint::OwnerSolicitor, endpoint::resource::ResourceFlow};
 use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue};
 use sea_orm::{Condition, IntoActiveModel};
@@ -534,4 +534,17 @@ impl<T: OwnerSolicitor<RequestCompat> + Send> Endpoint<RequestCompat> for OAuthE
     ) -> Option<&mut (dyn oxide_auth_async::primitives::Authorizer + Send)> {
         Some(&mut self.authorizer)
     }
+}
+
+pub async fn oauth_resource(req: Request, scopes: Vec<Scope>) -> Result<(), vercel_runtime::Error> {
+    ResourceFlow::prepare(OAuthEndpoint::new(
+        Vacant,
+        scopes,
+    ))
+    .map_err(|e| format!("Resource flow prep error: {e:?}"))?
+    .execute(RequestCompat(req))
+    .await
+    .map_err(|e| format!("Resource flow exec error: {e:?}"))?;
+
+    Ok(())
 }
