@@ -363,7 +363,7 @@ impl Issuer for DbIssuer {
                     scope: scope.parse().expect("scope parse"),
                     extensions: Default::default(),
                     redirect_uri: redirect_uri.parse().expect("redirect uri parse"),
-                    until: grant.until.into(),
+                    until: t.until.into(),
                 })
             }
             None => None,

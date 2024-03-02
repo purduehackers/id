@@ -5,6 +5,7 @@ use entity::{
     prelude::*,
 };
 use sea_orm::{prelude::*, ActiveValue, IntoActiveModel};
+use oxide_auth_async::code_grant::resource::protect;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
