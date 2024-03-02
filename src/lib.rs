@@ -353,13 +353,16 @@ impl Issuer for DbIssuer {
                     .expect("db op to succeed")
                     .expect("token to have grant parent");
 
+                let scope: String = serde_json::from_value(grant.scope).expect("scope to be valid object");
+                let redirect_uri: String = serde_json::from_value(grant.redirect_uri)
+                        .expect("redirect_uri to be valid object");
+
                 Some(oxide_auth::primitives::grant::Grant {
                     owner_id: grant.owner_id.to_string(),
                     client_id: grant.client_id,
-                    scope: serde_json::from_value(grant.scope).expect("scope to be valid object"),
+                    scope: scope.parse().expect("scope parse"),
                     extensions: Default::default(),
-                    redirect_uri: serde_json::from_value(grant.redirect_uri)
-                        .expect("redirect_uri to be valid object"),
+                    redirect_uri: redirect_uri.parse().expect("redirect uri parse"),
                     until: grant.until.into(),
                 })
             }
