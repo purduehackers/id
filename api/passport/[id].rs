@@ -5,7 +5,6 @@ use entity::{
     prelude::*,
 };
 use sea_orm::{prelude::*, ActiveValue, IntoActiveModel};
-use oxide_auth_async::code_grant::resource::protect;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -14,7 +13,7 @@ async fn main() -> Result<(), Error> {
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     let id: i32 = req.uri().path().split('/').last().expect("id path component").parse().expect("valid id");
-    oauth_resource(req, vec!["admin:read admin".parse().expect("scope to parse")]).await?;
+    oauth_resource(req, vec!["admin".parse().expect("scope to parse")]).await?;
 
     let db = db().await?;
 

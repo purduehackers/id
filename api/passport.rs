@@ -1,6 +1,10 @@
-use id::{wrap_error, OAuthEndpoint, RequestCompat, oauth_resource};
-use lambda_http::http::Method;
+use id::{wrap_error, OAuthEndpoint, RequestCompat, oauth_resource, db};
 use vercel_runtime::{run, Body, Error, Request, Response};
+use entity::{
+    passport,
+    prelude::*,
+};
+use sea_orm::{prelude::*, ActiveValue, IntoActiveModel};
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -10,5 +14,9 @@ async fn main() -> Result<(), Error> {
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     oauth_resource(req, vec!["admin:read".parse().expect("scope to parse")]).await?;
 
-    todo!()
+    let db = db().await?;
+
+    let all_passports: Vec<passport::Model> = Passport::find().all(&db).await?;
+
+    Ok(Response::new(Body::Text(serde_json::to_string(&all_passports).expect("convert passports to string array"))))
 }
