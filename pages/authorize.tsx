@@ -51,7 +51,7 @@ export default function Authorize() {
     urldata.set("allow", allow.toString());
     urldata.set("id", id.toString());
     if (totpNeeded) {
-        urldata.set("code", totpCode);
+      urldata.set("code", totpCode);
     }
 
     return `/api/authorize?${urldata.toString()}`;
@@ -134,34 +134,52 @@ export default function Authorize() {
         </div>
       )}
       {state == AuthState.Authorize && (
-        <div className="flex flex-col justify-center items-center gap-2">
-          <p className="text-3xl font-bold">Authorize?</p>
-          {totpNeeded && (
-            <div>
-                <p>Erm whats your code pls :3</p>
-                <input type="text" value={totpCode} onChange={(ev) => {setTotpCode(ev.target.value)}}/>
-            </div>
-          )}
-          <form method="post">
-            <div className="flex flex-row gap-2">
-              <button
-                className="border-2 px-3 shadow-blocks-tiny border-red-600 shadow-red-500 hover:bg-red-100 transition"
-                type="submit"
-                formAction={formAction(false)}
-                disabled={totpNeeded && totpCode.length === 0}
-              >
-                DENY
-              </button>
-              <button
-                className="border-2 border-green-600 px-3 shadow-blocks-tiny shadow-green-500 hover:bg-green-100 transition"
-                type="submit"
-                formAction={formAction(true)}
-                disabled={totpNeeded && totpCode.length === 0}
-              >
-                ACCEPT
-              </button>
-            </div>
-          </form>
+        <div className="flex flex-col justify-center items-center gap-8 w-11/12 sm:w-auto">
+          <div className="flex flex-col gap-2">
+            <h1 className="text-4xl text-center font-bold">Authorize?</h1>
+            <p>
+              <pre className="bg-gray-100 rounded px-2 inline-block">id</pre>{" "}
+              wants to authenticate with your passport.
+            </p>
+          </div>
+          <div className="flex flex-col justify-center items-center gap-4">
+            {totpNeeded && (
+              <div className="flex flex-col">
+                <label htmlFor="totpInput">2FA code</label>
+                <input
+                  className="autofocus border-[3px] border-black p-1 rounded-sm font-mono focus:outline-none text-6xl w-64"
+                  id="totpInput"
+                  type="number"
+                  value={totpCode}
+                  onChange={(ev) => {
+                    if (ev.target.value.length < 7) {
+                      setTotpCode(ev.target.value);
+                    }
+                  }}
+                />
+              </div>
+            )}
+            <form method="post" className="w-64">
+              <div className="flex flex-row gap-2">
+                <button
+                  className="w-full px-3 py-2 text-xl font-bold bg-red-300 hover:bg-red-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
+                  type="submit"
+                  formAction={formAction(false)}
+                  disabled={totpNeeded && totpCode.length < 6}
+                >
+                  DENY
+                </button>
+                <button
+                  className="w-full px-3 py-2 text-xl font-bold bg-green-300 hover:bg-green-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
+                  type="submit"
+                  formAction={formAction(true)}
+                  disabled={totpNeeded && totpCode.length < 6}
+                >
+                  ACCEPT
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
