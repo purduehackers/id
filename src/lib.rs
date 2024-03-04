@@ -222,7 +222,7 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[3],
         RegisteredUrl::Semantic(
-            Url::from_str("http://localhost:3000/api/callback").expect("url to be valid"),
+            Url::from_str("https://passport-auth-example.purduehackers.com/api/callback").expect("url to be valid"),
         ),
         "user:read user".parse().expect("scopes to be valid"),
     ));
