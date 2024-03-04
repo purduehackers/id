@@ -397,28 +397,29 @@ impl Authorizer for DbAuthorizer {
     ) -> Result<String, ()> {
         let db = db().await.expect("db to be accessible");
 
-        let existing: Option<auth_grant::Model> = AuthGrant::find()
-            .filter(
-                Condition::all()
-                    .add(
-                        auth_grant::Column::OwnerId.eq(grant
-                            .owner_id
-                            .parse::<i32>()
-                            .expect("failed to parse owner_id as int")),
-                    )
-                    .add(auth_grant::Column::ClientId.eq(grant.client_id.clone())),
-            )
-            .one(&db)
-            .await
-            .expect("db op to succeed");
-
-        if let Some(existing) = existing {
-            let mut active = existing.into_active_model();
-            active.until = ActiveValue::Set(grant.until.into());
-
-            let active = active.update(&db).await.expect("db update op to succeed");
-            return Ok(active.code);
-        }
+        // WARNING: This code is very stupid, why did I do this
+        // let existing: Option<auth_grant::Model> = AuthGrant::find()
+        //     .filter(
+        //         Condition::all()
+        //             .add(
+        //                 auth_grant::Column::OwnerId.eq(grant
+        //                     .owner_id
+        //                     .parse::<i32>()
+        //                     .expect("failed to parse owner_id as int")),
+        //             )
+        //             .add(auth_grant::Column::ClientId.eq(grant.client_id.clone())),
+        //     )
+        //     .one(&db)
+        //     .await
+        //     .expect("db op to succeed");
+        //
+        // if let Some(existing) = existing {
+        //     let mut active = existing.into_active_model();
+        //     active.until = ActiveValue::Set(grant.until.into());
+        //
+        //     let active = active.update(&db).await.expect("db update op to succeed");
+        //     return Ok(active.code);
+        // }
 
         let model = auth_grant::ActiveModel {
             id: ActiveValue::NotSet,
@@ -436,11 +437,11 @@ impl Authorizer for DbAuthorizer {
             scope: ActiveValue::Set(
                 serde_json::to_value(grant.scope).expect("scope to be serializable"),
             ),
-            code: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
+            code: ActiveValue::Set(Some(Alphanumeric.sample_string(&mut rand::thread_rng(),32))),
         };
 
         let grant = model.insert(&db).await.expect("insert to work");
-        Ok(grant.code)
+        Ok(grant.code.expect("grant code to be valid initially"))
     }
 
     async fn extract(
@@ -455,20 +456,27 @@ impl Authorizer for DbAuthorizer {
             .await
             .expect("db op to not fail");
 
-        Ok(grant.map(|g| {
-            let scope: String =
-                serde_json::from_value(g.scope).expect("scope to be deserializable");
-            let uri: String =
-                serde_json::from_value(g.redirect_uri).expect("redirect uri to be deserializable");
-            oxide_auth::primitives::grant::Grant {
-                client_id: g.client_id,
-                extensions: Default::default(),
-                owner_id: g.owner_id.to_string(),
-                scope: Scope::from_str(&scope).expect("scope deserialization from string"),
-                redirect_uri: Url::from_str(&uri).expect("url deserialization from string"),
-                until: g.until.into(),
-            }
-        }))
+        Ok(match grant {
+            Some(g) => {
+                let mut am = g.clone().into_active_model();
+                am.code = ActiveValue::Set(None);
+                am.save(&db).await.expect("db save to work");
+
+                let scope: String =
+                    serde_json::from_value(g.scope).expect("scope to be deserializable");
+                let uri: String =
+                    serde_json::from_value(g.redirect_uri).expect("redirect uri to be deserializable");
+                Some(oxide_auth::primitives::grant::Grant {
+                    client_id: g.client_id,
+                    extensions: Default::default(),
+                    owner_id: g.owner_id.to_string(),
+                    scope: Scope::from_str(&scope).expect("scope deserialization from string"),
+                    redirect_uri: Url::from_str(&uri).expect("url deserialization from string"),
+                    until: g.until.into(),
+                })
+            },
+            None => None,
+        })
     }
 }
 

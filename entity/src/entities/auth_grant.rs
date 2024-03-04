@@ -13,7 +13,7 @@ pub struct Model {
     pub until: DateTimeWithTimeZone,
     pub scope: Json,
     pub client_id: String,
-    pub code: String,
+    pub code: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
