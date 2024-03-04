@@ -1,3 +1,4 @@
+import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
 enum AuthState {
@@ -13,6 +14,9 @@ export default function Authorize() {
   const [totpCode, setTotpCode] = useState("");
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
+
+  const searchParams = useSearchParams();
+  const clientId = searchParams.get("client_id");
 
   const id = passport.includes(".")
     ? parseInt(passport.split(".")[1] ?? "0")
@@ -138,7 +142,9 @@ export default function Authorize() {
           <div className="flex flex-col gap-2">
             <h1 className="text-4xl text-center font-bold">Authorize?</h1>
             <p>
-              <pre className="bg-gray-100 rounded px-2 inline-block">id</pre>{" "}
+              <pre className="bg-gray-100 rounded px-2 inline-block">
+                {clientId ?? "id"}
+              </pre>{" "}
               wants to authenticate with your passport.
             </p>
           </div>
