@@ -110,7 +110,6 @@ export default function Authorize({
             <input
               className="border-2 border-black w-24 p-1 rounded-sm font-mono text-xl"
               type="string"
-              pattern="[0-9]*"
               inputMode="numeric"
               value={passportNumber}
               onChange={(ev) => {
