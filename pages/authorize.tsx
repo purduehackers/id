@@ -108,11 +108,15 @@ export default function Authorize({
             className="flex flex-row gap-2"
           >
             <input
-              className="border-2 border-black w-24 p-1 rounded-sm font-mono"
-              type="number"
+              className="border-2 border-black w-24 p-1 rounded-sm font-mono text-xl"
+              type="string"
+              pattern="[0-9]*"
+              inputMode="numeric"
               value={passport}
               onChange={(ev) => {
-                setPassport(ev.target.value);
+                if (!Number.isNaN(Number(ev.target.value))) {
+                  setPassport(ev.target.value);
+                }
               }}
               disabled={state != AuthState.EnterNumber}
             />
