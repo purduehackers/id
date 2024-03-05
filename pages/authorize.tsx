@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
@@ -5,18 +6,27 @@ enum AuthState {
   EnterNumber,
   WaitForScan,
   Authorize,
+  NoClient,
 }
 
-export default function Authorize() {
+const validClients = ["dashboard", "passports", "authority", "auth-test"];
+
+export default function Authorize({
+  isValidClientId,
+}: {
+  isValidClientId: boolean;
+}) {
+  const searchParams = useSearchParams();
+  const clientId = searchParams.get("client_id");
+
   const [passport, setPassport] = useState("");
-  const [state, setState] = useState(AuthState.EnterNumber);
+  const [state, setState] = useState(
+    isValidClientId ? AuthState.EnterNumber : AuthState.NoClient
+  );
   const [totpNeeded, setTotpNeeded] = useState(false);
   const [totpCode, setTotpCode] = useState("");
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
-
-  const searchParams = useSearchParams();
-  const clientId = searchParams.get("client_id");
 
   const id = passport.includes(".")
     ? parseInt(passport.split(".")[1] ?? "0")
@@ -188,6 +198,56 @@ export default function Authorize() {
           </div>
         </div>
       )}
+      {state === AuthState.NoClient && (
+        <div className="w-11/12 sm:w-auto sm:max-w-3xl p-4 sm:p-12 border-2 rounded border-black shadow-blocks-sm bg-orange-200 flex flex-col gap-2">
+          <p className="font-bold text-2xl sm:text-3xl text-center">
+            ‼️🐴 HOLD YOUR HORSES 🐴‼️
+          </p>
+          <p>
+            We can&rsquo;t find a valid client ID. You shouldn&rsquo;t be on
+            this page unless you came from an application that&rsquo;s
+            authorized to authenticate with ID.
+          </p>
+          <p>
+            If you&rsquo;re building an app and trying to authenticate with ID,
+            you&rsquo;ll need to open a PR to add your client{" "}
+            <span className="underline">
+              <Link
+                target="_blank"
+                href="https://github.com/purduehackers/id/blob/main/src/lib.rs#L196-L231"
+              >
+                here
+              </Link>
+            </span>
+            . Please reach out to Jack or Matthew, or post in{" "}
+            <span className="font-mono">#⚡lounge</span>, if you need help.
+          </p>
+          <p>
+            If you just want to try authenticating with your passport for fun,{" "}
+            <span className="underline">
+              <Link href="https://passport-auth-example.purduehackers.com">
+                click here
+              </Link>
+            </span>
+            .
+          </p>
+        </div>
+      )}
     </div>
   );
+}
+
+export async function getServerSideProps(context: {
+  query: { client_id: string | null };
+}) {
+  const { query } = context;
+  const clientId = query.client_id;
+
+  const isValidClientId = clientId && validClients.includes(clientId);
+
+  return {
+    props: {
+      isValidClientId: !!isValidClientId,
+    },
+  };
 }
