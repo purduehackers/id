@@ -163,10 +163,15 @@ export default function Authorize({
                 <input
                   className="autofocus border-[3px] border-black p-1 rounded-sm font-mono focus:outline-none text-6xl w-64"
                   id="totpInput"
-                  type="number"
+                  type="string"
+                  pattern="[0-9]*"
+                  inputMode="numeric"
                   value={totpCode}
                   onChange={(ev) => {
-                    if (ev.target.value.length < 7) {
+                    if (
+                      ev.target.value.length < 7 &&
+                      !Number.isNaN(Number(ev.target.value))
+                    ) {
                       setTotpCode(ev.target.value);
                     }
                   }}
