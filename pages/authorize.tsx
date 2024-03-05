@@ -87,7 +87,7 @@ export default function Authorize({
         default:
           console.log(`Error on request: ${await resp.text()}`);
       }
-    }, 3000);
+    }, 1500);
 
     return () => {
       clearInterval(interval);
@@ -145,7 +145,9 @@ export default function Authorize({
           <p className="font-bold text-2xl sm:text-3xl text-center">
             SCAN YOUR PASSPORT NOW
           </p>
-          <p className="text-center">Polling every 3 seconds...</p>
+          <p className="text-center leading-5">
+            Hold your phone near your passport and open the URL.
+          </p>
         </div>
       )}
       {authState == AuthState.Authorize && (
