@@ -19,8 +19,8 @@ export default function Authorize({
   const searchParams = useSearchParams();
   const clientId = searchParams.get("client_id");
 
-  const [passport, setPassport] = useState("");
-  const [state, setState] = useState(
+  const [passportNumber, setPassportNumber] = useState("");
+  const [authState, setAuthState] = useState(
     isValidClientId ? AuthState.EnterNumber : AuthState.NoClient
   );
   const [totpNeeded, setTotpNeeded] = useState(false);
@@ -28,9 +28,9 @@ export default function Authorize({
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
 
-  const id = passport.includes(".")
-    ? parseInt(passport.split(".")[1] ?? "0")
-    : Number(passport);
+  const id = passportNumber.includes(".")
+    ? parseInt(passportNumber.split(".")[1] ?? "0")
+    : Number(passportNumber);
 
   const selectPassport = async () => {
     setNumberFormPending(true);
@@ -54,7 +54,7 @@ export default function Authorize({
       return;
     }
 
-    setState(AuthState.WaitForScan);
+    setAuthState(AuthState.WaitForScan);
   };
 
   const formAction = (allow: boolean) => {
@@ -69,7 +69,7 @@ export default function Authorize({
   };
 
   useEffect(() => {
-    if (state != AuthState.WaitForScan) {
+    if (authState != AuthState.WaitForScan) {
       return;
     }
 
@@ -79,7 +79,7 @@ export default function Authorize({
         case 200:
           const { totp_needed } = await resp.json();
           setTotpNeeded(totp_needed);
-          setState(AuthState.Authorize);
+          setAuthState(AuthState.Authorize);
           clearInterval(interval);
           break;
         case 201:
@@ -92,11 +92,11 @@ export default function Authorize({
     return () => {
       clearInterval(interval);
     };
-  }, [id, state]);
+  }, [id, authState]);
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center font-main">
-      {state == AuthState.EnterNumber && (
+      {authState == AuthState.EnterNumber && (
         <div className="flex flex-col items-center gap-2">
           <p className="font-bold text-2xl">Enter passport number</p>
 
@@ -112,19 +112,19 @@ export default function Authorize({
               type="string"
               pattern="[0-9]*"
               inputMode="numeric"
-              value={passport}
+              value={passportNumber}
               onChange={(ev) => {
                 if (!Number.isNaN(Number(ev.target.value))) {
-                  setPassport(ev.target.value);
+                  setPassportNumber(ev.target.value);
                 }
               }}
-              disabled={state != AuthState.EnterNumber}
+              disabled={authState != AuthState.EnterNumber}
             />
             <button
               className="py-1 px-2 font-bold bg-amber-400 hover:bg-amber-500 transition duration-100 border-2 border-black shadow-blocks-tiny disabled:bg-gray-300"
               disabled={
-                passport.length === 0 ||
-                !/^(?:\d\.)?(\d{1,4})$/.test(passport) ||
+                passportNumber.length === 0 ||
+                !/^(?:\d\.)?(\d{1,4})$/.test(passportNumber) ||
                 numberFormPending
               }
             >
@@ -141,7 +141,7 @@ export default function Authorize({
           ) : null}
         </div>
       )}
-      {state == AuthState.WaitForScan && (
+      {authState == AuthState.WaitForScan && (
         <div className="w-11/12 sm:w-auto p-4 sm:p-12 border-2 rounded border-black shadow-blocks-sm bg-gradient-to-tr from-amber-100 to-amber-200 flex flex-col gap-2">
           <p className="font-bold text-2xl sm:text-3xl text-center">
             SCAN YOUR PASSPORT NOW
@@ -149,7 +149,7 @@ export default function Authorize({
           <p className="text-center">Polling every 3 seconds...</p>
         </div>
       )}
-      {state == AuthState.Authorize && (
+      {authState == AuthState.Authorize && (
         <div className="flex flex-col justify-center items-center gap-8 w-11/12 sm:w-auto">
           <div className="flex flex-col gap-2">
             <h1 className="text-4xl text-center font-bold">Authorize?</h1>
@@ -205,7 +205,7 @@ export default function Authorize({
           </div>
         </div>
       )}
-      {state === AuthState.NoClient && (
+      {authState === AuthState.NoClient && (
         <div className="w-11/12 sm:w-auto sm:max-w-3xl p-4 sm:p-12 border-2 rounded border-black shadow-blocks-sm bg-orange-200 flex flex-col gap-2">
           <p className="font-bold text-2xl sm:text-3xl text-center">
             ‼️🐴 HOLD YOUR HORSES 🐴‼️
