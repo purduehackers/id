@@ -47,13 +47,10 @@ export default function Authorize({
       }),
     });
 
-    if (res.status === 400) {
-      setNumberFormPending(false);
-      setNumberFormError(true);
-    }
-
     if (!res.ok) {
       console.log(`Bad scan open: ${res.status} ${await res.text()}`);
+      setNumberFormPending(false);
+      setNumberFormError(true);
       return;
     }
 
@@ -132,9 +129,10 @@ export default function Authorize({
           </form>
           {numberFormError ? (
             <p className="text-red-400 max-w-md mt-2">
-              Scan failed. Either this passport doesn&#39;t exist or there&#39;s
-              another active session. If you&#39;re sure this passport number
-              exists, try again in 90 seconds.
+              Can&#39;t find a passport by this number. Either it doesn&#39;t
+              exist, is not activated, or there&#39;s another active session. If
+              you&#39;re sure this passport number exists, try again in 90
+              seconds.
             </p>
           ) : null}
         </div>
