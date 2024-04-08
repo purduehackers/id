@@ -200,7 +200,7 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[0],
         RegisteredUrl::Semantic(
-            Url::from_str("https://dash.purduehackers.com/callback").expect("url to be valid"),
+            Url::from_str("https://dash.purduehackers.com/api/callback").expect("url to be valid"),
         ),
         "user:read".parse().expect("scope to be valid"),
     ));
