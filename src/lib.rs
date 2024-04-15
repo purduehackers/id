@@ -6,7 +6,7 @@ use lambda_http::http::{
     header::{CONTENT_TYPE, LOCATION, WWW_AUTHENTICATE},
     HeaderValue,
 };
-use sea_orm::{Database, DatabaseConnection};
+use sea_orm::Database;
 use serde::Serialize;
 use std::{borrow::Cow, env, fmt::Display, ops::DerefMut, str::FromStr};
 use vercel_runtime::{Body, Request, Response, StatusCode};
@@ -556,8 +556,8 @@ impl<T: OwnerSolicitor<RequestCompat> + Send> Endpoint<RequestCompat> for OAuthE
     }
 }
 
-pub async fn oauth_resource(req: Request, scopes: Vec<Scope>) -> Result<(), vercel_runtime::Error> {
-    ResourceFlow::prepare(OAuthEndpoint::new(
+pub async fn oauth_user(req: Request, scopes: Vec<Scope>) -> Result<i32, vercel_runtime::Error> {
+    let user = ResourceFlow::prepare(OAuthEndpoint::new(
         Vacant,
         scopes,
     ))
@@ -566,5 +566,5 @@ pub async fn oauth_resource(req: Request, scopes: Vec<Scope>) -> Result<(), verc
     .await
     .map_err(|e| format!("Resource flow exec error: {e:?}"))?;
 
-    Ok(())
+    Ok(user.owner_id.parse().expect("db id to be i32"))
 }

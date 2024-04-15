@@ -1,4 +1,4 @@
-use id::{wrap_error, oauth_resource, db};
+use id::{wrap_error, oauth_user, db};
 use vercel_runtime::{run, Body, Error, Request, Response};
 use entity::{
     passport,
@@ -13,7 +13,7 @@ async fn main() -> Result<(), Error> {
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     let id: i32 = req.uri().path().split('/').last().expect("id path component").parse().expect("valid id");
-    oauth_resource(req, vec!["admin".parse().expect("scope to parse")]).await?;
+    let _user = oauth_user(req, vec!["admin".parse().expect("scope to parse")]).await?;
 
     let db = db().await?;
 

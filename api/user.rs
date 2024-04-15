@@ -12,11 +12,12 @@ async fn main() -> Result<(), Error> {
 }
 
 pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    let _user = oauth_user(req, vec!["admin:read".parse().expect("scope to parse")]).await?;
+    let user = oauth_user(req, vec!["user:read".parse().expect("valid scope")]).await?;
 
     let db = db().await?;
 
-    let all_passports: Vec<passport::Model> = Passport::find().all(&db).await?;
+    let passport = Passport::find().filter(passport::Column::OwnerId.eq(user)).one(&db).await?;
 
-    Ok(Response::new(Body::Text(serde_json::to_string(&all_passports).expect("convert passports to string array"))))
+    Ok(Response::new(Body::Text(serde_json::to_string(&passport)?)))
 }
+
