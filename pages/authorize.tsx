@@ -162,7 +162,7 @@ export default function Authorize({
               </pre>{" "}
               wants to authenticate with your passport and use the following
               scopes:
-              <ul>
+              <ul className="list-disc m-4">
                 {scopes.map((scope: string, index: number) => {
                   return (
                     <li key={index}>
