@@ -19,7 +19,6 @@ export default function Authorize({
   const searchParams = useSearchParams();
   const clientId = searchParams.get("client_id");
   const scopes = (searchParams.get("scope") ?? "").split(" ");
-  console.log(scopes);
 
   const [passportNumber, setPassportNumber] = useState("");
   const [authState, setAuthState] = useState(
