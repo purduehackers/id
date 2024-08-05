@@ -14,14 +14,19 @@ use vercel_runtime::{Body, Request, Response, StatusCode};
 use chrono::{Months, Utc};
 use entity::prelude::*;
 use entity::{auth_grant, auth_token};
-use oxide_auth::{endpoint::ResponseStatus, frontends::{self, simple::endpoint::Vacant}};
+use oxide_auth::{
+    endpoint::ResponseStatus,
+    frontends::{self, simple::endpoint::Vacant},
+};
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
     frontends::dev::Url,
     primitives::registrar::{Client, ClientMap, RegisteredUrl},
 };
 use oxide_auth_async::primitives::{Authorizer, Issuer};
-use oxide_auth_async::{endpoint::Endpoint, endpoint::OwnerSolicitor, endpoint::resource::ResourceFlow};
+use oxide_auth_async::{
+    endpoint::resource::ResourceFlow, endpoint::Endpoint, endpoint::OwnerSolicitor,
+};
 use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue};
 use sea_orm::{Condition, IntoActiveModel};
@@ -222,7 +227,8 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[3],
         RegisteredUrl::Semantic(
-            Url::from_str("https://id-auth-example.purduehackers.com/api/callback").expect("url to be valid"),
+            Url::from_str("https://id-auth-example.purduehackers.com/api/callback")
+                .expect("url to be valid"),
         ),
         "user:read user".parse().expect("scopes to be valid"),
     ));
@@ -361,9 +367,10 @@ impl Issuer for DbIssuer {
                     .expect("db op to succeed")
                     .expect("token to have grant parent");
 
-                let scope: String = serde_json::from_value(grant.scope).expect("scope to be valid object");
+                let scope: String =
+                    serde_json::from_value(grant.scope).expect("scope to be valid object");
                 let redirect_uri: String = serde_json::from_value(grant.redirect_uri)
-                        .expect("redirect_uri to be valid object");
+                    .expect("redirect_uri to be valid object");
 
                 Some(oxide_auth::primitives::grant::Grant {
                     owner_id: grant.owner_id.to_string(),
@@ -437,7 +444,9 @@ impl Authorizer for DbAuthorizer {
             scope: ActiveValue::Set(
                 serde_json::to_value(grant.scope).expect("scope to be serializable"),
             ),
-            code: ActiveValue::Set(Some(Alphanumeric.sample_string(&mut rand::thread_rng(),32))),
+            code: ActiveValue::Set(Some(
+                Alphanumeric.sample_string(&mut rand::thread_rng(), 32),
+            )),
         };
 
         let grant = model.insert(&db).await.expect("insert to work");
@@ -464,8 +473,8 @@ impl Authorizer for DbAuthorizer {
 
                 let scope: String =
                     serde_json::from_value(g.scope).expect("scope to be deserializable");
-                let uri: String =
-                    serde_json::from_value(g.redirect_uri).expect("redirect uri to be deserializable");
+                let uri: String = serde_json::from_value(g.redirect_uri)
+                    .expect("redirect uri to be deserializable");
                 Some(oxide_auth::primitives::grant::Grant {
                     client_id: g.client_id,
                     extensions: Default::default(),
@@ -474,7 +483,7 @@ impl Authorizer for DbAuthorizer {
                     redirect_uri: Url::from_str(&uri).expect("url deserialization from string"),
                     until: g.until.into(),
                 })
-            },
+            }
             None => None,
         })
     }
@@ -557,14 +566,11 @@ impl<T: OwnerSolicitor<RequestCompat> + Send> Endpoint<RequestCompat> for OAuthE
 }
 
 pub async fn oauth_user(req: Request, scopes: Vec<Scope>) -> Result<i32, vercel_runtime::Error> {
-    let user = ResourceFlow::prepare(OAuthEndpoint::new(
-        Vacant,
-        scopes,
-    ))
-    .map_err(|e| format!("Resource flow prep error: {e:?}"))?
-    .execute(RequestCompat(req))
-    .await
-    .map_err(|e| format!("Resource flow exec error: {e:?}"))?;
+    let user = ResourceFlow::prepare(OAuthEndpoint::new(Vacant, scopes))
+        .map_err(|e| format!("Resource flow prep error: {e:?}"))?
+        .execute(RequestCompat(req))
+        .await
+        .map_err(|e| format!("Resource flow exec error: {e:?}"))?;
 
     Ok(user.owner_id.parse().expect("db id to be i32"))
 }
