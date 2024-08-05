@@ -12,23 +12,23 @@ migration = { path = "migration" } # depends on your needs
 tokio = { version = "1", features = ["macros"] }
 serde_json = { version = "1", features = ["raw_value"] }
 # Documentation: https://docs.rs/vercel_runtime/latest/vercel_runtime
-vercel_runtime = { version = "1.1.0" }
+vercel_runtime = { version = "1.1.4" }
 oxide-auth = "0.5.4"
-serde = { version = "1.0.196", features = ["derive"] }
-url = "2.5.0"
+serde = { version = "1.0.204", features = ["derive"] }
+url = "2.5.2"
 form_urlencoded = "1.2.1"
 urlencoding = "2.1.3"
-lambda_http = "0.8.1"
-thiserror = "1.0.56"
+lambda_http = "0.8.3"
+thiserror = "1.0.63"
 redis = { version = "0.24.0", features = ["aio", "tokio-comp", "rustls"] }
 sea-orm = { version = "0.12", features = [ "sqlx-postgres", "runtime-tokio-rustls", "with-chrono", "with-json", "macros" ] }
-fred = { version = "8.0.1", features = ["enable-rustls"] }
+fred = { version = "8.0.6", features = ["enable-rustls"] }
 rand = "0.8.5"
 oxide-auth-async = "0.1.1"
-chrono = "0.4.34"
-async-trait = "0.1.77"
+chrono = "0.4.38"
+async-trait = "0.1.81"
 base64 = "0.21.7"
-totp-rs = { version = "5.5.1", features = ["otpauth"] }
+totp-rs = { version = "5.6.0", features = ["otpauth"] }
 
 # You can specify a library for shared logic here (optional)
 [lib]
