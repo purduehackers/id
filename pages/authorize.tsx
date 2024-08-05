@@ -18,10 +18,12 @@ export default function Authorize({
 }) {
   const searchParams = useSearchParams();
   const clientId = searchParams.get("client_id");
+  const scopes = (searchParams.get("scope") ?? "").split(" ");
+  console.log(scopes);
 
   const [passportNumber, setPassportNumber] = useState("");
   const [authState, setAuthState] = useState(
-    isValidClientId ? AuthState.EnterNumber : AuthState.NoClient
+    isValidClientId ? AuthState.EnterNumber : AuthState.NoClient,
   );
   const [totpNeeded, setTotpNeeded] = useState(false);
   const [totpCode, setTotpCode] = useState("");
@@ -158,8 +160,20 @@ export default function Authorize({
               <pre className="bg-gray-100 rounded px-2 inline-block">
                 {clientId ?? "id"}
               </pre>{" "}
-              wants to authenticate with your passport.
+              wants to authenticate with your passport and use the following
+              scopes:
             </p>
+            <ul className="list-disc">
+              {scopes.map((scope: string, index: number) => {
+                return (
+                  <li key={index}>
+                    <pre className="bg-gray-100 rounded px-2 inline-block">
+                      {scope}
+                    </pre>
+                  </li>
+                );
+              })}
+            </ul>
           </div>
           <div className="flex flex-col justify-center items-center gap-4">
             {totpNeeded && (
