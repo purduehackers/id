@@ -15,6 +15,7 @@ pub struct Model {
     pub date_of_birth: Date,
     pub date_of_issue: Date,
     pub place_of_origin: String,
+    pub ceremony_time: String,
     pub secret: String,
     pub activated: bool,
 }
