@@ -21,8 +21,8 @@ impl MigrationTrait for Migration {
                     .if_not_exists()
                     .col(
                         ColumnDef::new(Ceremonies::CeremonyTime)
-                            .string()
-                            .default("1970-01-01 00:00:00")
+                            .timestamp()
+                            .default("1970-01-01T00:00:00.000Z")
                             .not_null()
                             .primary_key(),
                     )
