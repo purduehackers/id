@@ -64,7 +64,7 @@ export default function Authorize({
   };
 
   const formAction = (allow: boolean) => {
-    if (typeof window === undefined) {
+    if (typeof window === "undefined") {
       return;
     }
 
