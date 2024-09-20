@@ -227,7 +227,7 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[3],
         RegisteredUrl::Semantic(
-            Url::from_str("https://id-auth-test-next-auth.vercel.app/api/auth/callback/purduehackers-id")
+            Url::from_str("https://id-auth-example.purduehackers.com/api/callback")
                 .expect("url to be valid"),
         ),
         "user:read user".parse().expect("scopes to be valid"),
