@@ -201,7 +201,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
 
             let new = auth_session::ActiveModel {
                 id: ActiveValue::NotSet,
-                token: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 16)),
+                token: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
                 until: ActiveValue::Set((Utc::now() + Months::new(2)).into()),
                 owner_id: ActiveValue::Set(grant.owner_id),
             };
@@ -210,9 +210,12 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
 
             res.headers_mut().insert(
                 SET_COOKIE,
-                format!("session={}; Max-Age=5259492; Secure; HttpOnly", model.token)
-                    .parse()
-                    .unwrap(),
+                format!(
+                    "session={}; Max-Age=5259492; Secure; HttpOnly; Path=/",
+                    model.token
+                )
+                .parse()
+                .unwrap(),
             );
 
             // Purge invalid cookies
@@ -232,9 +235,9 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
         FnSolicitor(move |req: &mut RequestCompat, pre_grant: Solicitation| {
             let has_session = req
                 .headers()
-                .get_all("Cookie")
+                .get_all(COOKIE)
                 .iter()
-                .any(|v| v.to_str().unwrap_or_default().starts_with("session:"));
+                .any(|v| v.to_str().unwrap_or_default().contains("session:"));
 
             let mut resp = ResponseCompat::default();
             let pg = pre_grant.pre_grant();
