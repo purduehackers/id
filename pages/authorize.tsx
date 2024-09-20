@@ -34,9 +34,6 @@ export default function Authorize({
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
 
-  console.log({ clientId });
-  console.log({ scopes });
-
   const id = passportNumber.includes(".")
     ? parseInt(passportNumber.split(".")[1] ?? "0")
     : Number(passportNumber);
