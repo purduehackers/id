@@ -252,9 +252,11 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
                 params.push(("session", "true"));
             }
 
-            let url =
-                frontends::dev::Url::parse_with_params("http://localhost:3000/authorize", &params)
-                    .expect("const URL to be valid");
+            let url = frontends::dev::Url::parse_with_params(
+                "https://id.purduehackers.com/authorize",
+                &params,
+            )
+            .expect("const URL to be valid");
             resp.redirect(url).expect("infallible");
             OwnerConsent::InProgress(resp)
         }),
