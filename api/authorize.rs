@@ -55,13 +55,32 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
             None
         };
 
+        let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
+
+        let user_wants_allow = url
+            .query_pairs()
+            .find_map(|(k, v)| if k == "allow" { Some(v) } else { None })
+            .expect("allow param required")
+            .parse::<bool>()
+            .expect("failed to parse allow");
+
         let db = db().await.expect("db to be accessible");
 
         if let Some(token) = session {
             // Validate the token
+            let session = AuthSession::find()
+                .filter(auth_session::Column::Token.eq(token))
+                .one(&db)
+                .await
+                .unwrap();
+            if let Some(session) = session {
+                return if user_wants_allow {
+                    OwnerConsent::Authorized(session.owner_id.to_string())
+                } else {
+                    OwnerConsent::Denied
+                };
+            }
         }
-
-        let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
 
         let passport_id: i32 = url
             .query_pairs()
@@ -142,13 +161,7 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
             return OwnerConsent::Error("Admin login attempted without TOTP!".to_string().into());
         }
 
-        if !url
-            .query_pairs()
-            .find_map(|(k, v)| if k == "allow" { Some(v) } else { None })
-            .expect("allow param required")
-            .parse::<bool>()
-            .expect("failed to parse allow")
-        {
+        if !user_wants_allow {
             OwnerConsent::Denied
         } else {
             OwnerConsent::Authorized(passport.owner_id.to_string())
