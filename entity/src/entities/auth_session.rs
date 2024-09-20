@@ -4,20 +4,13 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "passport")]
+#[sea_orm(table_name = "auth_session")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
+    pub token: String,
+    pub until: DateTimeWithTimeZone,
     pub owner_id: i32,
-    pub version: i32,
-    pub surname: String,
-    pub name: String,
-    pub date_of_birth: Date,
-    pub date_of_issue: Date,
-    pub place_of_origin: String,
-    pub secret: String,
-    pub activated: bool,
-    pub ceremony_time: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

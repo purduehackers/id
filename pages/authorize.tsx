@@ -19,10 +19,15 @@ export default function Authorize({
   const searchParams = useSearchParams();
   const clientId = searchParams.get("client_id");
   const scopes = (searchParams.get("scope") ?? "").split(" ");
+  const hasSession = searchParams.has("session");
 
   const [passportNumber, setPassportNumber] = useState("");
   const [authState, setAuthState] = useState(
-    isValidClientId ? AuthState.EnterNumber : AuthState.NoClient,
+    isValidClientId
+      ? hasSession
+        ? AuthState.Authorize
+        : AuthState.EnterNumber
+      : AuthState.NoClient,
   );
   const [totpNeeded, setTotpNeeded] = useState(false);
   const [totpCode, setTotpCode] = useState("");
