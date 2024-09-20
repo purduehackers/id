@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
 enum AuthState {
@@ -13,14 +12,15 @@ const validClients = ["dashboard", "passports", "authority", "auth-test"];
 
 export default function Authorize({
   isValidClientId,
+  clientId,
+  scopes,
+  hasSession,
 }: {
   isValidClientId: boolean;
+  clientId: string;
+  scopes: string[];
+  hasSession: boolean;
 }) {
-  const searchParams = useSearchParams();
-  const clientId = searchParams.get("client_id") ?? "";
-  const scopes = (searchParams.get("scope") ?? "").split(" ");
-  const hasSession = searchParams.has("session");
-
   const [passportNumber, setPassportNumber] = useState("");
   const [authState, setAuthState] = useState(
     isValidClientId
@@ -33,6 +33,9 @@ export default function Authorize({
   const [totpCode, setTotpCode] = useState("");
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
+
+  console.log({ clientId });
+  console.log({ scopes });
 
   const id = passportNumber.includes(".")
     ? parseInt(passportNumber.split(".")[1] ?? "0")
@@ -165,9 +168,9 @@ export default function Authorize({
           <div className="flex flex-col gap-2">
             <h1 className="text-4xl text-center font-bold">Authorize?</h1>
             <p>
-              <pre className="bg-gray-100 rounded px-2 inline-block">
-                {clientId ?? "id"}
-              </pre>{" "}
+              <span className="bg-gray-100 rounded px-2 inline-block">
+                {clientId}
+              </span>{" "}
               wants to authenticate with your passport and use the following
               scopes:
             </p>
@@ -175,9 +178,9 @@ export default function Authorize({
               {scopes.map((scope: string, index: number) => {
                 return (
                   <li key={index}>
-                    <pre className="bg-gray-100 rounded px-2 inline-block">
+                    <span className="bg-gray-100 rounded px-2 inline-block">
                       {scope}
-                    </pre>
+                    </span>
                   </li>
                 );
               })}
@@ -268,16 +271,29 @@ export default function Authorize({
 }
 
 export async function getServerSideProps(context: {
-  query: { client_id: string | null };
+  query: {
+    client_id: string | null;
+    scope: string | null;
+    session: string | null;
+  };
 }) {
   const { query } = context;
   const clientId = query.client_id;
+
+  const decodedScope = query.scope
+    ? decodeURIComponent(query.scope.replace(/\+/g, " "))
+    : "";
+  const scopes = decodedScope.split(" ") ?? [];
+  const hasSession = !!query.session;
 
   const isValidClientId = clientId && validClients.includes(clientId);
 
   return {
     props: {
       isValidClientId: !!isValidClientId,
+      clientId: clientId || "",
+      scopes: scopes,
+      hasSession: hasSession,
     },
   };
 }
