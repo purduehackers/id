@@ -236,9 +236,7 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
                 .headers()
                 .get_all(COOKIE)
                 .iter()
-                .any(|v| v.to_str().unwrap_or_default().contains("session:"));
-
-            println!("HAS SESSION: {has_session} {req:#?}");
+                .any(|v| v.to_str().unwrap_or_default().contains("session="));
 
             let mut resp = ResponseCompat::default();
             let pg = pre_grant.pre_grant();
