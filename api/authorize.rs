@@ -19,7 +19,7 @@ use lambda_http::http::{
 use oxide_auth_async::endpoint::OwnerSolicitor;
 
 use rand::distributions::{Alphanumeric, DistString};
-use sea_orm::{prelude::*, ActiveValue};
+use sea_orm::{prelude::*, ActiveValue, Condition};
 
 use url::Url;
 use vercel_runtime::{run, Body, Error, Request, Response};
@@ -69,7 +69,11 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
         if let Some(token) = session {
             // Validate the token
             let session = AuthSession::find()
-                .filter(auth_session::Column::Token.eq(token))
+                .filter(
+                    Condition::all()
+                        .add(auth_session::Column::Token.eq(token))
+                        .add(auth_session::Column::Until.gte(Utc::now())),
+                )
                 .one(&db)
                 .await
                 .unwrap();
