@@ -1,6 +1,6 @@
 use entity::{passport, prelude::*, sea_orm_active_enums::RoleEnum, user};
 use id::{db, oauth_user, wrap_error};
-use sea_orm::prelude::*;
+use sea_orm::{prelude::*, QueryOrder};
 use serde::{Deserialize, Serialize};
 use vercel_runtime::{run, Body, Error, Request, Response};
 
@@ -30,6 +30,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         .ok_or_else(|| Error::from("User not found"))?;
     let latest_passport = Passport::find()
         .filter(passport::Column::OwnerId.eq(user_id))
+        .order_by_desc(passport::Column::Id)
         .one(&db)
         .await?;
 
