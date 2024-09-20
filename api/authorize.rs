@@ -184,7 +184,6 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     .map_err(|e| format!("Auth exec error: {e}"))?
     .0;
 
-    println!("RESPONSE: {res:#?}");
     // Grant may have been given, see if it was
     if let Some(loc) = res.headers().get(LOCATION) {
         let url = Url::parse(loc.to_str().unwrap()).unwrap();
@@ -238,6 +237,8 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
                 .get_all(COOKIE)
                 .iter()
                 .any(|v| v.to_str().unwrap_or_default().contains("session:"));
+
+            println!("HAS SESSION: {has_session} {req:#?}");
 
             let mut resp = ResponseCompat::default();
             let pg = pre_grant.pre_grant();
