@@ -184,6 +184,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     .map_err(|e| format!("Auth exec error: {e}"))?
     .0;
 
+    println!("RESPONSE: {res:#?}");
     // Grant may have been given, see if it was
     if let Some(loc) = res.headers().get(LOCATION) {
         let url = Url::parse(loc.to_str().unwrap()).unwrap();
@@ -251,11 +252,9 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
                 params.push(("session", "true"));
             }
 
-            let url = frontends::dev::Url::parse_with_params(
-                "https://id.purduehackers.com/authorize",
-                &params,
-            )
-            .expect("const URL to be valid");
+            let url =
+                frontends::dev::Url::parse_with_params("http://localhost:3000/authorize", &params)
+                    .expect("const URL to be valid");
             resp.redirect(url).expect("infallible");
             OwnerConsent::InProgress(resp)
         }),
