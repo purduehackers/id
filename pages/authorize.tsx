@@ -17,7 +17,7 @@ export default function Authorize({
   isValidClientId: boolean;
 }) {
   const searchParams = useSearchParams();
-  const clientId = searchParams.get("client_id");
+  const clientId = searchParams.get("client_id") ?? "";
   const scopes = (searchParams.get("scope") ?? "").split(" ");
   const hasSession = searchParams.has("session");
 
@@ -27,7 +27,7 @@ export default function Authorize({
       ? hasSession
         ? AuthState.Authorize
         : AuthState.EnterNumber
-      : AuthState.NoClient,
+      : AuthState.NoClient
   );
   const [totpNeeded, setTotpNeeded] = useState(false);
   const [totpCode, setTotpCode] = useState("");
@@ -64,6 +64,10 @@ export default function Authorize({
   };
 
   const formAction = (allow: boolean) => {
+    if (typeof window === undefined) {
+      return;
+    }
+
     const urldata = new URLSearchParams(window.location.search);
     urldata.set("allow", allow.toString());
     urldata.set("id", id.toString());
