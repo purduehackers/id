@@ -188,7 +188,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
     // Grant may have been given, see if it was
     if let Some(loc) = res.headers().get(LOCATION) {
         let url = Url::parse(loc.to_str().unwrap()).unwrap();
-        if let Some((_, grant)) = url.query_pairs().find(|(k, _)| k == "grant") {
+        if let Some((_, grant)) = url.query_pairs().find(|(k, _)| k == "code") {
             // Grant given, reverse reference to user and create a session token
             let db = db().await.unwrap();
 
