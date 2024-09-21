@@ -33,6 +33,7 @@ export default function Authorize({
   const [totpCode, setTotpCode] = useState("");
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
+  const [authorizeStateAllow, setAuthorizeStateAllow] = useState(false);
 
   const id = passportNumber.includes(".")
     ? parseInt(passportNumber.split(".")[1] ?? "0")
@@ -205,12 +206,16 @@ export default function Authorize({
                 />
               </div>
             )}
-            <form method="post" className="w-64">
+            <form
+              method="post"
+              className="w-64"
+              action={formAction(authorizeStateAllow)}
+            >
               <div className="flex flex-row gap-2">
                 <button
                   className="w-full px-3 py-2 text-xl font-bold bg-red-300 hover:bg-red-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
                   type="submit"
-                  formAction={formAction(false)}
+                  onClick={() => setAuthorizeStateAllow(false)}
                   disabled={totpNeeded && totpCode.length < 6}
                 >
                   DENY
@@ -218,7 +223,7 @@ export default function Authorize({
                 <button
                   className="w-full px-3 py-2 text-xl font-bold bg-green-300 hover:bg-green-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
                   type="submit"
-                  formAction={formAction(true)}
+                  onClick={() => setAuthorizeStateAllow(true)}
                   disabled={totpNeeded && totpCode.length < 6}
                 >
                   ACCEPT
