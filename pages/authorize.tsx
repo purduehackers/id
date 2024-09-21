@@ -255,9 +255,7 @@ export default function Authorize({
           <p>
             If you just want to try authenticating with your passport for fun,{" "}
             <span className="underline">
-              <Link href="https://id-auth-example.purduehackers.com">
-                click here
-              </Link>
+              <Link href="https://id-auth.purduehackers.com">click here</Link>
             </span>
             .
           </p>
