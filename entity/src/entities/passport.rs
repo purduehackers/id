@@ -18,7 +18,6 @@ pub struct Model {
     pub ceremony_time: String,
     pub secret: String,
     pub activated: bool,
-    pub ceremony_time: String,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
