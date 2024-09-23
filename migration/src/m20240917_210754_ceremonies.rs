@@ -11,6 +11,12 @@ enum Ceremonies {
     OpenRegistration,
 }
 
+#[derive(DeriveIden)]
+enum Passport {
+    Table,
+    CeremonyTime,
+}
+
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
@@ -40,6 +46,28 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
+        manager
+            .alter_table(
+                TableAlterStatement::new()
+                    .table(Passport::Table)
+                    .modify_column(
+                        ColumnDef::new(Passport::CeremonyTime)
+                            .unique_key()
+                    )
+                    .add_foreign_key(
+                        TableForeignKey::new()
+                            .name("fk_ceremony_time")
+                            .to_tbl(Passport::Table)
+                            .to_col(Passport::CeremonyTime)
+                            .from_tbl(Ceremonies::Table)
+                            .from_col(Ceremonies::CeremonyTime)
+                            .on_delete(ForeignKeyAction::Cascade)
+                            .on_update(ForeignKeyAction::Cascade)
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
         Ok(())
     }
 
@@ -48,6 +76,14 @@ impl MigrationTrait for Migration {
             .drop_table(Table::drop().table(Ceremonies::Table).to_owned())
             .await?;
 
+        manager
+            .drop_foreign_key(
+                ForeignKey::drop()
+                .table(Passport::Table)
+                .name("fk_ceremony_time")
+                .to_owned(),
+            )
+            .await?;
         
         Ok(())
     }
