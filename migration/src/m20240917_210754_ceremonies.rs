@@ -50,9 +50,13 @@ impl MigrationTrait for Migration {
             .alter_table(
                 TableAlterStatement::new()
                     .table(Passport::Table)
-                    .modify_column(
+                    .drop_column(Passport::CeremonyTime)
+                    .add_column(
                         ColumnDef::new(Passport::CeremonyTime)
+                            .timestamp()
+                            .default("1970-01-01 00:00:00")
                             .unique_key()
+                            .not_null(),
                     )
                     .add_foreign_key(
                         TableForeignKey::new()
@@ -77,11 +81,17 @@ impl MigrationTrait for Migration {
             .await?;
 
         manager
-            .drop_foreign_key(
-                ForeignKey::drop()
-                .table(Passport::Table)
-                .name("fk_ceremony_time")
-                .to_owned(),
+            .alter_table(
+                TableAlterStatement::new()
+                    .table(Passport::Table)
+                    .drop_column(Passport::CeremonyTime)
+                    .add_column(
+                        ColumnDef::new(Passport::CeremonyTime)
+                            .string()
+                            .default("1970-01-01 00:00:00")
+                            .not_null(),
+                    )
+                    .to_owned(),
             )
             .await?;
         
