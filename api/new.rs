@@ -54,7 +54,6 @@ async fn create_new_passport(
         version: ActiveValue::Set(CURRENT_PASSPORT_VERSION),
         activated: ActiveValue::Set(false),
         secret: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
-        ceremony_time: ActiveValue::Set("NOT SET PROPERLY".to_string()),
     };
 
     let new_passport = passport.insert(db).await?;
