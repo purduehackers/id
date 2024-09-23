@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 
 enum AuthState {
@@ -13,21 +12,28 @@ const validClients = ["dashboard", "passports", "authority", "auth-test"];
 
 export default function Authorize({
   isValidClientId,
+  clientId,
+  scopes,
+  hasSession,
 }: {
   isValidClientId: boolean;
+  clientId: string;
+  scopes: string[];
+  hasSession: boolean;
 }) {
-  const searchParams = useSearchParams();
-  const clientId = searchParams.get("client_id");
-  const scopes = (searchParams.get("scope") ?? "").split(" ");
-
   const [passportNumber, setPassportNumber] = useState("");
   const [authState, setAuthState] = useState(
-    isValidClientId ? AuthState.EnterNumber : AuthState.NoClient,
+    isValidClientId
+      ? hasSession
+        ? AuthState.Authorize
+        : AuthState.EnterNumber
+      : AuthState.NoClient
   );
   const [totpNeeded, setTotpNeeded] = useState(false);
   const [totpCode, setTotpCode] = useState("");
   const [numberFormPending, setNumberFormPending] = useState(false);
   const [numberFormError, setNumberFormError] = useState(false);
+  const [authorizeStateAllow, setAuthorizeStateAllow] = useState(false);
 
   const id = passportNumber.includes(".")
     ? parseInt(passportNumber.split(".")[1] ?? "0")
@@ -59,6 +65,10 @@ export default function Authorize({
   };
 
   const formAction = (allow: boolean) => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
     const urldata = new URLSearchParams(window.location.search);
     urldata.set("allow", allow.toString());
     urldata.set("id", id.toString());
@@ -156,9 +166,9 @@ export default function Authorize({
           <div className="flex flex-col gap-2">
             <h1 className="text-4xl text-center font-bold">Authorize?</h1>
             <p>
-              <pre className="bg-gray-100 rounded px-2 inline-block">
-                {clientId ?? "id"}
-              </pre>{" "}
+              <span className="bg-gray-100 rounded px-2 inline-block">
+                {clientId}
+              </span>{" "}
               wants to authenticate with your passport and use the following
               scopes:
             </p>
@@ -166,9 +176,9 @@ export default function Authorize({
               {scopes.map((scope: string, index: number) => {
                 return (
                   <li key={index}>
-                    <pre className="bg-gray-100 rounded px-2 inline-block">
+                    <span className="bg-gray-100 rounded px-2 inline-block">
                       {scope}
-                    </pre>
+                    </span>
                   </li>
                 );
               })}
@@ -196,12 +206,16 @@ export default function Authorize({
                 />
               </div>
             )}
-            <form method="post" className="w-64">
+            <form
+              method="post"
+              className="w-64"
+              action={formAction(authorizeStateAllow)}
+            >
               <div className="flex flex-row gap-2">
                 <button
                   className="w-full px-3 py-2 text-xl font-bold bg-red-300 hover:bg-red-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
                   type="submit"
-                  formAction={formAction(false)}
+                  onClick={() => setAuthorizeStateAllow(false)}
                   disabled={totpNeeded && totpCode.length < 6}
                 >
                   DENY
@@ -209,7 +223,7 @@ export default function Authorize({
                 <button
                   className="w-full px-3 py-2 text-xl font-bold bg-green-300 hover:bg-green-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
                   type="submit"
-                  formAction={formAction(true)}
+                  onClick={() => setAuthorizeStateAllow(true)}
                   disabled={totpNeeded && totpCode.length < 6}
                 >
                   ACCEPT
@@ -246,9 +260,7 @@ export default function Authorize({
           <p>
             If you just want to try authenticating with your passport for fun,{" "}
             <span className="underline">
-              <Link href="https://id-auth-example.purduehackers.com">
-                click here
-              </Link>
+              <Link href="https://id-auth.purduehackers.com">click here</Link>
             </span>
             .
           </p>
@@ -259,16 +271,29 @@ export default function Authorize({
 }
 
 export async function getServerSideProps(context: {
-  query: { client_id: string | null };
+  query: {
+    client_id: string | null;
+    scope: string | null;
+    session: string | null;
+  };
 }) {
   const { query } = context;
   const clientId = query.client_id;
+
+  const decodedScope = query.scope
+    ? decodeURIComponent(query.scope.replace(/\+/g, " "))
+    : "";
+  const scopes = decodedScope.split(" ") ?? [];
+  const hasSession = !!query.session;
 
   const isValidClientId = clientId && validClients.includes(clientId);
 
   return {
     props: {
       isValidClientId: !!isValidClientId,
+      clientId: clientId || "",
+      scopes: scopes,
+      hasSession: hasSession,
     },
   };
 }

@@ -9,9 +9,7 @@ export default function Index() {
         can&rsquo;t do very much here. Try using Sign In with Passport on a
         supported page,{" "}
         <span className="underline">
-          <Link href="https://id-auth-example.purduehackers.com">
-            like this one
-          </Link>
+          <Link href="https://id-auth.purduehackers.com">like this one</Link>
         </span>
         .
       </p>
