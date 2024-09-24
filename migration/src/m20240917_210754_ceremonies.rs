@@ -76,10 +76,6 @@ impl MigrationTrait for Migration {
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
         manager
-            .drop_table(Table::drop().table(Ceremonies::Table).to_owned())
-            .await?;
-
-        manager
             .alter_table(
                 TableAlterStatement::new()
                     .table(Passport::Table)
@@ -94,6 +90,10 @@ impl MigrationTrait for Migration {
             )
             .await?;
         
+        manager
+            .drop_table(Table::drop().table(Ceremonies::Table).to_owned())
+            .await?;
+
         Ok(())
     }
 }
