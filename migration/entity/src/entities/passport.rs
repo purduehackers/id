@@ -17,7 +17,6 @@ pub struct Model {
     pub place_of_origin: String,
     pub secret: String,
     pub activated: bool,
-    #[sea_orm(unique)]
     pub ceremony_time: DateTime,
 }
 

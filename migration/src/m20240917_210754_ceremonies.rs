@@ -55,7 +55,6 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(Passport::CeremonyTime)
                             .timestamp()
                             .default("1970-01-01 00:00:00")
-                            .unique_key()
                             .not_null(),
                     )
                     .add_foreign_key(
