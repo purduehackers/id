@@ -9,6 +9,8 @@ mod m20240304_164539_nullable_grant_code;
 mod m20240907_031824_passport_ceremony_date;
 mod m20240920_155703_auth_session;
 mod m20240917_210754_ceremonies;
+mod m20240924_225432_passport_ceremony_fk;
+
 
 pub struct Migrator;
 
@@ -25,6 +27,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240907_031824_passport_ceremony_date::Migration),
             Box::new(m20240920_155703_auth_session::Migration),
             Box::new(m20240917_210754_ceremonies::Migration),
+            Box::new(m20240924_225432_passport_ceremony_fk::Migration),
         ]
     }
 }
