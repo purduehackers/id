@@ -4,22 +4,32 @@ use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
-#[sea_orm(table_name = "auth_grant")]
+#[sea_orm(table_name = "passport")]
 pub struct Model {
     #[sea_orm(primary_key)]
     pub id: i32,
     pub owner_id: i32,
-    pub redirect_uri: Json,
-    pub until: DateTimeWithTimeZone,
-    pub scope: Json,
-    pub client_id: String,
-    pub code: Option<String>,
+    pub version: i32,
+    pub surname: String,
+    pub name: String,
+    pub date_of_birth: Date,
+    pub date_of_issue: Date,
+    pub place_of_origin: String,
+    pub secret: String,
+    pub activated: bool,
+    pub ceremony_time: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
-    #[sea_orm(has_many = "super::auth_token::Entity")]
-    AuthToken,
+    #[sea_orm(
+        belongs_to = "super::ceremonies::Entity",
+        from = "Column::CeremonyTime",
+        to = "super::ceremonies::Column::CeremonyTime",
+        on_update = "Cascade",
+        on_delete = "Cascade"
+    )]
+    Ceremonies,
     #[sea_orm(
         belongs_to = "super::user::Entity",
         from = "Column::OwnerId",
@@ -30,9 +40,9 @@ pub enum Relation {
     User,
 }
 
-impl Related<super::auth_token::Entity> for Entity {
+impl Related<super::ceremonies::Entity> for Entity {
     fn to() -> RelationDef {
-        Relation::AuthToken.def()
+        Relation::Ceremonies.def()
     }
 }
 

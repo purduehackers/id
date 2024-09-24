@@ -25,6 +25,7 @@ struct NewPassport {
     date_of_birth: String,
     date_of_issue: String,
     place_of_origin: String,
+    ceremony_time: String,
 }
 
 const CURRENT_PASSPORT_VERSION: i32 = 1;
@@ -49,10 +50,10 @@ async fn create_new_passport(
         date_of_birth: ActiveValue::Set(parse_date(&new.date_of_birth)?),
         date_of_issue: ActiveValue::Set(parse_date(&new.date_of_issue)?),
         place_of_origin: ActiveValue::Set(new.place_of_origin),
+        ceremony_time: ActiveValue::Set(new.ceremony_time),
         version: ActiveValue::Set(CURRENT_PASSPORT_VERSION),
         activated: ActiveValue::Set(false),
         secret: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
-        ceremony_time: ActiveValue::Set("NOT SET PROPERLY".to_string()),
     };
 
     let new_passport = passport.insert(db).await?;
@@ -114,6 +115,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                         found_passport.date_of_birth = parse_date(&new.date_of_birth)?;
                         found_passport.date_of_issue = parse_date(&new.date_of_issue)?;
                         found_passport.place_of_origin = new.place_of_origin;
+                        found_passport.ceremony_time = new.ceremony_time;
 
                         let active_passport = found_passport.into_active_model();
                         let updated_passport = active_passport.update(&db).await?;
