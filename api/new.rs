@@ -37,6 +37,13 @@ fn parse_date(s: &str) -> Result<ChronoDate, Error> {
     Ok(ChronoDateTime::parse_from_str(s, "%+")?.date())
 }
 
+fn parse_datetime(s: &str) -> Result<ChronoDateTime, Error> {
+    if let Ok(datetime) = ChronoDateTime::from_str(s) {
+        return Ok(datetime);
+    }
+    Ok(ChronoDateTime::parse_from_str(s, "%+")?)
+}
+
 async fn create_new_passport(
     db: &DatabaseConnection,
     user: &user::Model,
@@ -50,7 +57,7 @@ async fn create_new_passport(
         date_of_birth: ActiveValue::Set(parse_date(&new.date_of_birth)?),
         date_of_issue: ActiveValue::Set(parse_date(&new.date_of_issue)?),
         place_of_origin: ActiveValue::Set(new.place_of_origin),
-        ceremony_time: ActiveValue::Set(new.ceremony_time),
+        ceremony_time: ActiveValue::Set(parse_datetime(&new.ceremony_time)?),
         version: ActiveValue::Set(CURRENT_PASSPORT_VERSION),
         activated: ActiveValue::Set(false),
         secret: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
@@ -115,7 +122,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                         found_passport.date_of_birth = parse_date(&new.date_of_birth)?;
                         found_passport.date_of_issue = parse_date(&new.date_of_issue)?;
                         found_passport.place_of_origin = new.place_of_origin;
-                        found_passport.ceremony_time = parse_date(&new.ceremony_time)?;
+                        found_passport.ceremony_time = parse_datetime(&new.ceremony_time)?;
 
                         let active_passport = found_passport.into_active_model();
                         let updated_passport = active_passport.update(&db).await?;
