@@ -115,7 +115,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                         found_passport.date_of_birth = parse_date(&new.date_of_birth)?;
                         found_passport.date_of_issue = parse_date(&new.date_of_issue)?;
                         found_passport.place_of_origin = new.place_of_origin;
-                        found_passport.ceremony_time = new.ceremony_time;
+                        found_passport.ceremony_time = parse_date(&new.ceremony_time)?;
 
                         let active_passport = found_passport.into_active_model();
                         let updated_passport = active_passport.update(&db).await?;
