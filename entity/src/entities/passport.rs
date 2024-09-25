@@ -17,20 +17,19 @@ pub struct Model {
     pub place_of_origin: String,
     pub secret: String,
     pub activated: bool,
-    #[sea_orm(unique)]
-    pub ceremony_time: String,
+    pub ceremony_time: DateTime,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]
 pub enum Relation {
     #[sea_orm(
-        belongs_to = "Entity",
+        belongs_to = "super::ceremonies::Entity",
         from = "Column::CeremonyTime",
-        to = "Column::CeremonyTime",
+        to = "super::ceremonies::Column::CeremonyTime",
         on_update = "Cascade",
         on_delete = "Cascade"
     )]
-    SelfRef,
+    Ceremonies,
     #[sea_orm(
         belongs_to = "super::user::Entity",
         from = "Column::OwnerId",
@@ -39,6 +38,12 @@ pub enum Relation {
         on_delete = "Cascade"
     )]
     User,
+}
+
+impl Related<super::ceremonies::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::Ceremonies.def()
+    }
 }
 
 impl Related<super::user::Entity> for Entity {
