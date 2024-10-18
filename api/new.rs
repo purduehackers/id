@@ -119,11 +119,11 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                     } else {
                         let mut active_passport = found_passport.into_active_model();
 
-                        active_passport.name = ActiveValue::Set(new.name.clone());
-                        active_passport.surname = ActiveValue::Set(new.surname.clone());
+                        active_passport.name = ActiveValue::Set(new.name);
+                        active_passport.surname = ActiveValue::Set(new.surname);
                         active_passport.date_of_birth = ActiveValue::Set(parse_date(&new.date_of_birth)?);
                         active_passport.date_of_issue = ActiveValue::Set(parse_date(&new.date_of_issue)?);
-                        active_passport.place_of_origin = ActiveValue::Set(new.place_of_origin.clone());
+                        active_passport.place_of_origin = ActiveValue::Set(new.place_of_origin);
                         active_passport.ceremony_time = ActiveValue::Set(parse_datetime(&new.ceremony_time)?);
 
                         let updated_passport = active_passport.update(&db).await?;
