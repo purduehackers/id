@@ -112,19 +112,20 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 .await?;
 
             let passport_id = match latest_passport {
-                Some(mut found_passport) => {
+                Some(found_passport) => {
                     if found_passport.activated {
                         let new_passport = create_new_passport(&db, &user, new).await?;
                         new_passport.id
                     } else {
-                        found_passport.name = new.name;
-                        found_passport.surname = new.surname;
-                        found_passport.date_of_birth = parse_date(&new.date_of_birth)?;
-                        found_passport.date_of_issue = parse_date(&new.date_of_issue)?;
-                        found_passport.place_of_origin = new.place_of_origin;
-                        found_passport.ceremony_time = parse_datetime(&new.ceremony_time)?;
+                        let mut active_passport = found_passport.into_active_model();
 
-                        let active_passport = found_passport.into_active_model();
+                        active_passport.name = ActiveValue::Set(new.name.clone());
+                        active_passport.surname = ActiveValue::Set(new.surname.clone());
+                        active_passport.date_of_birth = ActiveValue::Set(parse_date(&new.date_of_birth)?);
+                        active_passport.date_of_issue = ActiveValue::Set(parse_date(&new.date_of_issue)?);
+                        active_passport.place_of_origin = ActiveValue::Set(new.place_of_origin.clone());
+                        active_passport.ceremony_time = ActiveValue::Set(parse_datetime(&new.ceremony_time)?);
+
                         let updated_passport = active_passport.update(&db).await?;
 
                         updated_passport.id
