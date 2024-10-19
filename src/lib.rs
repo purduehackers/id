@@ -198,7 +198,7 @@ impl WebRequest for RequestCompat {
     }
 }
 
-pub const VALID_CLIENTS: [&str; 5] = ["dashboard", "passports", "authority", "auth-test", "vulcan-auth", "shad-moe"];
+pub const VALID_CLIENTS: [&str; 6] = ["dashboard", "passports", "authority", "auth-test", "vulcan-auth", "shad-moe"];
 
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
