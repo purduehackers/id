@@ -236,7 +236,7 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[4],
         RegisteredUrl::Semantic(
-            Url::from_str("https://auth.purduehackers.com/source/oauth/callback/purduehackers-id")
+            Url::from_str("https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/")
                 .expect("url to be valid"),
         ),
         "user:read user".parse().expect("scopes to be valid"),
@@ -245,7 +245,7 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[5],
         RegisteredUrl::Semantic(
-            Url::from_str("https://auth.shad.moe/source/oauth/callback/purduehackers-id")
+            Url::from_str("https://auth.shad.moe/source/oauth/callback/purduehackers-id/")
                 .expect("url to be valid"),
         ),
         "user:read user".parse().expect("scopes to be valid"),
