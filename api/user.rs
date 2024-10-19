@@ -6,6 +6,8 @@ use vercel_runtime::{run, Body, Error, Request, Response};
 
 #[derive(Serialize, Deserialize)]
 struct UserWithPassport {
+    iss: String,
+    sub: i32,
     id: i32,
     discord_id: i64,
     role: RoleEnum,
@@ -35,6 +37,8 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
         .await?;
 
     let response_data = UserWithPassport {
+        iss: "https://id.purduehackers.com".to_owned(),
+        sub: user.id,
         id: user.id,
         discord_id: user.discord_id.clone(),
         role: user.role.clone(),
