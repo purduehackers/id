@@ -8,7 +8,7 @@ enum AuthState {
   NoClient,
 }
 
-const validClients = ["dashboard", "passports", "authority", "auth-test"];
+const validClients = ["dashboard", "passports", "authority", "auth-test", "vulcan-auth", "shad-moe"];
 
 export default function Authorize({
   isValidClientId,
