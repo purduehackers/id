@@ -8,8 +8,6 @@ enum AuthState {
   NoClient,
 }
 
-const validClients = ["dashboard", "passports", "authority", "auth-test", "vulcan-auth", "shad-moe"];
-
 export default function Authorize({
   isValidClientId,
   clientId,
@@ -27,7 +25,7 @@ export default function Authorize({
       ? hasSession
         ? AuthState.Authorize
         : AuthState.EnterNumber
-      : AuthState.NoClient
+      : AuthState.NoClient,
   );
   const [totpNeeded, setTotpNeeded] = useState(false);
   const [totpCode, setTotpCode] = useState("");
@@ -286,7 +284,11 @@ export async function getServerSideProps(context: {
   const scopes = decodedScope.split(" ") ?? [];
   const hasSession = !!query.session;
 
-  const isValidClientId = clientId && validClients.includes(clientId);
+  const { valid_clients }: { valid_clients: string[] } = await (
+    await fetch("/api/client")
+  ).json();
+
+  const isValidClientId = clientId && valid_clients.includes(clientId);
 
   return {
     props: {
