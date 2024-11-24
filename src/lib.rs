@@ -262,7 +262,7 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[6],
         RegisteredUrl::Semantic(
-            Url::from_str("https://www.imsqu.id/source/oauth/callback/purduehackers-id/")
+            Url::from_str("https://www.imsqu.id/source/auth/callback/purduehackers-id")
                 .expect("url to be valid"),
         ),
         "user:read".parse().expect("scopes to be valid"),
