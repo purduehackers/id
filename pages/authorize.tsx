@@ -1,3 +1,4 @@
+import { IncomingMessage } from "http";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 
@@ -274,8 +275,9 @@ export async function getServerSideProps(context: {
     scope: string | null;
     session: string | null;
   };
+  req: IncomingMessage;
 }) {
-  const { query } = context;
+  const { query, req } = context;
   const clientId = query.client_id;
 
   const decodedScope = query.scope
@@ -285,7 +287,7 @@ export async function getServerSideProps(context: {
   const hasSession = !!query.session;
 
   const { valid_clients }: { valid_clients: string[] } = await (
-    await fetch("/api/client")
+    await fetch(`https://${req.headers.host}/api/client`)
   ).json();
 
   const isValidClientId = clientId && valid_clients.includes(clientId);
