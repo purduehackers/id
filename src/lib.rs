@@ -198,7 +198,15 @@ impl WebRequest for RequestCompat {
     }
 }
 
-pub const VALID_CLIENTS: [&str; 6] = ["dashboard", "passports", "authority", "auth-test", "vulcan-auth", "shad-moe"];
+pub const VALID_CLIENTS: [&str; 7] = [
+    "dashboard",
+    "passports",
+    "authority",
+    "auth-test",
+    "vulcan-auth",
+    "shad-moe",
+    "shquid",
+];
 
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
@@ -249,6 +257,15 @@ pub fn client_registry() -> ClientMap {
                 .expect("url to be valid"),
         ),
         "user:read user".parse().expect("scopes to be valid"),
+    ));
+
+    clients.register_client(Client::public(
+        VALID_CLIENTS[6],
+        RegisteredUrl::Semantic(
+            Url::from_str("https://imsqu.id/source/oauth/callback/purduehackers-id/")
+                .expect("url to be valid"),
+        ),
+        "user:read".parse().expect("scopes to be valid"),
     ));
 
     clients
