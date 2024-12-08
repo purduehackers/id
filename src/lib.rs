@@ -198,7 +198,7 @@ impl WebRequest for RequestCompat {
     }
 }
 
-pub const VALID_CLIENTS: [&str; 7] = [
+pub const VALID_CLIENTS: [&str; 8] = [
     "dashboard",
     "passports",
     "authority",
@@ -206,6 +206,7 @@ pub const VALID_CLIENTS: [&str; 7] = [
     "vulcan-auth",
     "shad-moe",
     "shquid",
+    "auth-test-burst"
 ];
 
 pub fn client_registry() -> ClientMap {
@@ -266,6 +267,15 @@ pub fn client_registry() -> ClientMap {
                 .expect("url to be valid"),
         ),
         "user:read".parse().expect("scopes to be valid"),
+    ));
+
+    clients.register_client(Client::public(
+        VALID_CLIENTS[7],
+        RegisteredUrl::Semantic(
+            Url::from_str("http://localhost:3000/auth/callback/purduehackers-id")
+                .expect("url to be valid"),
+        ),
+        "user:read user".parse().expect("scopes to be valid"),
     ));
 
     clients
