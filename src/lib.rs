@@ -198,7 +198,7 @@ impl WebRequest for RequestCompat {
     }
 }
 
-pub const VALID_CLIENTS: [&str; 8] = [
+/*pub const VALID_CLIENTS: [&str; 8] = [
     "dashboard",
     "passports",
     "authority",
@@ -207,76 +207,24 @@ pub const VALID_CLIENTS: [&str; 8] = [
     "shad-moe",
     "shquid",
     "auth-test-burst"
-];
+];*/
 
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
-    clients.register_client(Client::public(
-        VALID_CLIENTS[0],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://dash.purduehackers.com/api/callback").expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scope to be valid"),
-    ));
 
-    clients.register_client(Client::public(
-        VALID_CLIENTS[1],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://passports.purduehackers.com/callback").expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
+    let data = fs::read_to_string("../clients.json").expect("Unable to read file");
 
-    clients.register_client(Client::public(
-        VALID_CLIENTS[2],
-        RegisteredUrl::Semantic(Url::from_str("authority://callback").expect("url to be valid")),
-        "admin:read admin".parse().expect("scopes to be valid"),
-    ));
+    let client_list: Vec<Foo> = serde_json::from_str(data)?;
 
-    clients.register_client(Client::public(
-        VALID_CLIENTS[3],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://id-auth.purduehackers.com/api/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[4],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[5],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.shad.moe/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[6],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://www.imsqu.id/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[7],
-        RegisteredUrl::Semantic(
-            Url::from_str("http://localhost:3000/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
+    for client_id in client_list.as_object().unwrap().keys() {
+        clients.register_client(Client::public(
+            client_id,
+            RegisteredUrl::Semantic(
+                Url::from_str(client_id[key]["url"]).expect("url to be valid"),
+            ),
+            [key]["scopes"].parse().expect("scopes to be valid"),
+        ));
+    }
 
     clients
 }
