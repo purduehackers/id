@@ -198,20 +198,32 @@ impl WebRequest for RequestCompat {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct ClientData {
+    url: String,
+    scopes: String
+}
+
+#[derive(Serialize, Deserialize)]
+struct ClientList {
+    #[serde(flatten)]
+    client_id: HashMap<String, ClientData>
+}
+
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
 
     let data = fs::read_to_string("../clients.json").expect("Unable to read file");
 
-    let client_list: Vec<Foo> = serde_json::from_str(data)?;
+    let client_list: ClientList = serde_json::from_str(data)?;
 
     for client_id in client_list.as_object().unwrap().keys() {
         clients.register_client(Client::public(
             client_id,
             RegisteredUrl::Semantic(
-                Url::from_str(client_id[key]["url"]).expect("url to be valid"),
+                Url::from_str(client_id[client_list]["url"]).expect("url to be valid"),
             ),
-            [key]["scopes"].parse().expect("scopes to be valid"),
+            [client_list]["scopes"].parse().expect("scopes to be valid"),
         ));
     }
 
