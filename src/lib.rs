@@ -272,7 +272,7 @@ pub fn client_registry() -> ClientMap {
     clients.register_client(Client::public(
         VALID_CLIENTS[7],
         RegisteredUrl::Semantic(
-            Url::from_str("http://localhost:3000/auth/callback/purduehackers-id")
+            Url::from_str("https://assistance-nuke-cheaper-carriers.trycloudflare.com/auth/callback/purduehackers-id")
                 .expect("url to be valid"),
         ),
         "user:read user".parse().expect("scopes to be valid"),
