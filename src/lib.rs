@@ -1,17 +1,16 @@
 #![deny(clippy::unwrap_used)]
 
-use base64::prelude::*;
 use core::ops::Deref;
 use fred::prelude::*;
 use jsonwebkey::JsonWebKey;
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use jsonwebtoken::{decode, encode, Header, TokenData, Validation};
 use lambda_http::http::{
     header::{CONTENT_TYPE, LOCATION, WWW_AUTHENTICATE},
     HeaderValue,
 };
 use sea_orm::Database;
 use serde::{Deserialize, Serialize};
-use std::{borrow::Cow, collections::HashSet, env, fmt::Display, ops::DerefMut, str::FromStr};
+use std::{borrow::Cow, env, fmt::Display, ops::DerefMut, str::FromStr};
 use vercel_runtime::{Body, Request, Response, StatusCode};
 
 use chrono::{DateTime, Months, Utc};
@@ -21,7 +20,7 @@ use oxide_auth::{
     endpoint::ResponseStatus,
     frontends::{self, simple::endpoint::Vacant},
     primitives::{
-        grant::{Extensions, Grant},
+        grant::Grant,
         issuer::{IssuedToken, TokenType},
     },
 };
