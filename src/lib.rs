@@ -1,22 +1,29 @@
 #![deny(clippy::unwrap_used)]
 
+use base64::prelude::*;
 use core::ops::Deref;
 use fred::prelude::*;
+use jsonwebkey::JsonWebKey;
+use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
 use lambda_http::http::{
     header::{CONTENT_TYPE, LOCATION, WWW_AUTHENTICATE},
     HeaderValue,
 };
 use sea_orm::Database;
-use serde::Serialize;
-use std::{borrow::Cow, env, fmt::Display, ops::DerefMut, str::FromStr};
+use serde::{Deserialize, Serialize};
+use std::{borrow::Cow, collections::HashSet, env, fmt::Display, ops::DerefMut, str::FromStr};
 use vercel_runtime::{Body, Request, Response, StatusCode};
 
-use chrono::{Months, Utc};
+use chrono::{DateTime, Months, Utc};
 use entity::prelude::*;
 use entity::{auth_grant, auth_token};
 use oxide_auth::{
     endpoint::ResponseStatus,
     frontends::{self, simple::endpoint::Vacant},
+    primitives::{
+        grant::{Extensions, Grant},
+        issuer::{IssuedToken, TokenType},
+    },
 };
 use oxide_auth::{
     endpoint::{NormalizedParameter, Scope, WebRequest, WebResponse},
@@ -198,85 +205,65 @@ impl WebRequest for RequestCompat {
     }
 }
 
-pub const VALID_CLIENTS: [&str; 8] = [
-    "dashboard",
-    "passports",
-    "authority",
-    "auth-test",
-    "vulcan-auth",
-    "shad-moe",
-    "shquid",
-    "auth-test-burst"
+pub struct ClientData<'a> {
+    pub client_id: &'a str,
+    pub url: &'a str,
+    pub scope: &'a str,
+}
+
+pub const VALID_CLIENTS: [ClientData<'static>; 7] = [
+    ClientData {
+        client_id: "dashboard",
+        url: "https://dash.purduehackers.com/api/callback",
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "passports",
+        url: "https://passports.purduehackers.com/callback",
+        scope: "user:read user",
+    },
+    ClientData {
+        client_id: "authority",
+        url: "authority://callback",
+        scope: "admin:read admin",
+    },
+    ClientData {
+        client_id: "auth-test",
+        url: "https://id-auth.purduehackers.com/api/auth/callback/purduehackers-id",
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "vulcan-auth",
+        url: "https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/",
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "shad-moe",
+        url: "https://auth.shad.moe/source/oauth/callback/purduehackers-id/",
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "shquid",
+        url: "https://www.imsqu.id/auth/callback/purduehackers-id",
+        scope: "user:read",
+    },
 ];
 
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
-    clients.register_client(Client::public(
-        VALID_CLIENTS[0],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://dash.purduehackers.com/api/callback").expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scope to be valid"),
-    ));
 
-    clients.register_client(Client::public(
-        VALID_CLIENTS[1],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://passports.purduehackers.com/callback").expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[2],
-        RegisteredUrl::Semantic(Url::from_str("authority://callback").expect("url to be valid")),
-        "admin:read admin".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[3],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://id-auth.purduehackers.com/api/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[4],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[5],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.shad.moe/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[6],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://www.imsqu.id/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[7],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://assistance-nuke-cheaper-carriers.trycloudflare.com/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
+    for ClientData {
+        client_id,
+        url,
+        scope,
+    } in VALID_CLIENTS
+    {
+        clients.register_client(Client::public(
+            client_id,
+            RegisteredUrl::Semantic(Url::from_str(url).expect("url to be valid")),
+            scope.parse().expect("scope to be valid"),
+        ));
+    }
 
     clients
 }
@@ -338,6 +325,88 @@ macro_rules! wrap_error {
             })
         }
     };
+}
+
+pub struct JwtIssuer;
+
+#[async_trait::async_trait]
+impl Issuer for JwtIssuer {
+    async fn issue(
+        &mut self,
+        grant: oxide_auth::primitives::grant::Grant,
+    ) -> Result<oxide_auth::primitives::prelude::IssuedToken, ()> {
+        let until = Utc::now() + Months::new(1);
+        let claims = Claims {
+            sub: grant.owner_id,
+            exp: until.timestamp(),
+            iat: Utc::now().timestamp(),
+            iss: "id".to_string(),
+            aud: grant.client_id,
+            scope: grant.scope,
+        };
+
+        let jwk = get_jwk();
+        let token = encode(
+            &Header::new(jwk.algorithm.unwrap().into()),
+            &claims,
+            &jwk.key.to_encoding_key(),
+        )
+        .expect("JWT encode success");
+
+        Ok(IssuedToken {
+            token,
+            refresh: None,
+            token_type: TokenType::Bearer,
+            until,
+        })
+    }
+
+    async fn refresh(
+        &mut self,
+        _: &str,
+        _: oxide_auth::primitives::grant::Grant,
+    ) -> Result<oxide_auth::primitives::issuer::RefreshedToken, ()> {
+        // No refresh tokens
+        Err(())
+    }
+
+    async fn recover_token(
+        &mut self,
+        t: &str,
+    ) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+        let Ok(TokenData { claims, .. }) = decode::<Claims>(
+            t,
+            &get_jwk().key.to_decoding_key(),
+            &get_validator(IdIsuser::Id),
+        ) else {
+            return Err(());
+        };
+
+        let Some(redirect_uri) = VALID_CLIENTS
+            .iter()
+            .find(|c| c.client_id == claims.aud)
+            .map(|c| c.url)
+        else {
+            return Err(());
+        };
+
+        Ok(Some(Grant {
+            owner_id: claims.sub,
+            client_id: claims.aud,
+            scope: claims.scope,
+            until: DateTime::from_timestamp(claims.exp, 0).expect("valid timestamp"),
+            extensions: Default::default(),
+            redirect_uri: Url::from_str(redirect_uri).expect("valid url"),
+        }))
+    }
+
+    async fn recover_refresh(
+        &mut self,
+        _: &str,
+    ) -> Result<Option<oxide_auth::primitives::grant::Grant>, ()> {
+        // No refresh tokens
+        Err(())
+    }
 }
 
 pub struct DbIssuer;
@@ -439,6 +508,99 @@ impl Issuer for DbIssuer {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct Claims {
+    sub: String, // Subject (user ID)
+    exp: i64,    // Expiration time (timestamp)
+    iat: i64,    // Issued at (timestamp)
+    iss: String, // Issuer
+    aud: String, // Audience
+    scope: Scope,
+}
+
+/// Not currently in use but can be switched to whenever
+pub struct JwtAuthorizer;
+
+pub fn get_jwk() -> JsonWebKey {
+    env::var("JWK").expect("JWK").parse().expect("JWK parse")
+}
+
+#[derive(Debug, Clone, Copy)]
+enum IdIsuser {
+    Id,
+    IdGrant,
+}
+
+fn get_validator(iss: IdIsuser) -> Validation {
+    let mut val = Validation::new(get_jwk().algorithm.expect("algo").into());
+    val.set_issuer(&[match iss {
+        IdIsuser::Id => "id",
+        IdIsuser::IdGrant => "id-grant",
+    }]);
+    val.set_audience(
+        &VALID_CLIENTS
+            .iter()
+            .map(|c| c.client_id)
+            .collect::<Vec<_>>(),
+    );
+
+    val
+}
+
+#[async_trait::async_trait]
+impl Authorizer for JwtAuthorizer {
+    async fn authorize(
+        &mut self,
+        grant: oxide_auth::primitives::grant::Grant,
+    ) -> Result<String, ()> {
+        let claims = Claims {
+            sub: grant.owner_id,
+            exp: grant.until.timestamp(),
+            iat: Utc::now().timestamp(),
+            iss: "id-grant".to_string(),
+            aud: grant.client_id,
+            scope: grant.scope,
+        };
+
+        let jwk = get_jwk();
+        let token = encode(
+            &Header::new(jwk.algorithm.unwrap().into()),
+            &claims,
+            &jwk.key.to_encoding_key(),
+        )
+        .expect("JWT encode success");
+
+        Ok(token)
+    }
+
+    async fn extract(&mut self, token: &str) -> Result<Option<Grant>, ()> {
+        let Ok(TokenData { claims, .. }) = decode::<Claims>(
+            token,
+            &get_jwk().key.to_decoding_key(),
+            &get_validator(IdIsuser::IdGrant),
+        ) else {
+            return Err(());
+        };
+
+        let Some(redirect_uri) = VALID_CLIENTS
+            .iter()
+            .find(|c| c.client_id == claims.aud)
+            .map(|c| c.url)
+        else {
+            return Err(());
+        };
+
+        Ok(Some(Grant {
+            owner_id: claims.sub,
+            client_id: claims.aud,
+            scope: claims.scope,
+            until: DateTime::from_timestamp(claims.exp, 0).expect("valid timestamp"),
+            extensions: Default::default(),
+            redirect_uri: Url::from_str(redirect_uri).expect("valid url"),
+        }))
+    }
+}
+
 pub struct DbAuthorizer;
 
 #[async_trait::async_trait]
@@ -448,30 +610,6 @@ impl Authorizer for DbAuthorizer {
         grant: oxide_auth::primitives::grant::Grant,
     ) -> Result<String, ()> {
         let db = db().await.expect("db to be accessible");
-
-        // WARNING: This code is very stupid, why did I do this
-        // let existing: Option<auth_grant::Model> = AuthGrant::find()
-        //     .filter(
-        //         Condition::all()
-        //             .add(
-        //                 auth_grant::Column::OwnerId.eq(grant
-        //                     .owner_id
-        //                     .parse::<i32>()
-        //                     .expect("failed to parse owner_id as int")),
-        //             )
-        //             .add(auth_grant::Column::ClientId.eq(grant.client_id.clone())),
-        //     )
-        //     .one(&db)
-        //     .await
-        //     .expect("db op to succeed");
-        //
-        // if let Some(existing) = existing {
-        //     let mut active = existing.into_active_model();
-        //     active.until = ActiveValue::Set(grant.until.into());
-        //
-        //     let active = active.update(&db).await.expect("db update op to succeed");
-        //     return Ok(active.code);
-        // }
 
         let model = auth_grant::ActiveModel {
             id: ActiveValue::NotSet,
@@ -538,7 +676,7 @@ pub struct OAuthEndpoint<T: OwnerSolicitor<RequestCompat>> {
     solicitor: T,
     scopes: Vec<Scope>,
     registry: ClientMap,
-    issuer: DbIssuer,
+    issuer: JwtIssuer,
     authorizer: DbAuthorizer,
 }
 
@@ -548,7 +686,7 @@ impl<T: OwnerSolicitor<RequestCompat>> OAuthEndpoint<T> {
             solicitor,
             scopes,
             registry: client_registry(),
-            issuer: DbIssuer,
+            issuer: JwtIssuer,
             authorizer: DbAuthorizer,
         }
     }
