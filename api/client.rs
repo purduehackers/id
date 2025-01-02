@@ -15,7 +15,7 @@ struct ValidClients<'a> {
 pub async fn handler(_req: Request) -> Result<Response<Body>, Error> {
     Ok(Response::new(Body::Text(
         serde_json::to_string(&ValidClients {
-            valid_clients: VALID_CLIENTS.to_vec(),
+            valid_clients: VALID_CLIENTS.iter().map(|c| c.client_id).collect(),
         })
         .unwrap(),
     )))
