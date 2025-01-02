@@ -522,7 +522,10 @@ struct Claims {
 pub struct JwtAuthorizer;
 
 pub fn get_jwk() -> JsonWebKey {
-    env::var("JWK").expect("JWK").parse().expect("JWK parse")
+    env::var("JWK")
+        .expect("JWK to be present")
+        .parse()
+        .expect("JWK parse")
 }
 
 #[derive(Debug, Clone, Copy)]
