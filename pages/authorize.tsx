@@ -215,7 +215,6 @@ export default function Authorize({
                   className="w-full px-3 py-2 text-xl font-bold bg-red-300 hover:bg-red-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
                   type="submit"
                   onClick={() => setAuthorizeStateAllow(false)}
-                  disabled={totpNeeded && totpCode.length < 6}
                 >
                   DENY
                 </button>
