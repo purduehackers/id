@@ -1,11 +1,13 @@
+use axum::{extract::State, Json};
 use entity::{passport, prelude::*, sea_orm_active_enums::RoleEnum, user};
-use id::{db, oauth_user, wrap_error};
+use oxide_auth::frontends::simple::endpoint::Vacant;
 use sea_orm::{prelude::*, QueryOrder};
 use serde::{Deserialize, Serialize};
-use vercel_runtime::{run, Body, Error, Request, Response};
+
+use crate::routes::{scope::USER_READ, OAuthUser, RouteError, RouteState};
 
 #[derive(Serialize, Deserialize)]
-struct UserWithPassport {
+pub struct UserWithPassport {
     iss: String,
     sub: i32,
     id: i32,
@@ -15,38 +17,30 @@ struct UserWithPassport {
     latest_passport: Option<passport::Model>,
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    run(wrap_error!(handler)).await
-}
-
-pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    let user_id = oauth_user(req, vec!["user:read".parse().expect("valid scope")]).await?;
-
-    let db = db().await?;
-
+pub async fn handler(
+    OAuthUser { id: user_id, .. }: OAuthUser<{ USER_READ }, Vacant>,
+    State(s): State<RouteState>,
+) -> Result<Json<UserWithPassport>, RouteError> {
     let user = User::find()
         .filter(user::Column::Id.eq(user_id))
-        .one(&db)
+        .one(&s.db)
         .await?
-        .ok_or_else(|| Error::from("User not found"))?;
+        .ok_or(RouteError::UserNotFound)?;
     let latest_passport = Passport::find()
         .filter(passport::Column::OwnerId.eq(user_id))
         .order_by_desc(passport::Column::Id)
-        .one(&db)
+        .one(&s.db)
         .await?;
 
     let response_data = UserWithPassport {
         iss: "https://id.purduehackers.com".to_owned(),
         sub: user.id,
         id: user.id,
-        discord_id: user.discord_id.clone(),
+        discord_id: user.discord_id,
         role: user.role.clone(),
         totp: user.totp.clone(),
         latest_passport: latest_passport.clone(),
     };
 
-    Ok(Response::new(Body::Text(serde_json::to_string(
-        &response_data,
-    )?)))
+    Ok(Json(response_data))
 }
