@@ -1,18 +1,18 @@
+use axum::Json;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
-use axum::Json;
 use entity::passport;
 use entity::prelude::*;
 use sea_orm::prelude::*;
 
+use crate::PassportRecord;
 use crate::routes::RouteError;
 use crate::routes::RouteState;
-use crate::PassportRecord;
 
 pub async fn handler(
-    Json(record): Json<PassportRecord>,
     State(s): State<RouteState>,
+    Json(record): Json<PassportRecord>,
 ) -> Result<impl IntoResponse, RouteError> {
     // Check if the passport exists and is valid
     let passport: Option<passport::Model> = Passport::find_by_id(record.id).one(&s.db).await?;

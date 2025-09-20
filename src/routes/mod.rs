@@ -1,8 +1,15 @@
-use axum::{extract::FromRequestParts, http::StatusCode, response::IntoResponse};
+use axum::{
+    Router,
+    extract::FromRequestParts,
+    http::StatusCode,
+    response::IntoResponse,
+    routing::{get, post},
+};
 use fred::{
     prelude::{Client, *},
     types::Builder,
 };
+use leptos::{prelude::*, server_fn::codec::JsonEncoding};
 use oxide_auth::{
     code_grant::error::{AccessTokenErrorType, AuthorizationErrorType},
     endpoint::OAuthError,
@@ -23,12 +30,29 @@ use crate::{
     routes::oauser::OAuthUser,
 };
 
+pub mod authorize;
 pub mod client;
 pub mod door;
 pub mod new;
 pub mod passport;
+pub mod passport_id;
 pub mod scan;
+pub mod token;
 pub mod user;
+
+pub fn router() -> Router<RouteState> {
+    Router::new()
+        .route("/door", post(door::handler))
+        .route("/new", post(new::handler))
+        .route("/passport", get(passport::handler))
+        .route("/passport/{id}", post(passport_id::handler))
+        .route("/user", post(user::handler))
+        .route("/token", post(token::handler))
+        .route(
+            "/authorize",
+            get(authorize::handle_get).post(authorize::handle_post),
+        )
+}
 
 #[derive(Debug, Clone)]
 pub struct RouteState {
@@ -53,9 +77,7 @@ impl RouteState {
 
 async fn kv() -> Result<Client, RouteError> {
     let config = Config::from_url(
-        &env::var("KV_URL")
-            .expect("KV_URL env var to be present")
-            .replace("redis://", "rediss://"),
+        &env::var("KV_URL").expect("KV_URL env var to be present"), // .replace("redis://", "rediss://"),
     )?;
     let c = Builder::from_config(config).build()?;
     c.init().await?;
@@ -63,10 +85,8 @@ async fn kv() -> Result<Client, RouteError> {
 }
 
 async fn db() -> Result<DatabaseConnection, RouteError> {
-    let db = Database::connect(
-        env::var("POSTGRES_URL_NON_POOLING").expect("Database URL var to be present"),
-    )
-    .await?;
+    let db = Database::connect(env::var("POSTGRES_URL").expect("Database URL var to be present"))
+        .await?;
     use migration::{Migrator, MigratorTrait};
     Migrator::up(&db, None).await?;
 

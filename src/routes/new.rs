@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use entity::{
     passport::{self},
     prelude::*,
@@ -8,7 +8,8 @@ use entity::{
     user,
 };
 use rand::distributions::{Alphanumeric, DistString};
-use sea_orm::{prelude::*, ActiveValue, IntoActiveModel, QueryOrder};
+use sea_orm::{ActiveValue, IntoActiveModel, QueryOrder, prelude::*};
+use serde::Serialize;
 
 use crate::routes::{RouteError, RouteState};
 
@@ -63,13 +64,14 @@ async fn create_new_passport(
     Ok(new_passport)
 }
 
+#[derive(Debug, Clone, Serialize)]
 pub struct PassportId {
     pub id: i32,
 }
 
 pub async fn handler(
-    Json(new): Json<NewPassport>,
     State(RouteState { db, .. }): State<RouteState>,
+    Json(new): Json<NewPassport>,
 ) -> Result<Json<PassportId>, RouteError> {
     let discord_id = new.discord_id.parse().map_err(|_| RouteError::BadRequest)?;
 

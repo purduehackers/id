@@ -2,104 +2,63 @@
 #![feature(adt_const_params)]
 #![allow(incomplete_features)]
 
-use std::str::FromStr;
-
-use oxide_auth::{
-    frontends::dev::Url,
-    primitives::registrar::{Client, ClientMap, RegisteredUrl},
-};
-
-use thiserror::Error;
+use leptos::{prelude::*, server_fn::codec::JsonEncoding};
 
 pub mod app;
 #[cfg(feature = "ssr")]
 pub mod oauth;
+pub mod pages;
 #[cfg(feature = "ssr")]
 pub mod routes;
 #[cfg(feature = "ssr")]
 pub mod tfa;
 
-#[derive(Debug, Error)]
-pub enum Error {
-    #[error("Invalid body type")]
-    InvalidBodyType,
+#[server]
+pub async fn scan_post(id: i32, secret: String) -> Result<(), LeptosRouteError> {
+    Ok(crate::routes::scan::post_handler(id, secret).await?)
 }
 
-pub const VALID_CLIENTS: [&str; 7] = [
-    "dashboard",
-    "passports",
-    "authority",
-    "auth-test",
-    "vulcan-auth",
-    "shad-moe",
-    "shquid",
-];
-
-pub fn client_registry() -> ClientMap {
-    let mut clients = ClientMap::new();
-    clients.register_client(Client::public(
-        VALID_CLIENTS[0],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://dash.purduehackers.com/api/callback").expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scope to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[1],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://passports.purduehackers.com/callback").expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[2],
-        RegisteredUrl::Semantic(Url::from_str("authority://callback").expect("url to be valid")),
-        "admin:read admin".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[3],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://id-auth.purduehackers.com/api/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[4],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[5],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.shad.moe/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[6],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://www.imsqu.id/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scopes to be valid"),
-    ));
-
-    clients
+#[cfg(feature = "hydrate")]
+#[wasm_bindgen::prelude::wasm_bindgen]
+pub fn hydrate() {
+    use crate::app::*;
+    console_error_panic_hook::set_once();
+    leptos::mount::hydrate_body(App);
 }
 
 #[derive(Debug, serde::Deserialize)]
 pub struct PassportRecord {
     pub id: i32,
     pub secret: String,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+pub enum LeptosRouteError {
+    InternalServerError(String),
+    BadRequest,
+    Unauthorized,
+    PassportDisabled,
+    UserNotFound,
+    Leptos(ServerFnErrorErr),
+}
+
+#[cfg(feature = "ssr")]
+impl From<crate::routes::RouteError> for LeptosRouteError {
+    fn from(err: crate::routes::RouteError) -> Self {
+        use crate::routes::RouteError;
+        match err {
+            RouteError::UserNotFound => LeptosRouteError::UserNotFound,
+            RouteError::Unauthorized => LeptosRouteError::Unauthorized,
+            RouteError::BadRequest => LeptosRouteError::BadRequest,
+            RouteError::PassportDisabled => LeptosRouteError::PassportDisabled,
+            _ => LeptosRouteError::InternalServerError(err.to_string()),
+        }
+    }
+}
+
+impl FromServerFnError for LeptosRouteError {
+    type Encoder = JsonEncoding;
+    fn from_server_fn_error(value: leptos::prelude::ServerFnErrorErr) -> Self {
+        Self::Leptos(value)
+    }
 }

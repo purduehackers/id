@@ -1,36 +1,19 @@
-use std::str::FromStr;
-
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use entity::{passport, prelude::*, sea_orm_active_enums::RoleEnum, user};
 use fred::prelude::*;
+use leptos::prelude::expect_context;
 use sea_orm::prelude::*;
 
-use crate::{
-    routes::{RouteError, RouteState},
-    PassportRecord,
-};
+use crate::routes::{RouteError, RouteState};
 
-/// Returns whether the passport is in the KV and is
-pub async fn get_handler(req: Request) -> Result<Response<Body>, RouteError> {
-    let id: i32 = url::Url::from_str(&req.uri().to_string())
-        .expect("URL to be valid")
-        .query_pairs()
-        .find_map(|(k, v)| if k == "id" { Some(v) } else { None })
-        .ok_or("No ID provided!".to_string())?
-        .parse()
-        .map_err(|e| format!("Failed to convert to passport number! {e}"))?;
-
-    let kv = kv().await?;
+/// Returns whether the passport is in the KV and TOTP needed
+pub async fn get_handler(id: i32) -> Result<bool, RouteError> {
+    let RouteState { db, kv, .. } = expect_context();
 
     if !kv.exists(id).await? {
-        let mut resp = Response::new(Body::Text("Passport not found".to_string()));
-        *resp.status_mut() = StatusCode::NOT_FOUND;
-        return Ok(resp);
+        return Err(RouteError::UserNotFound);
     }
 
     let ready: bool = kv.get(id).await?;
-
-    let db = db().await?;
 
     let passport: passport::Model = Passport::find_by_id(id)
         .one(&db)
@@ -44,32 +27,19 @@ pub async fn get_handler(req: Request) -> Result<Response<Body>, RouteError> {
             .await?
             .expect("Passport to have an owner");
 
-        #[derive(Debug, serde::Serialize)]
-        struct GetReturn {
-            totp_needed: bool,
-        }
-
-        Ok(Response::new(Body::Text(serde_json::to_string(
-            &GetReturn {
-                totp_needed: user.role == RoleEnum::Admin,
-            },
-        )?)))
+        Ok(user.role == RoleEnum::Admin)
     } else {
-        let mut resp = Response::new(Body::Text("Invalid secret".to_string()));
-        *resp.status_mut() = StatusCode::UNAUTHORIZED;
-        Ok(resp)
+        Err(RouteError::Unauthorized)
     }
 }
 
 /// Puts data in the KV, with or without a secret
-pub async fn post_handler(
-    Json(record): Json<PassportRecord>,
-    State(RouteState { db, kv, .. }): State<RouteState>,
-) -> Result<impl IntoResponse, RouteError> {
+pub async fn post_handler(id: i32, secret: String) -> Result<(), RouteError> {
     // If the KV has a record with an empty string, someone is trying to auth
     // You may only set the record to the correct secret once its set to an empty record
+    let RouteState { db, kv, .. } = expect_context::<RouteState>();
 
-    let passport: passport::Model = Passport::find_by_id(record.id)
+    let passport: passport::Model = Passport::find_by_id(id)
         .one(&db)
         .await?
         .ok_or(RouteError::UserNotFound)?;
@@ -82,7 +52,7 @@ pub async fn post_handler(
     if !kv.exists(passport.id).await? {
         kv.set::<(), _, _>(passport.id, false, Some(Expiration::EX(90)), None, false)
             .await?;
-        return Ok((StatusCode::OK, ""));
+        return Ok(());
     }
 
     // There is a passport, so figure out what it is
@@ -90,11 +60,11 @@ pub async fn post_handler(
     // passport
     // If it's not or there is already a valid secret in the KV, return error
     let current_value: bool = kv.get(passport.id).await?;
-    if !current_value && record.secret == passport.secret {
+    if !current_value && secret == passport.secret {
         kv.set::<(), _, _>(passport.id, true, Some(Expiration::EX(60)), None, false)
             .await?;
 
-        Ok((StatusCode::OK, ""))
+        Ok(())
     } else {
         Err(RouteError::BadRequest)
     }
