@@ -21,7 +21,7 @@ use oxide_auth::{
     primitives::registrar::{Client, ClientMap, RegisteredUrl},
 };
 
-pub const VALID_CLIENTS: [&str; 7] = [
+pub const VALID_CLIENTS: [&str; 8] = [
     "dashboard",
     "passports",
     "authority",
@@ -29,6 +29,7 @@ pub const VALID_CLIENTS: [&str; 7] = [
     "vulcan-auth",
     "shad-moe",
     "shquid",
+    "fiestadothorse",
 ];
 
 pub fn client_registry() -> ClientMap {
@@ -86,6 +87,15 @@ pub fn client_registry() -> ClientMap {
         VALID_CLIENTS[6],
         RegisteredUrl::Semantic(
             Url::from_str("https://www.imsqu.id/auth/callback/purduehackers-id")
+                .expect("url to be valid"),
+        ),
+        "user:read".parse().expect("scopes to be valid"),
+    ));
+
+    clients.register_client(Client::public(
+        VALID_CLIENTS[7],
+        RegisteredUrl::Semantic(
+            Url::from_str("https://fiesta.horse/api/auth/callback/purduehackers-id")
                 .expect("url to be valid"),
         ),
         "user:read".parse().expect("scopes to be valid"),
