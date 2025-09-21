@@ -46,8 +46,9 @@ pub fn router() -> Router<RouteState> {
         .route("/new", post(new::handler))
         .route("/passport", get(passport::handler))
         .route("/passport/{id}", post(passport_id::handler))
-        .route("/user", post(user::handler))
+        .route("/user", get(user::handler))
         .route("/token", post(token::handler))
+        .route("/scan", post(scan::post_api_handler))
         .route(
             "/authorize",
             get(authorize::handle_get).post(authorize::handle_post),

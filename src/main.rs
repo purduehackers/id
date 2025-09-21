@@ -31,6 +31,7 @@ async fn main() {
         )
         .fallback(leptos_axum::file_and_error_handler(shell))
         .with_state(leptos_options)
+        .nest("/api", id::routes::router())
         .with_state(route_state);
 
     // run our app with hyper

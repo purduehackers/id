@@ -1,7 +1,9 @@
+use axum::Json;
 use entity::{passport, prelude::*, sea_orm_active_enums::RoleEnum, user};
 use fred::prelude::*;
 use leptos::prelude::expect_context;
 use sea_orm::prelude::*;
+use serde::Deserialize;
 
 use crate::routes::{RouteError, RouteState};
 
@@ -31,6 +33,18 @@ pub async fn get_handler(id: i32) -> Result<bool, RouteError> {
     } else {
         Err(RouteError::Unauthorized)
     }
+}
+
+#[derive(Debug, Deserialize)]
+pub struct PassportApiScanPost {
+    id: String,
+    secret: String,
+}
+
+pub async fn post_api_handler(
+    Json(PassportApiScanPost { id, secret }): Json<PassportApiScanPost>,
+) -> Result<(), RouteError> {
+    post_handler(id.parse().map_err(|_| RouteError::BadRequest)?, secret).await
 }
 
 /// Puts data in the KV, with or without a secret

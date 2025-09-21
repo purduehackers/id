@@ -1,9 +1,9 @@
 use std::str::FromStr;
 
 use axum::{
-    extract::{Request, State},
+    extract::{OriginalUri, Request, State},
     http::{
-        Uri,
+        HeaderMap, Uri,
         header::{LOCATION, SET_COOKIE},
     },
     response::IntoResponse,
@@ -12,6 +12,7 @@ use axum_extra::extract::CookieJar;
 use chrono::{Months, Utc};
 use entity::{auth_grant, auth_session, passport, sea_orm_active_enums::RoleEnum, user};
 
+use leptos_router::params::ParamsMap;
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
@@ -54,7 +55,9 @@ impl OwnerSolicitor<OAuthRequest> for AuthorizeSolicitor {
         // If there is a session token, try to use that.
         let session = self.session.clone();
 
-        let url = url::Url::from_str(&self.uri.to_string()).expect("URL to be valid");
+        // Doesn't matter what the host is, only the query
+        let url = url::Url::from_str(&format!("https://example.com{}", self.uri))
+            .expect("URL to be valid");
 
         let user_wants_allow = url
             .query_pairs()
@@ -184,16 +187,19 @@ impl OwnerSolicitor<OAuthRequest> for AuthorizeSolicitor {
     }
 }
 
+#[axum::debug_handler]
 pub async fn handle_post(
-    oauth: OAuthResource,
     cookies: CookieJar,
     State(state): State<RouteState>,
-    req: Request,
+    headers: HeaderMap,
+    uri: OriginalUri,
+    oauth: OAuthRequest,
 ) -> Result<impl IntoResponse, RouteError> {
+    println!("Handling POST request");
     let res = AuthorizationFlow::prepare(OAuthEndpoint::new(
         AuthorizeSolicitor {
             state: state.clone(),
-            uri: req.uri().clone(),
+            uri: uri.0,
             session: cookies
                 .get("session")
                 .map(|cookie| cookie.value().to_string()),
@@ -202,7 +208,7 @@ pub async fn handle_post(
         state.issuer,
         state.authorizer,
     ))?
-    .execute(oauth.into())
+    .execute(oauth)
     .await?;
 
     let mut res = res.into_response();
@@ -210,7 +216,7 @@ pub async fn handle_post(
     let db = state.db;
 
     // Grant may have been given, see if it was
-    if let Some(loc) = res.headers().get(LOCATION) {
+    if let Some(loc) = headers.get(LOCATION) {
         let url = Url::parse(loc.to_str().expect("valid loc string")).expect("valid url");
         if let Some((_, grant)) = url.query_pairs().find(|(k, _)| k == "code") {
             // Grant given, reverse reference to user and create a session token
@@ -254,9 +260,9 @@ pub async fn handle_post(
 }
 
 pub async fn handle_get(
-    oauth: OAuthResource,
     cookies: CookieJar,
     State(state): State<RouteState>,
+    oauth: OAuthRequest,
 ) -> Result<impl IntoResponse, RouteError> {
     let res = AuthorizationFlow::prepare(OAuthEndpoint::new(
         FnSolicitor(move |_req: &mut OAuthRequest, pre_grant: Solicitation| {
@@ -290,7 +296,7 @@ pub async fn handle_get(
         state.issuer,
         state.authorizer,
     ))?
-    .execute(oauth.into())
+    .execute(oauth)
     .await?;
 
     Ok(res)
