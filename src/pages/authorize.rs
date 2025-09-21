@@ -162,11 +162,10 @@ pub fn Authorize() -> impl IntoView {
                         <Auth
                             client_id=client_id()
                             scopes=scopes()
-                            totp_needed=totp_needed().expect("valid at this")
+                            totp_needed=Signal::derive(move || totp_needed().unwrap_or_default())
                             totp=totp_code
                             set_totp=set_totp_code
                             passport_id=passport_number
-                            aq=Signal::derive(move || query().expect("valid query"))
                         />
                     }
                         .into_any()
@@ -184,11 +183,10 @@ pub fn Authorize() -> impl IntoView {
 fn Auth(
     client_id: String,
     scopes: Vec<String>,
-    totp_needed: bool,
+    totp_needed: Signal<bool>,
     totp: ReadSignal<String>,
     set_totp: WriteSignal<String>,
     passport_id: ReadSignal<Option<i32>>,
-    aq: Signal<AuthQuery>,
 ) -> impl IntoView {
     let (allow, set_allow) = signal(false);
     let query = use_query_map();
@@ -196,7 +194,7 @@ fn Auth(
         let mut q = query.get();
         q.insert("allow", allow().to_string());
         q.insert("id", passport_id().expect("passport").to_string());
-        if totp_needed {
+        if totp_needed() {
             q.insert("code", totp());
         }
 
@@ -228,7 +226,7 @@ fn Auth(
                 </ul>
             </div>
             <div class="flex flex-col justify-center items-center gap-4">
-                <Show when=move || totp_needed>
+                <Show when=move || totp_needed()>
                     <div class="flex flex-col">
                         <label htmlFor="totpInput">2FA code</label>
                         <input
@@ -249,7 +247,7 @@ fn Auth(
                     </div>
                 </Show>
                 <form method="post" action=submit>
-                    <Show when=move || totp_needed>
+                    <Show when=move || totp_needed()>
                         <input type="hidden" name="code" value=totp/>
                     </Show>
                     <div class="flex flex-row gap-2">
@@ -259,7 +257,7 @@ fn Auth(
                             on:click=move |_| {
                                 set_allow(false);
                             }
-                            disabled=move || totp_needed && totp().len() < 6
+                            disabled=move || totp_needed() && totp().len() < 6
                         >
                             DENY
                         </button>
@@ -269,7 +267,7 @@ fn Auth(
                             on:click=move |_| {
                                 set_allow(true);
                             }
-                            disabled=move || totp_needed && totp().len() < 6
+                            disabled=move || totp_needed() && totp().len() < 6
                         >
                             ACCEPT
                         </button>
