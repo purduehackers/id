@@ -193,7 +193,7 @@ fn Auth(
     let submit = move || {
         let mut q = query.get();
         q.insert("allow", allow().to_string());
-        q.insert("id", passport_id().expect("passport").to_string());
+        q.insert("id", passport_id().unwrap_or_default().to_string());
         if totp_needed() {
             q.insert("code", totp());
         }
