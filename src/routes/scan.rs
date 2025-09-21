@@ -1,4 +1,4 @@
-use axum::Json;
+use axum::{Json, extract::State};
 use entity::{passport, prelude::*, sea_orm_active_enums::RoleEnum, user};
 use fred::prelude::*;
 use leptos::prelude::expect_context;
@@ -43,15 +43,24 @@ pub struct PassportApiScanPost {
 
 pub async fn post_api_handler(
     Json(PassportApiScanPost { id, secret }): Json<PassportApiScanPost>,
+    State(rs): State<RouteState>,
 ) -> Result<(), RouteError> {
-    post_handler(id.parse().map_err(|_| RouteError::BadRequest)?, secret).await
+    post_handler_priv(id.parse().map_err(|_| RouteError::BadRequest)?, secret, rs).await
+}
+
+pub async fn post_handler(id: i32, secret: String) -> Result<(), RouteError> {
+    let rs = expect_context::<RouteState>();
+    post_handler_priv(id, secret, rs).await
 }
 
 /// Puts data in the KV, with or without a secret
-pub async fn post_handler(id: i32, secret: String) -> Result<(), RouteError> {
+async fn post_handler_priv(
+    id: i32,
+    secret: String,
+    RouteState { db, kv, .. }: RouteState,
+) -> Result<(), RouteError> {
     // If the KV has a record with an empty string, someone is trying to auth
     // You may only set the record to the correct secret once its set to an empty record
-    let RouteState { db, kv, .. } = expect_context::<RouteState>();
 
     let passport: passport::Model = Passport::find_by_id(id)
         .one(&db)
