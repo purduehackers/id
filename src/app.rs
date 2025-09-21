@@ -1,11 +1,11 @@
 use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
+use leptos_meta::{MetaTags, Stylesheet, Title, provide_meta_context};
 use leptos_router::{
-    components::{Route, Router, Routes},
     StaticSegment,
+    components::{Route, Router, Routes},
 };
 
-use crate::pages::{authorize::Authorize, scan::Scan, Index};
+use crate::pages::{Index, authorize::Authorize, scan::Scan};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {

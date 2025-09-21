@@ -1,12 +1,12 @@
 #[cfg(feature = "ssr")]
-#[dotenvy::load(override_ = false)]
+#[dotenvy::load(override_ = false, required = false)]
 #[tokio::main]
 async fn main() {
     use axum::Router;
     use id::{app::*, routes::RouteState};
     use leptos::logging::log;
     use leptos::prelude::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use leptos_axum::{LeptosRoutes, generate_route_list};
 
     let route_state = RouteState::new().await.expect("State OK");
 
