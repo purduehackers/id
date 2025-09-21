@@ -195,7 +195,6 @@ pub async fn handle_post(
     uri: OriginalUri,
     oauth: OAuthRequest,
 ) -> Result<impl IntoResponse, RouteError> {
-    println!("Handling POST request");
     let res = AuthorizationFlow::prepare(OAuthEndpoint::new(
         AuthorizeSolicitor {
             state: state.clone(),

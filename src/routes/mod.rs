@@ -223,8 +223,8 @@ impl<const S: scope::Scope, SL: NewSolicitor> FromRequestParts<RouteState> for O
         .await
         .map_err(|e| e.expect_err("Received oauth response when expected error on bad data"))?;
 
-        Ok(OAuthUser::new(
-            user.client_id.parse().expect("valid user id"),
-        ))
+        Ok(OAuthUser::new(user.client_id.parse().unwrap_or_else(
+            |_| panic!("invalid user id: {}", user.client_id),
+        )))
     }
 }
