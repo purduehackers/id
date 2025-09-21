@@ -37,7 +37,7 @@ pub async fn get_handler(id: i32) -> Result<bool, RouteError> {
 
 #[derive(Debug, Deserialize)]
 pub struct PassportApiScanPost {
-    id: String,
+    id: i32,
     secret: String,
 }
 
@@ -45,7 +45,7 @@ pub async fn post_api_handler(
     State(rs): State<RouteState>,
     Json(PassportApiScanPost { id, secret }): Json<PassportApiScanPost>,
 ) -> Result<(), RouteError> {
-    post_handler_priv(id.parse().map_err(|_| RouteError::BadRequest)?, secret, rs).await
+    post_handler_priv(id, secret, rs).await
 }
 
 pub async fn post_handler(id: i32, secret: String) -> Result<(), RouteError> {
