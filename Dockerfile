@@ -3,7 +3,7 @@
 FROM rustlang/rust:nightly-alpine AS builder
 
 RUN apk update
-RUN apk add musl-dev openssl-libs-static openssl-dev binaryen zlib-dev zlib-static
+RUN apk add musl-dev openssl-libs-static openssl-dev binaryen zlib-dev zlib-static build-base linux-headers
 
 ENV OPENSSL_STATIC=1 OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include/openssl RUST_BACKTRACE=1 ZLIB_USE_STATIC_LIBS=ON
 
