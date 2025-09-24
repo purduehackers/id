@@ -3,8 +3,8 @@ use std::str::FromStr;
 use axum::{
     extract::{OriginalUri, Request, State},
     http::{
-        HeaderMap, Uri,
         header::{LOCATION, SET_COOKIE},
+        HeaderMap, Uri,
     },
     response::IntoResponse,
 };
@@ -26,16 +26,13 @@ use oxide_auth_async::endpoint::OwnerSolicitor;
 
 use oxide_auth_axum::{OAuthRequest, OAuthResource, OAuthResponse, WebError};
 use rand::distributions::{Alphanumeric, DistString};
-use sea_orm::{ActiveValue, Condition, prelude::*};
+use sea_orm::{prelude::*, ActiveValue, Condition};
 
 use url::Url;
 
 use crate::{
     oauth::OAuthEndpoint,
-    routes::{
-        RouteError, RouteState,
-        scope::{USER, USER_READ},
-    },
+    routes::{scope::AUTH, RouteError, RouteState},
     tfa,
 };
 
@@ -187,7 +184,6 @@ impl OwnerSolicitor<OAuthRequest> for AuthorizeSolicitor {
     }
 }
 
-#[axum::debug_handler]
 pub async fn handle_post(
     cookies: CookieJar,
     State(state): State<RouteState>,
@@ -203,7 +199,7 @@ pub async fn handle_post(
                 .get("session")
                 .map(|cookie| cookie.value().to_string()),
         },
-        USER.names(),
+        AUTH.names(),
         state.issuer,
         state.authorizer,
     ))?
@@ -291,7 +287,7 @@ pub async fn handle_get(
             resp.redirect(url).expect("infallible");
             OwnerConsent::InProgress(resp)
         }),
-        USER_READ.names(),
+        AUTH.names(),
         state.issuer,
         state.authorizer,
     ))?

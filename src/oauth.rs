@@ -12,7 +12,7 @@ use oxide_auth_async::{
 };
 use oxide_auth_axum::{OAuthRequest, OAuthResponse};
 use rand::distributions::{Alphanumeric, DistString};
-use sea_orm::{ActiveValue, Condition, DatabaseConnection, IntoActiveModel, prelude::*};
+use sea_orm::{prelude::*, ActiveValue, Condition, DatabaseConnection, IntoActiveModel};
 
 use crate::{
     jwt::{JwtAuthorizer, JwtIssuer},
@@ -112,7 +112,7 @@ pub fn client_registry() -> ClientMap {
         clients.register_client(Client::public(
             client_id,
             RegisteredUrl::Semantic(Url::from_str(url).expect("url to be valid")),
-            scope.parse().expect("scope to be valid"),
+            format!("{scope} auth").parse().expect("scope to be valid"),
         ));
     }
 

@@ -5,7 +5,7 @@ use oxide_auth_async::endpoint::OwnerSolicitor;
 use oxide_auth_axum::{OAuthRequest, OAuthResponse};
 
 use crate::oauth::OAuthEndpoint;
-use crate::routes::scope::USER;
+use crate::routes::scope::AUTH;
 use crate::routes::{RouteError, RouteState};
 
 struct TokenSolicitor;
@@ -65,7 +65,7 @@ pub async fn handler(
 ) -> Result<OAuthResponse, RouteError> {
     AccessTokenFlow::prepare(OAuthEndpoint::new(
         TokenSolicitor,
-        vec![],
+        AUTH.names(),
         issuer,
         authorizer,
     ))?

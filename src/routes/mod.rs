@@ -1,9 +1,9 @@
 use axum::{
-    Json, Router,
     extract::FromRequestParts,
     http::StatusCode,
     response::IntoResponse,
     routing::{get, post},
+    Json, Router,
 };
 use fred::{
     prelude::{Client, *},
@@ -28,7 +28,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
-    jwt::{JwtAuthorizer, JwtIssuer, get_jwk},
+    jwt::{get_jwk, JwtAuthorizer, JwtIssuer},
     oauth::{DbAuthorizer, DbIssuer, OAuthEndpoint},
     routes::oauser::OAuthUser,
 };
@@ -174,12 +174,13 @@ pub mod scope {
     }
 
     /// This MUST be written in order with the below consts
-    const STRINGS: [&str; 4] = ["user:read", "user", "admin:read", "admin"];
+    const STRINGS: [&str; 5] = ["auth", "user:read", "user", "admin:read", "admin"];
 
-    pub const USER_READ: Scope = Scope(0b1);
-    pub const USER: Scope = Scope(0b10);
-    pub const ADMIN_READ: Scope = Scope(0b100);
-    pub const ADMIN: Scope = Scope(0b1000);
+    pub const AUTH: Scope = Scope(0b1);
+    pub const USER_READ: Scope = Scope(0b10);
+    pub const USER: Scope = Scope(0b100);
+    pub const ADMIN_READ: Scope = Scope(0b1000);
+    pub const ADMIN: Scope = Scope(0b10000);
 
     impl Scope {
         pub fn names(&self) -> Vec<endpoint::Scope> {
