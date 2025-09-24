@@ -32,7 +32,7 @@ struct Claims {
 }
 
 /// Not currently in use but can be switched to whenever
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct JwtAuthorizer;
 
 pub fn get_jwk() -> JsonWebKey {

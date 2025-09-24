@@ -95,7 +95,7 @@ pub const VALID_CLIENTS: [ClientData<'static>; 8] = [
     ClientData {
         client_id: "fiestadothorse",
 
-        url: "https://fiesta.horse/auth/callback/purduehackers-id",
+        url: "https://fiesta.horse/api/auth/callback/purduehackers-id",
 
         scope: "user:read",
     },
