@@ -17,7 +17,7 @@ use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
 };
-use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
+use oxide_auth_async::{endpoint::authorization::AuthorizationFlow, primitives::Authorizer};
 
 use entity::prelude::*;
 use fred::prelude::*;
@@ -186,7 +186,7 @@ impl OwnerSolicitor<OAuthRequest> for AuthorizeSolicitor {
 
 pub async fn handle_post(
     cookies: CookieJar,
-    State(state): State<RouteState>,
+    State(mut state): State<RouteState>,
     uri: OriginalUri,
     oauth: OAuthRequest,
 ) -> Result<impl IntoResponse, RouteError> {
@@ -200,7 +200,7 @@ pub async fn handle_post(
         },
         AUTH.names(),
         state.issuer,
-        state.authorizer,
+        state.authorizer.clone(),
     ))?
     .execute(oauth)
     .await?;
@@ -214,19 +214,18 @@ pub async fn handle_post(
         let url = Url::parse(loc.to_str().expect("valid loc string")).expect("valid url");
         if let Some((_, grant)) = url.query_pairs().find(|(k, _)| k == "code") {
             // Grant given, reverse reference to user and create a session token
-
-            let grant: auth_grant::Model = AuthGrant::find()
-                .filter(auth_grant::Column::Code.eq(grant.as_ref()))
-                .one(&db)
+            let grant = state
+                .authorizer
+                .extract(&grant)
                 .await
-                .expect("db ok")
-                .expect("grant to exist");
+                .map_err(|()| RouteError::Web(WebError::Encoding))?
+                .ok_or(RouteError::UserNotFound)?;
 
             let new = auth_session::ActiveModel {
                 id: ActiveValue::NotSet,
                 token: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
                 until: ActiveValue::Set((Utc::now() + Months::new(2)).into()),
-                owner_id: ActiveValue::Set(grant.owner_id),
+                owner_id: ActiveValue::Set(grant.owner_id.parse().expect("valid owner id parse")),
             };
 
             let model = new.insert(&db).await.expect("insert token");
