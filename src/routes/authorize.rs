@@ -1,61 +1,60 @@
 use std::str::FromStr;
 
+use axum::{
+    extract::{OriginalUri, Request, State},
+    http::{
+        header::{LOCATION, SET_COOKIE},
+        HeaderMap, Uri,
+    },
+    response::IntoResponse,
+};
+use axum_extra::extract::CookieJar;
 use chrono::{Months, Utc};
 use entity::{auth_grant, auth_session, passport, sea_orm_active_enums::RoleEnum, user};
-use id::{db, kv, tfa, wrap_error, OAuthEndpoint, RequestCompat, ResponseCompat};
 
+use leptos_router::params::ParamsMap;
 use oxide_auth::{
     endpoint::{OwnerConsent, Solicitation, WebResponse},
     frontends::{self, simple::endpoint::FnSolicitor},
 };
-use oxide_auth_async::endpoint::authorization::AuthorizationFlow;
+use oxide_auth_async::{endpoint::authorization::AuthorizationFlow, primitives::Authorizer};
 
 use entity::prelude::*;
 use fred::prelude::*;
-use lambda_http::http::{
-    header::{COOKIE, LOCATION, SET_COOKIE},
-    Method,
-};
+
 use oxide_auth_async::endpoint::OwnerSolicitor;
 
+use oxide_auth_axum::{OAuthRequest, OAuthResource, OAuthResponse, WebError};
 use rand::distributions::{Alphanumeric, DistString};
 use sea_orm::{prelude::*, ActiveValue, Condition};
 
 use url::Url;
-use vercel_runtime::{run, Body, Error, Request, Response};
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    run(wrap_error!(handler)).await
+use crate::{
+    oauth::OAuthEndpoint,
+    routes::{scope::AUTH, RouteError, RouteState},
+    tfa,
+};
+
+struct AuthorizeSolicitor {
+    state: RouteState,
+    uri: Uri,
+    session: Option<String>,
 }
 
-struct AuthorizeSolicitor;
-
 #[async_trait::async_trait]
-impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
+impl OwnerSolicitor<OAuthRequest> for AuthorizeSolicitor {
     async fn check_consent(
         &mut self,
-        req: &mut RequestCompat,
+        _req: &mut OAuthRequest,
         solicitation: Solicitation<'_>,
-    ) -> OwnerConsent<ResponseCompat> {
+    ) -> OwnerConsent<OAuthResponse> {
         // If there is a session token, try to use that.
-        let session = 's: {
-            let cookies = req.headers().get_all(COOKIE);
-            for cookie in cookies {
-                for itm in cookie.to_str().unwrap_or_default().split("; ") {
-                    if itm.starts_with("session") {
-                        let mut s = itm.split("=");
-                        if let Some(v) = s.nth(1) {
-                            break 's Some(v);
-                        }
-                    }
-                }
-            }
+        let session = self.session.clone();
 
-            None
-        };
-
-        let url = url::Url::from_str(&req.uri().to_string()).expect("URL to be valid");
+        // Doesn't matter what the host is, only the query
+        let url = url::Url::from_str(&format!("https://example.com{}", self.uri))
+            .expect("URL to be valid");
 
         let user_wants_allow = url
             .query_pairs()
@@ -64,7 +63,7 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
             .parse::<bool>()
             .expect("failed to parse allow");
 
-        let db = db().await.expect("db to be accessible");
+        let db = self.state.db.clone();
 
         if let Some(token) = session {
             // Validate the token
@@ -76,7 +75,7 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
                 )
                 .one(&db)
                 .await
-                .unwrap();
+                .expect("db ok");
             if let Some(session) = session {
                 return if user_wants_allow {
                     OwnerConsent::Authorized(session.owner_id.to_string())
@@ -101,22 +100,30 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
 
         let passport = match passport {
             Some(p) => p,
-            None => return OwnerConsent::Error("passport doesn't exist!".to_string().into()),
+            None => {
+                return OwnerConsent::Error(WebError::InternalError(Some(
+                    "Passport not found".to_string(),
+                )));
+            }
         };
 
         if !passport.activated {
-            return OwnerConsent::Error("passport isn't activated!".to_string().into());
+            return OwnerConsent::Error(WebError::InternalError(Some(
+                "Passport not activated".to_string(),
+            )));
         }
 
         // If it exists, now try to find in the Redis KV
-        let kv = kv().await.expect("redis client to be valid");
+        let kv = self.state.kv.clone();
         if kv
             .exists::<u32, i32>(passport_id)
             .await
             .expect("redis op to succeed")
             == 0
         {
-            return OwnerConsent::Error("Passport has not been scanned!".to_string().into());
+            return OwnerConsent::Error(WebError::InternalError(Some(
+                "Passport has not been scanned!".to_string(),
+            )));
         }
 
         let ready: bool = kv
@@ -125,7 +132,9 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
             .expect("redis getdel op to succeed");
 
         if !ready {
-            return OwnerConsent::Error("Passport not ready for auth!".to_string().into());
+            return OwnerConsent::Error(WebError::InternalError(Some(
+                "Passport not ready for auth!".to_string(),
+            )));
         }
 
         // If the user is an admin or has a 2FA code attached, require it here
@@ -144,11 +153,9 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
             .any(|s| s.starts_with("admin"))
             && user.role != RoleEnum::Admin
         {
-            return OwnerConsent::Error(
-                "You may not access administrator scopes!"
-                    .to_string()
-                    .into(),
-            );
+            return OwnerConsent::Error(WebError::InternalError(Some(
+                "You may not access administrator scopes!".to_string(),
+            )));
         }
 
         if let Some(totp) = user.totp {
@@ -159,10 +166,14 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
                 .expect("TOTP code to be given");
 
             if !tfa::validate_totp(user.id, totp, &code).expect("TOTP validation to succeed") {
-                return OwnerConsent::Error("Invalid TOTP code!".to_string().into());
+                return OwnerConsent::Error(WebError::InternalError(Some(
+                    "Invalid TOTP code!".to_string(),
+                )));
             }
         } else if user.role == RoleEnum::Admin {
-            return OwnerConsent::Error("Admin login attempted without TOTP!".to_string().into());
+            return OwnerConsent::Error(WebError::InternalError(Some(
+                "Admin login attempted without TOTP!".to_string(),
+            )));
         }
 
         if !user_wants_allow {
@@ -173,40 +184,48 @@ impl OwnerSolicitor<RequestCompat> for AuthorizeSolicitor {
     }
 }
 
-pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    if req.method() == Method::GET {
-        return handle_get(req).await;
-    }
+pub async fn handle_post(
+    cookies: CookieJar,
+    State(mut state): State<RouteState>,
+    uri: OriginalUri,
+    oauth: OAuthRequest,
+) -> Result<impl IntoResponse, RouteError> {
+    let res = AuthorizationFlow::prepare(OAuthEndpoint::new(
+        AuthorizeSolicitor {
+            state: state.clone(),
+            uri: uri.0,
+            session: cookies
+                .get("session")
+                .map(|cookie| cookie.value().to_string()),
+        },
+        AUTH.names(),
+        state.issuer,
+        state.authorizer.clone(),
+    ))?
+    .execute(oauth)
+    .await?;
 
-    let mut res = AuthorizationFlow::prepare(OAuthEndpoint::new(
-        AuthorizeSolicitor,
-        vec!["user".parse().expect("scope to parse")],
-    ))
-    .map_err(|e| format!("Auth prep error: {e}"))?
-    .execute(RequestCompat(req))
-    .await
-    .map_err(|e| format!("Auth exec error: {e}"))?
-    .0;
+    let mut res = res.into_response();
+
+    let db = state.db;
 
     // Grant may have been given, see if it was
     if let Some(loc) = res.headers().get(LOCATION) {
-        let url = Url::parse(loc.to_str().unwrap()).unwrap();
+        let url = Url::parse(loc.to_str().expect("valid loc string")).expect("valid url");
         if let Some((_, grant)) = url.query_pairs().find(|(k, _)| k == "code") {
             // Grant given, reverse reference to user and create a session token
-            let db = db().await.unwrap();
-
-            let grant: auth_grant::Model = AuthGrant::find()
-                .filter(auth_grant::Column::Code.eq(grant.as_ref()))
-                .one(&db)
+            let grant = state
+                .authorizer
+                .extract(&grant)
                 .await
-                .unwrap()
-                .expect("grant to exist");
+                .map_err(|()| RouteError::Web(WebError::Encoding))?
+                .ok_or(RouteError::UserNotFound)?;
 
             let new = auth_session::ActiveModel {
                 id: ActiveValue::NotSet,
                 token: ActiveValue::Set(Alphanumeric.sample_string(&mut rand::thread_rng(), 32)),
                 until: ActiveValue::Set((Utc::now() + Months::new(2)).into()),
-                owner_id: ActiveValue::Set(grant.owner_id),
+                owner_id: ActiveValue::Set(grant.owner_id.parse().expect("valid owner id parse")),
             };
 
             let model = new.insert(&db).await.expect("insert token");
@@ -218,7 +237,7 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                     model.token
                 )
                 .parse()
-                .unwrap(),
+                .expect("valid cookie parse"),
             );
 
             // Purge invalid cookies
@@ -226,23 +245,23 @@ pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
                 .filter(auth_session::Column::Until.lt(Utc::now()))
                 .exec(&db)
                 .await
-                .unwrap();
+                .expect("db ok");
         }
     }
 
     Ok(res)
 }
 
-async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
+pub async fn handle_get(
+    cookies: CookieJar,
+    State(state): State<RouteState>,
+    oauth: OAuthRequest,
+) -> Result<impl IntoResponse, RouteError> {
     let res = AuthorizationFlow::prepare(OAuthEndpoint::new(
-        FnSolicitor(move |req: &mut RequestCompat, pre_grant: Solicitation| {
-            let has_session = req
-                .headers()
-                .get_all(COOKIE)
-                .iter()
-                .any(|v| v.to_str().unwrap_or_default().contains("session="));
+        FnSolicitor(move |_req: &mut OAuthRequest, pre_grant: Solicitation| {
+            let has_session = cookies.get("session").is_some();
 
-            let mut resp = ResponseCompat::default();
+            let mut resp = OAuthResponse::default();
             let pg = pre_grant.pre_grant();
             let client_id = pg.client_id.to_string();
             let redirect_uri = pg.redirect_uri.to_string();
@@ -266,12 +285,12 @@ async fn handle_get(req: Request) -> Result<Response<Body>, Error> {
             resp.redirect(url).expect("infallible");
             OwnerConsent::InProgress(resp)
         }),
-        vec!["user:read".parse().expect("scope to parse")],
-    ))
-    .map_err(|e| format!("Auth prep error: {e}"))?
-    .execute(RequestCompat(req))
-    .await
-    .map_err(|e| format!("Error on auth flow: {:?}", e))?;
+        AUTH.names(),
+        state.issuer,
+        state.authorizer,
+    ))?
+    .execute(oauth)
+    .await?;
 
-    Ok(res.0)
+    Ok(res)
 }

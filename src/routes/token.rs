@@ -1,23 +1,22 @@
-use id::{wrap_error, OAuthEndpoint, RequestCompat, ResponseCompat};
+use axum::extract::State;
 use oxide_auth::endpoint::{OwnerConsent, Solicitation};
 use oxide_auth_async::endpoint::access_token::AccessTokenFlow;
 use oxide_auth_async::endpoint::OwnerSolicitor;
-use vercel_runtime::{run, Body, Error, Request, Response};
+use oxide_auth_axum::{OAuthRequest, OAuthResponse};
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    run(wrap_error!(handler)).await
-}
+use crate::oauth::OAuthEndpoint;
+use crate::routes::scope::AUTH;
+use crate::routes::{RouteError, RouteState};
 
 struct TokenSolicitor;
 
 #[async_trait::async_trait]
-impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
+impl OwnerSolicitor<OAuthRequest> for TokenSolicitor {
     async fn check_consent(
         &mut self,
-        _req: &mut RequestCompat,
+        _req: &mut OAuthRequest,
         solicitation: Solicitation<'_>,
-    ) -> OwnerConsent<ResponseCompat> {
+    ) -> OwnerConsent<OAuthResponse> {
         // This will do for now for authentication
         // Yes, this is not secure and is very easy to cause problems with,
         // but for right now PH are the only people using this, so we don't
@@ -57,14 +56,19 @@ impl OwnerSolicitor<RequestCompat> for TokenSolicitor {
     }
 }
 
-pub async fn handler(req: Request) -> Result<Response<Body>, Error> {
-    Ok(AccessTokenFlow::prepare(OAuthEndpoint::new(
+#[axum::debug_handler]
+pub async fn handler(
+    State(RouteState {
+        issuer, authorizer, ..
+    }): State<RouteState>,
+    req: OAuthRequest,
+) -> Result<OAuthResponse, RouteError> {
+    AccessTokenFlow::prepare(OAuthEndpoint::new(
         TokenSolicitor,
-        vec!["user".parse().expect("scope to parse")],
-    ))
-    .map_err(|e| format!("Access token flow prep error: {e}"))?
-    .execute(RequestCompat(req))
+        AUTH.names(),
+        issuer,
+        authorizer,
+    ))?
+    .execute(req)
     .await
-    .map_err(|e| format!("Access token flow exec error: {e}"))?
-    .0)
 }

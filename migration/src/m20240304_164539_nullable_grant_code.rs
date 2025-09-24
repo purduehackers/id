@@ -10,12 +10,8 @@ impl MigrationTrait for Migration {
             .alter_table(
                 TableAlterStatement::new()
                     .table(AuthGrant::Table)
-                    .modify_column(
-                        ColumnDef::new(AuthGrant::Code)
-                            .string()
-                            .null()
-                    )
-                    .to_owned()
+                    .modify_column(ColumnDef::new(AuthGrant::Code).string().null())
+                    .to_owned(),
             )
             .await
     }
@@ -29,10 +25,11 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(AuthGrant::Code)
                             .string()
                             .not_null()
-                            .default("")
+                            .default(""),
                     )
-                    .to_owned()
-                ).await
+                    .to_owned(),
+            )
+            .await
     }
 }
 
