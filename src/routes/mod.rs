@@ -1,5 +1,5 @@
 use axum::{
-    Router,
+    Json, Router,
     extract::FromRequestParts,
     http::StatusCode,
     response::IntoResponse,
@@ -9,6 +9,7 @@ use fred::{
     prelude::{Client, *},
     types::Builder,
 };
+use jsonwebkey::JsonWebKey;
 use leptos::{prelude::*, server_fn::codec::JsonEncoding};
 use oxide_auth::{
     code_grant::error::{AccessTokenErrorType, AuthorizationErrorType},
@@ -18,6 +19,7 @@ use oxide_auth::{
 use oxide_auth_async::endpoint::resource::ResourceFlow;
 use oxide_auth_axum::{OAuthResource, WebError};
 use sea_orm::{Database, DatabaseConnection};
+use serde::Serialize;
 use std::{
     env,
     marker::{ConstParamTy, PhantomData},
@@ -26,6 +28,7 @@ use std::{
 use thiserror::Error;
 
 use crate::{
+    jwt::{JwtAuthorizer, JwtIssuer, get_jwk},
     oauth::{DbAuthorizer, DbIssuer, OAuthEndpoint},
     routes::oauser::OAuthUser,
 };
@@ -53,14 +56,25 @@ pub fn router() -> Router<RouteState> {
             "/authorize",
             get(authorize::handle_get).post(authorize::handle_post),
         )
+        .route("/jwks", get(jwks))
+}
+
+async fn jwks() -> Result<impl IntoResponse, RouteError> {
+    let key = match get_jwk().key.to_public().expect("public key") {
+        std::borrow::Cow::Owned(o) => o,
+
+        std::borrow::Cow::Borrowed(_) => unreachable!(),
+    };
+
+    Ok(JsonWebKey::new(key).to_string())
 }
 
 #[derive(Debug, Clone)]
 pub struct RouteState {
     db: DatabaseConnection,
     kv: Client,
-    issuer: DbIssuer,
-    authorizer: DbAuthorizer,
+    issuer: JwtIssuer,
+    authorizer: JwtAuthorizer,
 }
 
 impl RouteState {
@@ -70,8 +84,8 @@ impl RouteState {
         Ok(Self {
             db: db.clone(),
             kv,
-            issuer: DbIssuer::new(db.clone()),
-            authorizer: DbAuthorizer::new(db.clone()),
+            issuer: JwtIssuer,
+            authorizer: JwtAuthorizer,
         })
     }
 }

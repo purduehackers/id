@@ -12,94 +12,109 @@ use oxide_auth_async::{
 };
 use oxide_auth_axum::{OAuthRequest, OAuthResponse};
 use rand::distributions::{Alphanumeric, DistString};
-use sea_orm::{prelude::*, ActiveValue, Condition, DatabaseConnection, IntoActiveModel};
+use sea_orm::{ActiveValue, Condition, DatabaseConnection, IntoActiveModel, prelude::*};
 
-use crate::routes::RouteError;
+use crate::{
+    jwt::{JwtAuthorizer, JwtIssuer},
+    routes::RouteError,
+};
 
 use oxide_auth::{
     frontends::dev::Url,
     primitives::registrar::{Client, ClientMap, RegisteredUrl},
 };
 
-pub const VALID_CLIENTS: [&str; 8] = [
-    "dashboard",
-    "passports",
-    "authority",
-    "auth-test",
-    "vulcan-auth",
-    "shad-moe",
-    "shquid",
-    "fiestadothorse",
+// pub const VALID_CLIENTS: [&str; 8] = [
+//     "dashboard",
+//     "passports",
+//     "authority",
+//     "auth-test",
+//     "vulcan-auth",
+//     "shad-moe",
+//     "shquid",
+// ];
+
+pub struct ClientData<'a> {
+    pub client_id: &'a str,
+
+    pub url: &'a str,
+
+    pub scope: &'a str,
+}
+
+pub const VALID_CLIENTS: [ClientData<'static>; 8] = [
+    ClientData {
+        client_id: "dashboard",
+
+        url: "https://dash.purduehackers.com/api/callback",
+
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "passports",
+
+        url: "https://passports.purduehackers.com/callback",
+
+        scope: "user:read user",
+    },
+    ClientData {
+        client_id: "authority",
+
+        url: "authority://callback",
+
+        scope: "admin:read admin",
+    },
+    ClientData {
+        client_id: "auth-test",
+
+        url: "https://id-auth.purduehackers.com/api/auth/callback/purduehackers-id",
+
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "vulcan-auth",
+
+        url: "https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/",
+
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "shad-moe",
+
+        url: "https://auth.shad.moe/source/oauth/callback/purduehackers-id/",
+
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "shquid",
+
+        url: "https://www.imsqu.id/auth/callback/purduehackers-id",
+
+        scope: "user:read",
+    },
+    ClientData {
+        client_id: "fiestadothorse",
+
+        url: "https://fiesta.horse/auth/callback/purduehackers-id",
+
+        scope: "user:read",
+    },
 ];
 
 pub fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
-    clients.register_client(Client::public(
-        VALID_CLIENTS[0],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://dash.purduehackers.com/api/callback").expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scope to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[1],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://passports.purduehackers.com/callback").expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[2],
-        RegisteredUrl::Semantic(Url::from_str("authority://callback").expect("url to be valid")),
-        "admin:read admin".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[3],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://id-auth.purduehackers.com/api/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[4],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[5],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://auth.shad.moe/source/oauth/callback/purduehackers-id/")
-                .expect("url to be valid"),
-        ),
-        "user:read user".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[6],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://www.imsqu.id/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scopes to be valid"),
-    ));
-
-    clients.register_client(Client::public(
-        VALID_CLIENTS[7],
-        RegisteredUrl::Semantic(
-            Url::from_str("https://fiesta.horse/api/auth/callback/purduehackers-id")
-                .expect("url to be valid"),
-        ),
-        "user:read".parse().expect("scopes to be valid"),
-    ));
+    for ClientData {
+        client_id,
+        url,
+        scope,
+    } in VALID_CLIENTS
+    {
+        clients.register_client(Client::public(
+            client_id,
+            RegisteredUrl::Semantic(Url::from_str(url).expect("url to be valid")),
+            scope.parse().expect("scope to be valid"),
+        ));
+    }
 
     clients
 }
@@ -312,8 +327,8 @@ pub struct OAuthEndpoint<T: OwnerSolicitor<OAuthRequest>> {
     solicitor: T,
     scopes: Vec<Scope>,
     registry: ClientMap,
-    issuer: DbIssuer,
-    authorizer: DbAuthorizer,
+    issuer: JwtIssuer,
+    authorizer: JwtAuthorizer,
 }
 
 #[async_trait::async_trait]
@@ -374,8 +389,8 @@ impl<T: OwnerSolicitor<OAuthRequest>> OAuthEndpoint<T> {
     pub fn new(
         solicitor: T,
         scopes: Vec<Scope>,
-        issuer: DbIssuer,
-        authorizer: DbAuthorizer,
+        issuer: JwtIssuer,
+        authorizer: JwtAuthorizer,
     ) -> Self {
         Self {
             solicitor,

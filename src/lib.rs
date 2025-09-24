@@ -6,6 +6,8 @@ use leptos::{prelude::*, server_fn::codec::JsonEncoding};
 
 pub mod app;
 #[cfg(feature = "ssr")]
+pub mod jwt;
+#[cfg(feature = "ssr")]
 pub mod oauth;
 pub mod pages;
 #[cfg(feature = "ssr")]
