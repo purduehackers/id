@@ -187,7 +187,6 @@ impl OwnerSolicitor<OAuthRequest> for AuthorizeSolicitor {
 pub async fn handle_post(
     cookies: CookieJar,
     State(state): State<RouteState>,
-    headers: HeaderMap,
     uri: OriginalUri,
     oauth: OAuthRequest,
 ) -> Result<impl IntoResponse, RouteError> {
@@ -211,7 +210,7 @@ pub async fn handle_post(
     let db = state.db;
 
     // Grant may have been given, see if it was
-    if let Some(loc) = headers.get(LOCATION) {
+    if let Some(loc) = res.headers().get(LOCATION) {
         let url = Url::parse(loc.to_str().expect("valid loc string")).expect("valid url");
         if let Some((_, grant)) = url.query_pairs().find(|(k, _)| k == "code") {
             // Grant given, reverse reference to user and create a session token
