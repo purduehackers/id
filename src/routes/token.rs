@@ -1,7 +1,7 @@
 use axum::extract::State;
 use oxide_auth::endpoint::{OwnerConsent, Solicitation};
-use oxide_auth_async::endpoint::OwnerSolicitor;
 use oxide_auth_async::endpoint::access_token::AccessTokenFlow;
+use oxide_auth_async::endpoint::OwnerSolicitor;
 use oxide_auth_axum::{OAuthRequest, OAuthResponse};
 
 use crate::oauth::OAuthEndpoint;
@@ -65,7 +65,7 @@ pub async fn handler(
 ) -> Result<OAuthResponse, RouteError> {
     AccessTokenFlow::prepare(OAuthEndpoint::new(
         TokenSolicitor,
-        USER.names(),
+        vec![],
         issuer,
         authorizer,
     ))?
