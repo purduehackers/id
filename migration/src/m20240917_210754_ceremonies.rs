@@ -26,11 +26,7 @@ impl MigrationTrait for Migration {
                             .not_null()
                             .primary_key(),
                     )
-                    .col(
-                        ColumnDef::new(Ceremonies::TotalSlots)
-                            .integer()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Ceremonies::TotalSlots).integer().not_null())
                     .col(
                         ColumnDef::new(Ceremonies::OpenRegistration)
                             .boolean()

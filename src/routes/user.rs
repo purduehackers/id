@@ -1,10 +1,10 @@
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use entity::{passport, prelude::*, sea_orm_active_enums::RoleEnum, user};
 use oxide_auth::frontends::simple::endpoint::Vacant;
-use sea_orm::{prelude::*, QueryOrder};
+use sea_orm::{QueryOrder, prelude::*};
 use serde::{Deserialize, Serialize};
 
-use crate::routes::{scope::USER_READ, OAuthUser, RouteError, RouteState};
+use crate::routes::{OAuthUser, RouteError, RouteState, scope::USER_READ};
 
 #[derive(Serialize, Deserialize)]
 pub struct UserWithPassport {

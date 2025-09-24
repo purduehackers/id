@@ -1,11 +1,7 @@
 use leptos::prelude::*;
-use leptos_router::{
-    components::*,
-    hooks::{use_params, use_query},
-    params::Params,
-};
+use leptos_router::{hooks::use_query, params::Params};
 
-use crate::{scan_post, ScanPost};
+use crate::ScanPost;
 
 #[derive(Debug, Params, PartialEq, Eq)]
 struct Query {
@@ -18,7 +14,9 @@ pub fn Scan() -> impl IntoView {
     let q = use_query::<Query>();
 
     let send = ServerAction::<ScanPost>::new();
-    if let Ok(Query { id, secret }) = q.read().as_ref() && let Ok(id) = id.parse::<i32>() {
+    if let Ok(Query { id, secret }) = q.read().as_ref()
+        && let Ok(id) = id.parse::<i32>()
+    {
         send.dispatch(ScanPost {
             id,
             secret: secret.clone(),

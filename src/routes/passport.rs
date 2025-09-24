@@ -1,9 +1,9 @@
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 use entity::{passport, prelude::*};
 use oxide_auth::frontends::simple::endpoint::Vacant;
 use sea_orm::prelude::*;
 
-use crate::routes::{oauser::OAuthUser, scope::ADMIN_READ, RouteError, RouteState};
+use crate::routes::{RouteError, RouteState, oauser::OAuthUser, scope::ADMIN_READ};
 
 pub async fn handler(
     _user: OAuthUser<{ ADMIN_READ }, Vacant>,
