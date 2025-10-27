@@ -7,7 +7,7 @@ use serde::Serialize;
 use crate::routes::{scope::USER_READ, OAuthUser, RouteError, RouteState};
 
 #[derive(Serialize)]
-struct UserWithPassport {
+pub struct UserWithPassport {
     iss: String,
     sub: i32,
     id: i32,
@@ -18,7 +18,7 @@ struct UserWithPassport {
 }
 
 #[derive(Serialize)]
-struct PublicPassport {
+pub struct PublicPassport {
     pub id: i32,
     pub version: i32,
     pub surname: String,
