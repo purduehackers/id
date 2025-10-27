@@ -13,7 +13,6 @@ pub struct UserWithPassport {
     id: i32,
     discord_id: i64,
     role: RoleEnum,
-    totp: Option<String>,
     latest_passport: Option<PublicPassport>,
 }
 
@@ -49,7 +48,6 @@ pub async fn handler(
         id: user.id,
         discord_id: user.discord_id,
         role: user.role.clone(),
-        totp: user.totp.clone(),
         latest_passport: latest_passport.map(
             |entity::passport::Model {
                  id,
