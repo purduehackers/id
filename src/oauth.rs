@@ -181,29 +181,43 @@ impl DbClientRegistry {
                 continue;
             }
 
+            let redirect_url = match Url::from_str(&client.redirect_uri) {
+                Ok(url) => url,
+                Err(e) => {
+                    eprintln!(
+                        "Warning: skipping client {} with invalid redirect_uri '{}': {e}",
+                        client.client_id, client.redirect_uri
+                    );
+                    continue;
+                }
+            };
+
             let scope = format!("{} auth", client.default_scope);
+            let parsed_scope = match scope.parse() {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!(
+                        "Warning: skipping client {} with invalid scope '{}': {e:?}",
+                        client.client_id, scope
+                    );
+                    continue;
+                }
+            };
+
             if let Some(secret) = &client.client_secret {
                 // Confidential client with secret
                 clients.register_client(Client::confidential(
                     &client.client_id,
-                    RegisteredUrl::Semantic(Url::from_str(&client.redirect_uri).unwrap_or_else(
-                        |_| panic!("invalid redirect_uri for client {}", client.client_id),
-                    )),
-                    scope.parse().unwrap_or_else(|_| {
-                        panic!("invalid scope for client {}", client.client_id)
-                    }),
+                    RegisteredUrl::Semantic(redirect_url),
+                    parsed_scope,
                     secret.as_bytes(),
                 ));
             } else {
                 // Public client
                 clients.register_client(Client::public(
                     &client.client_id,
-                    RegisteredUrl::Semantic(Url::from_str(&client.redirect_uri).unwrap_or_else(
-                        |_| panic!("invalid redirect_uri for client {}", client.client_id),
-                    )),
-                    scope.parse().unwrap_or_else(|_| {
-                        panic!("invalid scope for client {}", client.client_id)
-                    }),
+                    RegisteredUrl::Semantic(redirect_url),
+                    parsed_scope,
                 ));
             }
         }

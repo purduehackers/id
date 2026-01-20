@@ -182,6 +182,11 @@ pub async fn create_client(
         }
     }
 
+    // Validate redirect_uri is a valid URL
+    if url::Url::parse(&req.redirect_uri).is_err() {
+        return Err(LeptosRouteError::BadRequest);
+    }
+
     // Generate client_id and optional client_secret
     let client_id = Uuid::new_v4().to_string();
     let client_secret = if req.is_confidential {
