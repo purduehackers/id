@@ -33,6 +33,7 @@ ssr = [
     "dep:axum-extra",
     "dep:jsonwebtoken",
     "dep:jsonwebkey",
+    "dep:uuid",
     "leptos/ssr",
     "leptos_meta/ssr",
     "leptos_router/ssr",
@@ -64,7 +65,7 @@ redis = { version = "0.27.2", features = [
     "tokio-comp",
     "rustls",
 ], optional = true }
-sea-orm = { version = "0.12", features = [
+sea-orm = { version = "2.0.0-rc", features = [
     "sqlx-postgres",
     "runtime-tokio-rustls",
     "with-chrono",
@@ -90,6 +91,7 @@ dotenvy = { version = "0.15.7", optional = true, git = "https://github.com/allan
 axum-extra = { version = "0.10.1", optional = true, features = ["cookie"] }
 jsonwebtoken = { version = "8", optional = true }
 jsonwebkey = { version = "0.3.5", features = ["jsonwebtoken", "jwt-convert"], optional = true }
+uuid = { version = "1", features = ["v4"], optional = true }
 
 # You can specify a library for shared logic here (optional)
 [lib]

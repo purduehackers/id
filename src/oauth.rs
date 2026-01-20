@@ -1,9 +1,10 @@
 use std::str::FromStr;
+use std::sync::Arc;
 
 use chrono::{Months, Utc};
 use entity::{
-    auth_grant, auth_token,
-    prelude::{AuthGrant, AuthToken},
+    auth_grant, auth_token, oauth_client,
+    prelude::{AuthGrant, AuthToken, OAuthClient},
 };
 use oxide_auth::endpoint::{OAuthError, ResponseStatus, Scope, WebRequest};
 use oxide_auth_async::{
@@ -12,7 +13,8 @@ use oxide_auth_async::{
 };
 use oxide_auth_axum::{OAuthRequest, OAuthResponse};
 use rand::distributions::{Alphanumeric, DistString};
-use sea_orm::{prelude::*, ActiveValue, Condition, DatabaseConnection, IntoActiveModel};
+use sea_orm::{ActiveValue, Condition, DatabaseConnection, IntoActiveModel, prelude::*};
+use tokio::sync::RwLock;
 
 use crate::{
     jwt::{JwtAuthorizer, JwtIssuer},
@@ -21,7 +23,9 @@ use crate::{
 
 use oxide_auth::{
     frontends::dev::Url,
-    primitives::registrar::{Client, ClientMap, RegisteredUrl},
+    primitives::registrar::{
+        BoundClient, Client, ClientMap, ClientUrl, PreGrant, RegisteredUrl, RegistrarError,
+    },
 };
 
 // pub const VALID_CLIENTS: [&str; 8] = [
@@ -42,7 +46,14 @@ pub struct ClientData<'a> {
     pub scope: &'a str,
 }
 
-pub const VALID_CLIENTS: [ClientData<'static>; 8] = [
+pub const VALID_CLIENTS: [ClientData<'static>; 9] = [
+    ClientData {
+        client_id: "id-dash",
+
+        url: "https://id.purduehackers.com/dash",
+
+        scope: "user:read user",
+    },
     ClientData {
         client_id: "dashboard",
 
@@ -117,6 +128,117 @@ pub fn client_registry() -> ClientMap {
     }
 
     clients
+}
+
+/// A unified client registry combining static clients with database-stored clients
+pub struct DbClientRegistry {
+    db: DatabaseConnection,
+    /// Unified cache of all clients (static + database)
+    clients: Arc<RwLock<ClientMap>>,
+}
+
+impl std::fmt::Debug for DbClientRegistry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("DbClientRegistry")
+            .field("db", &self.db)
+            .finish_non_exhaustive()
+    }
+}
+
+impl Clone for DbClientRegistry {
+    fn clone(&self) -> Self {
+        Self {
+            db: self.db.clone(),
+            clients: Arc::clone(&self.clients),
+        }
+    }
+}
+
+impl DbClientRegistry {
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self {
+            db,
+            clients: Arc::new(RwLock::new(ClientMap::new())),
+        }
+    }
+
+    /// Refresh the unified cache with both static and database clients
+    pub async fn refresh_cache(&self) -> Result<(), sea_orm::DbErr> {
+        let db_clients: Vec<oauth_client::Model> = OAuthClient::find().all(&self.db).await?;
+
+        let mut clients = self.clients.write().await;
+
+        // Start fresh with static clients
+        *clients = client_registry();
+
+        // Collect static client IDs to prevent overrides
+        let static_ids: std::collections::HashSet<&str> =
+            VALID_CLIENTS.iter().map(|c| c.client_id).collect();
+
+        // Add database clients, skipping any that would override static clients
+        for client in db_clients {
+            if static_ids.contains(client.client_id.as_str()) {
+                continue;
+            }
+
+            let scope = format!("{} auth", client.default_scope);
+            if let Some(secret) = &client.client_secret {
+                // Confidential client with secret
+                clients.register_client(Client::confidential(
+                    &client.client_id,
+                    RegisteredUrl::Semantic(Url::from_str(&client.redirect_uri).unwrap_or_else(
+                        |_| panic!("invalid redirect_uri for client {}", client.client_id),
+                    )),
+                    scope.parse().unwrap_or_else(|_| {
+                        panic!("invalid scope for client {}", client.client_id)
+                    }),
+                    secret.as_bytes(),
+                ));
+            } else {
+                // Public client
+                clients.register_client(Client::public(
+                    &client.client_id,
+                    RegisteredUrl::Semantic(Url::from_str(&client.redirect_uri).unwrap_or_else(
+                        |_| panic!("invalid redirect_uri for client {}", client.client_id),
+                    )),
+                    scope.parse().unwrap_or_else(|_| {
+                        panic!("invalid scope for client {}", client.client_id)
+                    }),
+                ));
+            }
+        }
+
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl oxide_auth_async::primitives::Registrar for DbClientRegistry {
+    async fn bound_redirect<'a>(
+        &self,
+        bound: ClientUrl<'a>,
+    ) -> Result<BoundClient<'a>, RegistrarError> {
+        let clients = self.clients.read().await;
+        oxide_auth::primitives::registrar::Registrar::bound_redirect(&*clients, bound)
+    }
+
+    async fn negotiate<'a>(
+        &self,
+        client: BoundClient<'a>,
+        scope: Option<Scope>,
+    ) -> Result<PreGrant, RegistrarError> {
+        let clients = self.clients.read().await;
+        oxide_auth::primitives::registrar::Registrar::negotiate(&*clients, client, scope)
+    }
+
+    async fn check(
+        &self,
+        client_id: &str,
+        passphrase: Option<&[u8]>,
+    ) -> Result<(), RegistrarError> {
+        let clients = self.clients.read().await;
+        oxide_auth::primitives::registrar::Registrar::check(&*clients, client_id, passphrase)
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -326,7 +448,7 @@ impl Authorizer for DbAuthorizer {
 pub struct OAuthEndpoint<T: OwnerSolicitor<OAuthRequest>> {
     solicitor: T,
     scopes: Vec<Scope>,
-    registry: ClientMap,
+    registry: DbClientRegistry,
     issuer: JwtIssuer,
     authorizer: JwtAuthorizer,
 }
@@ -391,11 +513,12 @@ impl<T: OwnerSolicitor<OAuthRequest>> OAuthEndpoint<T> {
         scopes: Vec<Scope>,
         issuer: JwtIssuer,
         authorizer: JwtAuthorizer,
+        registry: DbClientRegistry,
     ) -> Self {
         Self {
             solicitor,
             scopes,
-            registry: client_registry(),
+            registry,
             issuer,
             authorizer,
         }

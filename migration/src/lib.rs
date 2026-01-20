@@ -10,6 +10,7 @@ mod m20240907_031824_passport_ceremony_date;
 mod m20240917_210754_ceremonies;
 mod m20240920_155703_auth_session;
 mod m20240924_225432_passport_ceremony_fk;
+mod m20260119_000000_oauth_client;
 
 pub struct Migrator;
 
@@ -24,9 +25,10 @@ impl MigratorTrait for Migrator {
             Box::new(m20240210_064839_oauth_tables::Migration),
             Box::new(m20240304_164539_nullable_grant_code::Migration),
             Box::new(m20240907_031824_passport_ceremony_date::Migration),
-            Box::new(m20240920_155703_auth_session::Migration),
             Box::new(m20240917_210754_ceremonies::Migration),
+            Box::new(m20240920_155703_auth_session::Migration),
             Box::new(m20240924_225432_passport_ceremony_fk::Migration),
+            Box::new(m20260119_000000_oauth_client::Migration),
         ]
     }
 }

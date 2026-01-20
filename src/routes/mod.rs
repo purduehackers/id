@@ -29,7 +29,7 @@ use thiserror::Error;
 
 use crate::{
     jwt::{get_jwk, JwtAuthorizer, JwtIssuer},
-    oauth::{DbAuthorizer, DbIssuer, OAuthEndpoint},
+    oauth::{DbAuthorizer, DbClientRegistry, DbIssuer, OAuthEndpoint},
     routes::oauser::OAuthUser,
 };
 
@@ -71,21 +71,26 @@ async fn jwks() -> Result<impl IntoResponse, RouteError> {
 
 #[derive(Debug, Clone)]
 pub struct RouteState {
-    db: DatabaseConnection,
-    kv: Client,
-    issuer: JwtIssuer,
-    authorizer: JwtAuthorizer,
+    pub db: DatabaseConnection,
+    pub kv: Client,
+    pub issuer: JwtIssuer,
+    pub authorizer: JwtAuthorizer,
+    pub registry: DbClientRegistry,
 }
 
 impl RouteState {
     pub async fn new() -> Result<Self, RouteError> {
         let db = db().await?;
         let kv = kv().await?;
+        let registry = DbClientRegistry::new(db.clone());
+        // Pre-populate the cache with database clients
+        registry.refresh_cache().await?;
         Ok(Self {
             db: db.clone(),
             kv,
             issuer: JwtIssuer,
             authorizer: JwtAuthorizer,
+            registry,
         })
     }
 }
@@ -233,6 +238,7 @@ impl<const S: scope::Scope, SL: NewSolicitor> FromRequestParts<RouteState> for O
             S.names(),
             state.issuer.clone(),
             state.authorizer.clone(),
+            state.registry.clone(),
         ))?
         .execute(resource.into())
         .await

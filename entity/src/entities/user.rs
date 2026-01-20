@@ -21,6 +21,8 @@ pub enum Relation {
     AuthGrant,
     #[sea_orm(has_many = "super::auth_session::Entity")]
     AuthSession,
+    #[sea_orm(has_many = "super::oauth_client::Entity")]
+    OAuthClient,
     #[sea_orm(has_many = "super::passport::Entity")]
     Passport,
 }
@@ -34,6 +36,12 @@ impl Related<super::auth_grant::Entity> for Entity {
 impl Related<super::auth_session::Entity> for Entity {
     fn to() -> RelationDef {
         Relation::AuthSession.def()
+    }
+}
+
+impl Related<super::oauth_client::Entity> for Entity {
+    fn to() -> RelationDef {
+        Relation::OAuthClient.def()
     }
 }
 

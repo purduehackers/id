@@ -201,6 +201,7 @@ pub async fn handle_post(
         AUTH.names(),
         state.issuer,
         state.authorizer.clone(),
+        state.registry.clone(),
     ))?
     .execute(oauth)
     .await?;
@@ -288,6 +289,7 @@ pub async fn handle_get(
         AUTH.names(),
         state.issuer,
         state.authorizer,
+        state.registry,
     ))?
     .execute(oauth)
     .await?;

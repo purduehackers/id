@@ -4,5 +4,6 @@ pub use super::auth_grant::Entity as AuthGrant;
 pub use super::auth_session::Entity as AuthSession;
 pub use super::auth_token::Entity as AuthToken;
 pub use super::ceremonies::Entity as Ceremonies;
+pub use super::oauth_client::Entity as OAuthClient;
 pub use super::passport::Entity as Passport;
 pub use super::user::Entity as User;

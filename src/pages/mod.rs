@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use leptos_router::components::*;
 
 pub mod authorize;
+pub mod dash;
 pub mod scan;
 
 #[component]

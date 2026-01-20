@@ -170,7 +170,7 @@ pub fn Authorize() -> impl IntoView {
                         .into_any()
                 }
                 AuthState::NoClient => {
-                    view! { <p class="font-bold text-2xl">No client found</p> }.into_any()
+                    view! { <p class="font-bold text-2xl">Invalid client ID</p> }.into_any()
                 }
             }}
         </div>

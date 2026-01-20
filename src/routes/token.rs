@@ -59,7 +59,10 @@ impl OwnerSolicitor<OAuthRequest> for TokenSolicitor {
 #[axum::debug_handler]
 pub async fn handler(
     State(RouteState {
-        issuer, authorizer, ..
+        issuer,
+        authorizer,
+        registry,
+        ..
     }): State<RouteState>,
     req: OAuthRequest,
 ) -> Result<OAuthResponse, RouteError> {
@@ -68,6 +71,7 @@ pub async fn handler(
         AUTH.names(),
         issuer,
         authorizer,
+        registry,
     ))?
     .execute(req)
     .await
