@@ -1,7 +1,7 @@
 #![deny(clippy::unwrap_used)]
 #![feature(adt_const_params)]
 #![allow(incomplete_features)]
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 use leptos::{prelude::*, server_fn::codec::JsonEncoding};
 

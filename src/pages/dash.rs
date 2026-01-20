@@ -5,7 +5,6 @@ use crate::{ClientCreatedResponse, ClientResponse, CreateClientRequest, UserInfo
 
 #[component]
 pub fn Dash() -> impl IntoView {
-    // Use query map as dependency so resource re-fetches when redirected back with ?code=...
     let query = use_query_map();
     let user_resource: Resource<Option<UserInfo>> = Resource::new(
         move || query.read().get("code").unwrap_or_default(),
@@ -57,7 +56,6 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
     let (created_client, set_created_client) = signal(None::<ClientCreatedResponse>);
     let (refresh_trigger, set_refresh_trigger) = signal(0u32);
 
-    // Trigger refetch when refresh_trigger changes
     Effect::new(move |_| {
         let _ = refresh_trigger();
         clients_resource.refetch();
@@ -67,41 +65,40 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
         set_refresh_trigger.update(|n| *n = n.wrapping_add(1));
     };
 
+    let is_admin = user.role == "Admin";
+
     view! {
         <div class="min-h-screen p-4 max-w-4xl mx-auto">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-                <div>
-                    <h1 class="text-3xl font-bold">"Client Dashboard"</h1>
-                    <p class="text-gray-600">
-                        "Logged in as user #" {user.id} " (" {user.role.clone()} ")"
-                    </p>
-                </div>
-                <button
-                    class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
-                    on:click=move |_| set_show_create_form(true)
-                >
-                    "Create Client"
-                </button>
-            </div>
+            <DashboardHeader user_id=user.id user_role=user.role on_create=move || set_show_create_form(true)/>
 
-            <Show when=move || show_create_form()>
-                <CreateClientForm
-                    is_admin=user.role == "Admin"
-                    on_created=move |client| {
-                        set_created_client(Some(client));
-                        set_show_create_form(false);
-                        refetch_clients();
+            {move || {
+                if show_create_form() {
+                    view! {
+                        <CreateClientForm
+                            is_admin=is_admin
+                            on_created=move |client| {
+                                set_created_client(Some(client));
+                                set_show_create_form(false);
+                                refetch_clients();
+                            }
+                            on_cancel=move || set_show_create_form(false)
+                        />
+                    }.into_any()
+                } else {
+                    view! { <div></div> }.into_any()
+                }
+            }}
+
+            {move || {
+                created_client().map(|client| {
+                    view! {
+                        <ClientCreatedModal
+                            client=client
+                            on_close=move || set_created_client(None)
+                        />
                     }
-                    on_cancel=move || set_show_create_form(false)
-                />
-            </Show>
-
-            <Show when=move || created_client().is_some()>
-                <ClientCreatedModal
-                    client=created_client().unwrap()
-                    on_close=move || set_created_client(None)
-                />
-            </Show>
+                })
+            }}
 
             <Suspense fallback=|| view! { <div>"Loading clients..."</div> }>
                 {move || {
@@ -112,6 +109,30 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
                         })
                 }}
             </Suspense>
+        </div>
+    }
+}
+
+#[component]
+fn DashboardHeader(
+    user_id: i32,
+    user_role: String,
+    on_create: impl Fn() + Copy + 'static,
+) -> impl IntoView {
+    view! {
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+            <div>
+                <h1 class="text-3xl font-bold">"Client Dashboard"</h1>
+                <p class="text-gray-600">
+                    "Logged in as user #" {user_id} " (" {user_role} ")"
+                </p>
+            </div>
+            <button
+                class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
+                on:click=move |_| on_create()
+            >
+                "Create Client"
+            </button>
         </div>
     }
 }
@@ -134,7 +155,7 @@ fn ClientList(clients: Vec<ClientResponse>, refetch: impl Fn() + Copy + 'static)
                 {clients
                     .into_iter()
                     .map(|client| {
-                        view! { <ClientCard client=client refetch=refetch/> }
+                        view! { <ClientCard client=client refetch=refetch/> }.into_any()
                     })
                     .collect_view()}
             </div>
@@ -170,53 +191,56 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + 'static) -> im
         });
     };
 
+    let button_text = move || {
+        if deleting() {
+            "Deleting..."
+        } else if confirm_delete() {
+            "Confirm?"
+        } else {
+            "Delete"
+        }
+    };
+
     view! {
         <div class="border-2 border-black rounded p-4 bg-white shadow-blocks-tiny">
             <div class="flex justify-between items-start gap-4">
-                <div class="flex-1 min-w-0">
-                    <h3 class="font-bold text-lg truncate">{client.name.clone()}</h3>
-                    <div class="mt-2 space-y-1 text-sm">
-                        <div>
-                            <span class="text-gray-500">"Client ID: "</span>
-                            <code class="bg-gray-100 px-1 rounded break-all">
-                                {client.client_id.clone()}
-                            </code>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">"Redirect URI: "</span>
-                            <code class="bg-gray-100 px-1 rounded break-all">
-                                {client.redirect_uri.clone()}
-                            </code>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">"Scopes: "</span>
-                            <code class="bg-gray-100 px-1 rounded">{client.scopes.clone()}</code>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">"Type: "</span>
-                            {if client.is_confidential {
-                                "Confidential"
-                            } else {
-                                "Public"
-                            }}
-                        </div>
-                    </div>
-                </div>
+                <ClientCardInfo client=client/>
                 <button
                     class="px-3 py-1 bg-red-300 hover:bg-red-500 border-2 border-black rounded font-bold text-sm transition disabled:bg-gray-200"
                     disabled=deleting
                     on:click=handle_delete
                 >
-                    {move || {
-                        if deleting() {
-                            "Deleting..."
-                        } else if confirm_delete() {
-                            "Confirm?"
-                        } else {
-                            "Delete"
-                        }
-                    }}
+                    {button_text}
                 </button>
+            </div>
+        </div>
+    }
+}
+
+#[component]
+fn ClientCardInfo(client: ClientResponse) -> impl IntoView {
+    let client_type = if client.is_confidential { "Confidential" } else { "Public" };
+
+    view! {
+        <div class="flex-1 min-w-0">
+            <h3 class="font-bold text-lg truncate">{client.name}</h3>
+            <div class="mt-2 space-y-1 text-sm">
+                <div>
+                    <span class="text-gray-500">"Client ID: "</span>
+                    <code class="bg-gray-100 px-1 rounded break-all">{client.client_id}</code>
+                </div>
+                <div>
+                    <span class="text-gray-500">"Redirect URI: "</span>
+                    <code class="bg-gray-100 px-1 rounded break-all">{client.redirect_uri}</code>
+                </div>
+                <div>
+                    <span class="text-gray-500">"Scopes: "</span>
+                    <code class="bg-gray-100 px-1 rounded">{client.scopes}</code>
+                </div>
+                <div>
+                    <span class="text-gray-500">"Type: "</span>
+                    {client_type}
+                </div>
             </div>
         </div>
     }
@@ -234,23 +258,6 @@ where
     let (selected_scopes, set_selected_scopes) = signal(vec!["user:read".to_string()]);
     let (submitting, set_submitting) = signal(false);
     let (error, set_error) = signal(None::<String>);
-
-    let available_scopes = if is_admin {
-        vec!["user:read", "user", "admin:read", "admin"]
-    } else {
-        vec!["user:read", "user"]
-    };
-
-    let toggle_scope = move |scope: &str| {
-        let scope = scope.to_string();
-        set_selected_scopes.update(|scopes| {
-            if scopes.contains(&scope) {
-                scopes.retain(|s| s != &scope);
-            } else {
-                scopes.push(scope);
-            }
-        });
-    };
 
     let handle_submit = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
@@ -283,12 +290,13 @@ where
         });
     };
 
+    let submit_text = move || if submitting() { "Creating..." } else { "Create" };
+
     view! {
         <div class="border-2 border-black rounded p-4 bg-amber-50 shadow-blocks-tiny mb-6">
             <h2 class="text-xl font-bold mb-4">"Create New Client"</h2>
             <form on:submit=handle_submit class="space-y-4">
-                <div>
-                    <label class="block font-medium mb-1">"Name"</label>
+                <FormField label="Name">
                     <input
                         type="text"
                         class="w-full border-2 border-black rounded p-2"
@@ -296,10 +304,9 @@ where
                         on:input:target=move |ev| set_name(ev.target().value())
                         prop:value=name
                     />
-                </div>
+                </FormField>
 
-                <div>
-                    <label class="block font-medium mb-1">"Redirect URI"</label>
+                <FormField label="Redirect URI">
                     <input
                         type="text"
                         class="w-full border-2 border-black rounded p-2"
@@ -307,36 +314,13 @@ where
                         on:input:target=move |ev| set_redirect_uri(ev.target().value())
                         prop:value=redirect_uri
                     />
-                </div>
+                </FormField>
 
-                <div>
-                    <label class="block font-medium mb-1">"Scopes"</label>
-                    <div class="flex flex-wrap gap-2">
-                        {available_scopes
-                            .into_iter()
-                            .map(|scope| {
-                                let scope_str = scope.to_string();
-                                let scope_for_check = scope_str.clone();
-                                let scope_for_toggle = scope_str.clone();
-                                view! {
-                                    <label class="inline-flex items-center gap-1 cursor-pointer">
-                                        <input
-                                            type="checkbox"
-                                            class="w-4 h-4"
-                                            checked=move || {
-                                                selected_scopes().contains(&scope_for_check)
-                                            }
-                                            on:change=move |_| toggle_scope(&scope_for_toggle)
-                                        />
-                                        <span class="bg-gray-100 px-2 py-1 rounded text-sm">
-                                            {scope}
-                                        </span>
-                                    </label>
-                                }
-                            })
-                            .collect_view()}
-                    </div>
-                </div>
+                <ScopeSelector
+                    is_admin=is_admin
+                    selected_scopes=selected_scopes
+                    set_selected_scopes=set_selected_scopes
+                />
 
                 <div>
                     <label class="inline-flex items-center gap-2 cursor-pointer">
@@ -350,9 +334,9 @@ where
                     </label>
                 </div>
 
-                <Show when=move || error().is_some()>
-                    <div class="text-red-600 text-sm">{error}</div>
-                </Show>
+                {move || {
+                    error().map(|e| view! { <div class="text-red-600 text-sm">{e}</div> })
+                }}
 
                 <div class="flex gap-2">
                     <button
@@ -360,7 +344,7 @@ where
                         class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black rounded font-bold transition disabled:bg-gray-200"
                         disabled=submitting
                     >
-                        {move || if submitting() { "Creating..." } else { "Create" }}
+                        {submit_text}
                     </button>
                     <button
                         type="button"
@@ -376,10 +360,84 @@ where
 }
 
 #[component]
+fn FormField(label: &'static str, children: Children) -> impl IntoView {
+    view! {
+        <div>
+            <label class="block font-medium mb-1">{label}</label>
+            {children()}
+        </div>
+    }
+}
+
+#[component]
+fn ScopeSelector(
+    is_admin: bool,
+    selected_scopes: ReadSignal<Vec<String>>,
+    set_selected_scopes: WriteSignal<Vec<String>>,
+) -> impl IntoView {
+    let available_scopes: Vec<&'static str> = if is_admin {
+        vec!["user:read", "user", "admin:read", "admin"]
+    } else {
+        vec!["user:read", "user"]
+    };
+
+    let toggle_scope = move |scope: String| {
+        set_selected_scopes.update(|scopes| {
+            if scopes.contains(&scope) {
+                scopes.retain(|s| s != &scope);
+            } else {
+                scopes.push(scope);
+            }
+        });
+    };
+
+    view! {
+        <div>
+            <label class="block font-medium mb-1">"Scopes"</label>
+            <div class="flex flex-wrap gap-2">
+                {available_scopes
+                    .into_iter()
+                    .map(|scope| {
+                        let scope_string = scope.to_string();
+                        let scope_for_check = scope_string.clone();
+                        let scope_for_toggle = scope_string.clone();
+                        view! {
+                            <label class="inline-flex items-center gap-1 cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    class="w-4 h-4"
+                                    checked=move || selected_scopes().contains(&scope_for_check)
+                                    on:change=move |_| toggle_scope(scope_for_toggle.clone())
+                                />
+                                <span class="bg-gray-100 px-2 py-1 rounded text-sm">{scope}</span>
+                            </label>
+                        }.into_any()
+                    })
+                    .collect_view()}
+            </div>
+        </div>
+    }
+}
+
+#[component]
 fn ClientCreatedModal<F>(client: ClientCreatedResponse, on_close: F) -> impl IntoView
 where
     F: Fn() + Copy + 'static,
 {
+    let secret_view = client.client_secret.clone().map(|secret| {
+        view! {
+            <div>
+                <span class="text-gray-500">"Client Secret:"</span>
+                <div class="bg-amber-100 border-2 border-amber-400 rounded p-2 mt-1">
+                    <p class="text-amber-800 text-sm mb-2 font-bold">
+                        "Save this secret now! It will not be shown again."
+                    </p>
+                    <code class="block bg-white p-2 rounded break-all select-all">{secret}</code>
+                </div>
+            </div>
+        }
+    });
+
     view! {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white border-2 border-black rounded p-6 max-w-lg w-full shadow-blocks-sm">
@@ -389,28 +447,10 @@ where
                     <div>
                         <span class="text-gray-500">"Client ID:"</span>
                         <code class="block bg-gray-100 p-2 rounded mt-1 break-all select-all">
-                            {client.client_id.clone()}
+                            {client.client_id}
                         </code>
                     </div>
-
-                    {client
-                        .client_secret
-                        .clone()
-                        .map(|secret| {
-                            view! {
-                                <div>
-                                    <span class="text-gray-500">"Client Secret:"</span>
-                                    <div class="bg-amber-100 border-2 border-amber-400 rounded p-2 mt-1">
-                                        <p class="text-amber-800 text-sm mb-2 font-bold">
-                                            "Save this secret now! It will not be shown again."
-                                        </p>
-                                        <code class="block bg-white p-2 rounded break-all select-all">
-                                            {secret}
-                                        </code>
-                                    </div>
-                                </div>
-                            }
-                        })}
+                    {secret_view}
                 </div>
 
                 <button
