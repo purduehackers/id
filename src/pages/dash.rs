@@ -6,20 +6,24 @@ use crate::{ClientCreatedResponse, ClientResponse, CreateClientRequest, UserInfo
 #[component]
 pub fn Dash() -> impl IntoView {
     let query = use_query_map();
-    let user_resource: Resource<Option<UserInfo>> = Resource::new(
-        move || query.read().get("code").unwrap_or_default(),
-        |_| async { crate::get_current_user().await.ok().flatten() },
-    );
+
+    // Use LocalResource to avoid SSR/hydration mismatch
+    let user_resource = LocalResource::new(move || {
+        let code = query.read().get("code").unwrap_or_default();
+        async move {
+            let _ = code; // Use code as dependency
+            crate::get_current_user().await.ok().flatten()
+        }
+    });
 
     view! {
-        <Suspense fallback=|| view! { <div class="p-4">"Loading..."</div> }>
-            {move || {
-                user_resource.get().map(|user| match user {
-                    Some(user) => view! { <DashboardContent user=user/> }.into_any(),
-                    None => view! { <LoginPrompt/> }.into_any(),
-                })
+        <div class="p-4">
+            {move || match user_resource.get() {
+                None => view! { <div>"Loading..."</div> }.into_any(),
+                Some(None) => view! { <LoginPrompt/> }.into_any(),
+                Some(Some(user)) => view! { <DashboardContent user=user/> }.into_any(),
             }}
-        </Suspense>
+        </div>
     }
 }
 
@@ -43,19 +47,16 @@ fn LoginPrompt() -> impl IntoView {
 
 #[component]
 fn DashboardContent(user: UserInfo) -> impl IntoView {
-    let clients_resource: Resource<Vec<ClientResponse>> = Resource::new(
-        || (),
-        |_| async { crate::get_my_clients().await.unwrap_or_default() },
-    );
+    let (refresh_trigger, set_refresh_trigger) = signal(0u32);
+
+    // Use LocalResource to avoid SSR/hydration mismatch
+    let clients_resource = LocalResource::new(move || {
+        let _ = refresh_trigger(); // Dependency for refetch
+        async move { crate::get_my_clients().await.unwrap_or_default() }
+    });
 
     let (show_create_form, set_show_create_form) = signal(false);
     let (created_client, set_created_client) = signal(None::<ClientCreatedResponse>);
-    let (refresh_trigger, set_refresh_trigger) = signal(0u32);
-
-    Effect::new(move |_| {
-        let _ = refresh_trigger();
-        clients_resource.refetch();
-    });
 
     let refetch_clients = move || {
         set_refresh_trigger.update(|n| *n = n.wrapping_add(1));
@@ -96,13 +97,10 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
                 <ClientCreatedModal client=client on_close=move || set_created_client(None)/>
             })}
 
-            <Suspense fallback=|| view! { <div>"Loading clients..."</div> }>
-                {move || {
-                    clients_resource.get().map(|clients| view! {
-                        <ClientList clients=clients refetch=refetch_clients/>
-                    })
-                }}
-            </Suspense>
+            {move || match clients_resource.get() {
+                None => view! { <div>"Loading clients..."</div> }.into_any(),
+                Some(clients) => view! { <ClientList clients=clients refetch=refetch_clients/> }.into_any(),
+            }}
         </div>
     }
 }
