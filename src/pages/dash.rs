@@ -96,7 +96,7 @@ fn DashboardContent(user: UserInfo) -> AnyView {
 fn DashboardHeader(
     user_id: i32,
     user_role: String,
-    on_create: impl Fn() + Copy + 'static,
+    on_create: impl Fn() + Copy + Send + Sync + 'static,
 ) -> AnyView {
     view! {
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
@@ -125,8 +125,8 @@ fn CreateFormSection<FC, FX>(
     on_cancel: FX,
 ) -> AnyView
 where
-    FC: Fn(ClientCreatedResponse) + Copy + 'static,
-    FX: Fn() + Copy + 'static,
+    FC: Fn(ClientCreatedResponse) + Copy + Send + Sync + 'static,
+    FX: Fn() + Copy + Send + Sync + 'static,
 {
     view! {
         {move || {
@@ -143,7 +143,7 @@ where
 #[component]
 fn ModalSection<F>(client: ReadSignal<Option<ClientCreatedResponse>>, on_close: F) -> AnyView
 where
-    F: Fn() + Copy + 'static,
+    F: Fn() + Copy + Send + Sync + 'static,
 {
     view! {
         {move || {
@@ -156,7 +156,7 @@ where
 #[component]
 fn ClientListSection(
     clients_resource: Resource<Vec<ClientResponse>>,
-    refetch: impl Fn() + Copy + 'static,
+    refetch: impl Fn() + Copy + Send + Sync + 'static,
 ) -> AnyView {
     view! {
         <Suspense fallback=|| view! { <div>"Loading clients..."</div> }>
@@ -169,7 +169,7 @@ fn ClientListSection(
 }
 
 #[component]
-fn ClientList(clients: Vec<ClientResponse>, refetch: impl Fn() + Copy + 'static) -> AnyView {
+fn ClientList(clients: Vec<ClientResponse>, refetch: impl Fn() + Copy + Send + Sync + 'static) -> AnyView {
     if clients.is_empty() {
         return view! {
             <div class="text-center py-8 text-gray-500">
@@ -194,7 +194,7 @@ fn ClientList(clients: Vec<ClientResponse>, refetch: impl Fn() + Copy + 'static)
 }
 
 #[component]
-fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + 'static) -> AnyView {
+fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 'static) -> AnyView {
     let (deleting, set_deleting) = signal(false);
     let (confirm_delete, set_confirm_delete) = signal(false);
 
@@ -264,8 +264,8 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + 'static) -> An
 #[component]
 fn CreateClientForm<FC, FX>(is_admin: bool, on_created: FC, on_cancel: FX) -> AnyView
 where
-    FC: Fn(ClientCreatedResponse) + Copy + 'static,
-    FX: Fn() + Copy + 'static,
+    FC: Fn(ClientCreatedResponse) + Copy + Send + Sync + 'static,
+    FX: Fn() + Copy + Send + Sync + 'static,
 {
     let (name, set_name) = signal(String::new());
     let (redirect_uri, set_redirect_uri) = signal(String::new());
@@ -301,8 +301,6 @@ where
         });
     };
 
-    let submit_text = move || if submitting() { "Creating..." } else { "Create" };
-
     view! {
         <div class="border-2 border-black rounded p-4 bg-amber-50 shadow-blocks-tiny mb-6">
             <h2 class="text-xl font-bold mb-4">"Create New Client"</h2>
@@ -312,7 +310,7 @@ where
                 <ScopeSelector is_admin=is_admin selected_scopes=selected_scopes set_selected_scopes=set_selected_scopes/>
                 <ConfidentialCheckbox is_confidential=is_confidential set_is_confidential=set_is_confidential/>
                 <ErrorDisplay error=error/>
-                <FormButtons submitting=submitting submit_text=submit_text on_cancel=on_cancel/>
+                <FormButtons submitting=submitting on_cancel=on_cancel/>
             </form>
         </div>
     }
@@ -434,12 +432,13 @@ fn ErrorDisplay(error: ReadSignal<Option<String>>) -> AnyView {
 #[component]
 fn FormButtons<F>(
     submitting: ReadSignal<bool>,
-    submit_text: impl Fn() -> &'static str + Copy + 'static,
     on_cancel: F,
 ) -> AnyView
 where
-    F: Fn() + Copy + 'static,
+    F: Fn() + Copy + Send + Sync + 'static,
 {
+    let submit_text = move || if submitting() { "Creating..." } else { "Create" };
+
     view! {
         <div class="flex gap-2">
             <button
@@ -464,7 +463,7 @@ where
 #[component]
 fn ClientCreatedModal<F>(client: ClientCreatedResponse, on_close: F) -> AnyView
 where
-    F: Fn() + Copy + 'static,
+    F: Fn() + Copy + Send + Sync + 'static,
 {
     let secret_section = client.client_secret.clone().map(|secret| {
         view! {

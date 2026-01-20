@@ -1,7 +1,7 @@
 #![deny(clippy::unwrap_used)]
 #![feature(adt_const_params)]
 #![allow(incomplete_features)]
-#![recursion_limit = "512"]
+#![recursion_limit = "1024"]
 
 use leptos::{prelude::*, server_fn::codec::JsonEncoding};
 
@@ -23,18 +23,19 @@ pub async fn scan_post(id: i32, secret: String) -> Result<(), LeptosRouteError> 
 
 #[server]
 pub async fn get_current_user() -> Result<Option<UserInfo>, LeptosRouteError> {
-    use chrono::Utc;
-    use entity::{auth_session, user};
-    use entity::prelude::{AuthSession, User};
-    use leptos_axum::extract;
     use axum_extra::extract::CookieJar;
-    use sea_orm::{prelude::*, Condition};
+    use chrono::Utc;
+    use entity::prelude::{AuthSession, User};
+    use entity::{auth_session, user};
+    use leptos_axum::extract;
+    use sea_orm::{Condition, prelude::*};
 
     let state: crate::routes::RouteState = use_context()
         .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
 
-    let cookies: CookieJar = extract().await
-        .map_err(|e| LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}")))?;
+    let cookies: CookieJar = extract().await.map_err(|e| {
+        LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}"))
+    })?;
 
     let session_token = match cookies.get("session") {
         Some(cookie) => cookie.value().to_string(),
@@ -73,20 +74,22 @@ pub async fn get_current_user() -> Result<Option<UserInfo>, LeptosRouteError> {
 
 #[server]
 pub async fn get_my_clients() -> Result<Vec<ClientResponse>, LeptosRouteError> {
-    use chrono::Utc;
-    use entity::{auth_session, oauth_client};
-    use entity::prelude::{AuthSession, OAuthClient};
-    use leptos_axum::extract;
     use axum_extra::extract::CookieJar;
-    use sea_orm::{prelude::*, Condition};
+    use chrono::Utc;
+    use entity::prelude::{AuthSession, OAuthClient};
+    use entity::{auth_session, oauth_client};
+    use leptos_axum::extract;
+    use sea_orm::{Condition, prelude::*};
 
     let state: crate::routes::RouteState = use_context()
         .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
 
-    let cookies: CookieJar = extract().await
-        .map_err(|e| LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}")))?;
+    let cookies: CookieJar = extract().await.map_err(|e| {
+        LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}"))
+    })?;
 
-    let session_token = cookies.get("session")
+    let session_token = cookies
+        .get("session")
         .ok_or(LeptosRouteError::Unauthorized)?
         .value()
         .to_string();
@@ -123,24 +126,28 @@ pub async fn get_my_clients() -> Result<Vec<ClientResponse>, LeptosRouteError> {
 }
 
 #[server]
-pub async fn create_client(req: CreateClientRequest) -> Result<ClientCreatedResponse, LeptosRouteError> {
+pub async fn create_client(
+    req: CreateClientRequest,
+) -> Result<ClientCreatedResponse, LeptosRouteError> {
+    use axum_extra::extract::CookieJar;
     use chrono::Utc;
-    use entity::{auth_session, oauth_client, user};
     use entity::prelude::{AuthSession, User};
     use entity::sea_orm_active_enums::RoleEnum;
+    use entity::{auth_session, oauth_client, user};
     use leptos_axum::extract;
-    use axum_extra::extract::CookieJar;
-    use sea_orm::{prelude::*, ActiveValue, Condition};
     use rand::distributions::{Alphanumeric, DistString};
+    use sea_orm::{ActiveValue, Condition, prelude::*};
     use uuid::Uuid;
 
     let state: crate::routes::RouteState = use_context()
         .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
 
-    let cookies: CookieJar = extract().await
-        .map_err(|e| LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}")))?;
+    let cookies: CookieJar = extract().await.map_err(|e| {
+        LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}"))
+    })?;
 
-    let session_token = cookies.get("session")
+    let session_token = cookies
+        .get("session")
         .ok_or(LeptosRouteError::Unauthorized)?
         .value()
         .to_string();
@@ -203,7 +210,10 @@ pub async fn create_client(req: CreateClientRequest) -> Result<ClientCreatedResp
         .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
 
     // Refresh the client registry cache
-    state.registry.refresh_cache().await
+    state
+        .registry
+        .refresh_cache()
+        .await
         .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
 
     Ok(ClientCreatedResponse {
@@ -220,20 +230,22 @@ pub async fn create_client(req: CreateClientRequest) -> Result<ClientCreatedResp
 
 #[server]
 pub async fn delete_client(id: i32) -> Result<(), LeptosRouteError> {
-    use chrono::Utc;
-    use entity::{auth_session, oauth_client};
-    use entity::prelude::{AuthSession, OAuthClient};
-    use leptos_axum::extract;
     use axum_extra::extract::CookieJar;
-    use sea_orm::{prelude::*, Condition};
+    use chrono::Utc;
+    use entity::prelude::{AuthSession, OAuthClient};
+    use entity::{auth_session, oauth_client};
+    use leptos_axum::extract;
+    use sea_orm::{Condition, prelude::*};
 
     let state: crate::routes::RouteState = use_context()
         .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
 
-    let cookies: CookieJar = extract().await
-        .map_err(|e| LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}")))?;
+    let cookies: CookieJar = extract().await.map_err(|e| {
+        LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}"))
+    })?;
 
-    let session_token = cookies.get("session")
+    let session_token = cookies
+        .get("session")
         .ok_or(LeptosRouteError::Unauthorized)?
         .value()
         .to_string();
@@ -267,7 +279,10 @@ pub async fn delete_client(id: i32) -> Result<(), LeptosRouteError> {
         .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
 
     // Refresh the client registry cache
-    state.registry.refresh_cache().await
+    state
+        .registry
+        .refresh_cache()
+        .await
         .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
 
     Ok(())

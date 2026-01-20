@@ -1,3 +1,5 @@
+#![recursion_limit = "1024"]
+
 #[cfg(feature = "ssr")]
 #[dotenvy::load(override_ = false, required = false)]
 #[tokio::main]
