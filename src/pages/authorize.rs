@@ -30,7 +30,9 @@ struct AuthQuery {
 
 #[server]
 pub async fn valid_clients_list() -> Result<Vec<String>, LeptosRouteError> {
-    Ok(crate::routes::client::handler().await?)
+    let state: crate::routes::RouteState = use_context()
+        .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
+    Ok(crate::routes::client::handler(&state.db).await?)
 }
 
 #[component]

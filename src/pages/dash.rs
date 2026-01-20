@@ -63,7 +63,7 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
     };
 
     let is_admin = user.role == "Admin";
-    let user_id = user.id;
+    let user_name = user.name.unwrap_or_else(|| format!("User #{}", user.id));
     let user_role = user.role;
 
     view! {
@@ -71,14 +71,22 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
                 <div>
                     <h1 class="text-3xl font-bold">"Client Dashboard"</h1>
-                    <p class="text-gray-600">"Logged in as user #" {user_id} " (" {user_role} ")"</p>
+                    <p class="text-gray-600">"Logged in as " {user_name} " (" {user_role} ")"</p>
                 </div>
-                <button
-                    class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
-                    on:click=move |_| set_show_create_form(true)
-                >
-                    "Create Client"
-                </button>
+                <div class="flex gap-2">
+                    <button
+                        class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
+                        on:click=move |_| set_show_create_form(true)
+                    >
+                        "Create Client"
+                    </button>
+                    <a
+                        href="/logout"
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
+                    >
+                        "Logout"
+                    </a>
+                </div>
             </div>
 
             <Show when=move || show_create_form()>
@@ -245,8 +253,18 @@ fn CreateClientForm(
                                         on:change=move |_| {
                                             let s = scope_toggle.clone();
                                             set_selected_scopes.update(|scopes| {
-                                                if scopes.contains(&s) { scopes.retain(|x| x != &s); }
-                                                else { scopes.push(s); }
+                                                if scopes.contains(&s) {
+                                                    scopes.retain(|x| x != &s);
+                                                } else {
+                                                    scopes.push(s.clone());
+                                                    // Auto-select read scope when write scope is selected
+                                                    if s == "user" && !scopes.contains(&"user:read".to_string()) {
+                                                        scopes.push("user:read".to_string());
+                                                    }
+                                                    if s == "admin" && !scopes.contains(&"admin:read".to_string()) {
+                                                        scopes.push("admin:read".to_string());
+                                                    }
+                                                }
                                             });
                                         }/>
                                     <span class="bg-gray-100 px-2 py-1 rounded text-sm">{scope}</span>

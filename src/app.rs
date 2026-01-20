@@ -5,7 +5,7 @@ use leptos_router::{
     StaticSegment,
 };
 
-use crate::pages::{authorize::Authorize, dash::Dash, scan::Scan, Index};
+use crate::pages::{authorize::Authorize, dash::Dash, logout::Logout, scan::Scan, Index};
 
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
@@ -46,6 +46,7 @@ pub fn App() -> impl IntoView {
                     <Route path=StaticSegment("authorize") view=Authorize />
                     <Route path=StaticSegment("scan") view=Scan />
                     <Route path=StaticSegment("dash") view=Dash />
+                    <Route path=StaticSegment("logout") view=Logout />
                 </Routes>
             </main>
         </Router>

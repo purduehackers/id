@@ -3,6 +3,7 @@ use leptos_router::components::*;
 
 pub mod authorize;
 pub mod dash;
+pub mod logout;
 pub mod scan;
 
 #[component]

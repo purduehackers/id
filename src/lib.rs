@@ -22,13 +22,53 @@ pub async fn scan_post(id: i32, secret: String) -> Result<(), LeptosRouteError> 
 }
 
 #[server]
+pub async fn logout() -> Result<(), LeptosRouteError> {
+    use axum::http::header::SET_COOKIE;
+    use axum_extra::extract::CookieJar;
+    use entity::auth_session;
+    use entity::prelude::AuthSession;
+    use leptos_axum::{extract, ResponseOptions};
+    use sea_orm::prelude::*;
+
+    let state: crate::routes::RouteState = use_context()
+        .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
+
+    let cookies: CookieJar = extract().await.map_err(|e| {
+        LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}"))
+    })?;
+
+    // Get and delete the session from DB if it exists
+    if let Some(session_cookie) = cookies.get("session") {
+        let session_token = session_cookie.value().to_string();
+
+        // Delete the session from the database
+        AuthSession::delete_many()
+            .filter(auth_session::Column::Token.eq(&session_token))
+            .exec(&state.db)
+            .await
+            .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
+    }
+
+    // Clear the session cookie by setting Max-Age=0
+    let response = expect_context::<ResponseOptions>();
+    response.insert_header(
+        SET_COOKIE,
+        "session=; Max-Age=0; Secure; HttpOnly; Path=/"
+            .parse()
+            .expect("valid cookie header"),
+    );
+
+    Ok(())
+}
+
+#[server]
 pub async fn get_current_user() -> Result<Option<UserInfo>, LeptosRouteError> {
     use axum_extra::extract::CookieJar;
     use chrono::Utc;
-    use entity::prelude::{AuthSession, User};
-    use entity::{auth_session, user};
+    use entity::prelude::{AuthSession, Passport, User};
+    use entity::{auth_session, passport, user};
     use leptos_axum::extract;
-    use sea_orm::{Condition, prelude::*};
+    use sea_orm::{Condition, QueryOrder, prelude::*};
 
     let state: crate::routes::RouteState = use_context()
         .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
@@ -63,11 +103,28 @@ pub async fn get_current_user() -> Result<Option<UserInfo>, LeptosRouteError> {
         .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
 
     match user {
-        Some(u) => Ok(Some(UserInfo {
-            id: u.id,
-            discord_id: u.discord_id,
-            role: format!("{:?}", u.role),
-        })),
+        Some(u) => {
+            // Get the latest activated passport for this user
+            let latest_passport: Option<passport::Model> = Passport::find()
+                .filter(
+                    Condition::all()
+                        .add(passport::Column::OwnerId.eq(u.id))
+                        .add(passport::Column::Activated.eq(true)),
+                )
+                .order_by_desc(passport::Column::Id)
+                .one(&state.db)
+                .await
+                .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
+
+            let name = latest_passport.map(|p| format!("{} {}", p.name, p.surname));
+
+            Ok(Some(UserInfo {
+                id: u.id,
+                discord_id: u.discord_id,
+                role: format!("{:?}", u.role),
+                name,
+            }))
+        }
         None => Ok(None),
     }
 }
@@ -323,6 +380,7 @@ pub struct UserInfo {
     pub id: i32,
     pub discord_id: i64,
     pub role: String,
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
