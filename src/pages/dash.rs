@@ -13,12 +13,12 @@ pub fn Dash() -> impl IntoView {
 
     view! {
         <Suspense fallback=|| view! { <div class="p-4">"Loading..."</div> }>
-            {move || Suspend::new(async move {
-                match user_resource.await {
+            {move || {
+                user_resource.get().map(|user| match user {
                     Some(user) => view! { <DashboardContent user=user/> }.into_any(),
                     None => view! { <LoginPrompt/> }.into_any(),
-                }
-            })}
+                })
+            }}
         </Suspense>
     }
 }
@@ -92,17 +92,16 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
                 />
             </Show>
 
-            <Show when=move || created_client().is_some()>
-                {move || created_client().map(|client| view! {
-                    <ClientCreatedModal client=client on_close=move || set_created_client(None)/>
-                })}
-            </Show>
+            {move || created_client().map(|client| view! {
+                <ClientCreatedModal client=client on_close=move || set_created_client(None)/>
+            })}
 
             <Suspense fallback=|| view! { <div>"Loading clients..."</div> }>
-                {move || Suspend::new(async move {
-                    let clients = clients_resource.await;
-                    view! { <ClientList clients=clients refetch=refetch_clients/> }
-                })}
+                {move || {
+                    clients_resource.get().map(|clients| view! {
+                        <ClientList clients=clients refetch=refetch_clients/>
+                    })
+                }}
             </Suspense>
         </div>
     }
