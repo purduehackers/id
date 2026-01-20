@@ -16,6 +16,9 @@ use url::Url;
 
 use crate::oauth::VALID_CLIENTS;
 
+use entity::{oauth_client, prelude::OAuthClient};
+use sea_orm::{DatabaseConnection, EntityTrait, QueryFilter, ColumnTrait};
+
 #[derive(Serialize, Deserialize)]
 struct Claims {
     sub: String, // Subject (user ID)
@@ -33,7 +36,15 @@ struct Claims {
 
 /// Not currently in use but can be switched to whenever
 #[derive(Debug, Clone)]
-pub struct JwtAuthorizer;
+pub struct JwtAuthorizer {
+    db: DatabaseConnection,
+}
+
+impl JwtAuthorizer {
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
+    }
+}
 
 pub fn get_jwk() -> JsonWebKey {
     let mut k: JsonWebKey = env::var("JWK")
@@ -64,12 +75,8 @@ fn get_validator(iss: IdIsuser) -> Validation {
         IdIsuser::IdGrant => "id-grant",
     }]);
 
-    val.set_audience(
-        &VALID_CLIENTS
-            .iter()
-            .map(|c| c.client_id)
-            .collect::<Vec<_>>(),
-    );
+    // Audience is validated manually after decoding to support database clients
+    val.validate_aud = false;
 
     val
 }
@@ -116,12 +123,21 @@ impl Authorizer for JwtAuthorizer {
             return Err(());
         };
 
-        let Some(redirect_uri) = VALID_CLIENTS
-            .iter()
-            .find(|c| c.client_id == claims.aud)
-            .map(|c| c.url)
-        else {
-            return Err(());
+        // Check client exists - first in static list (fast), then database if needed
+        let redirect_uri = if let Some(client) = VALID_CLIENTS.iter().find(|c| c.client_id == claims.aud) {
+            client.url.to_string()
+        } else {
+            // Query database for this specific client
+            let db_client = OAuthClient::find()
+                .filter(oauth_client::Column::ClientId.eq(&claims.aud))
+                .one(&self.db)
+                .await
+                .map_err(|_| ())?;
+
+            match db_client {
+                Some(c) => c.redirect_uri,
+                None => return Err(()),
+            }
         };
 
         Ok(Some(Grant {
@@ -135,13 +151,21 @@ impl Authorizer for JwtAuthorizer {
 
             extensions: Default::default(),
 
-            redirect_uri: Url::from_str(redirect_uri).expect("valid url"),
+            redirect_uri: Url::from_str(&redirect_uri).expect("valid url"),
         }))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct JwtIssuer;
+pub struct JwtIssuer {
+    db: DatabaseConnection,
+}
+
+impl JwtIssuer {
+    pub fn new(db: DatabaseConnection) -> Self {
+        Self { db }
+    }
+}
 
 #[async_trait::async_trait]
 impl Issuer for JwtIssuer {
@@ -211,12 +235,21 @@ impl Issuer for JwtIssuer {
             return Err(());
         };
 
-        let Some(redirect_uri) = VALID_CLIENTS
-            .iter()
-            .find(|c| c.client_id == claims.aud)
-            .map(|c| c.url)
-        else {
-            return Err(());
+        // Check client exists - first in static list (fast), then database if needed
+        let redirect_uri = if let Some(client) = VALID_CLIENTS.iter().find(|c| c.client_id == claims.aud) {
+            client.url.to_string()
+        } else {
+            // Query database for this specific client
+            let db_client = OAuthClient::find()
+                .filter(oauth_client::Column::ClientId.eq(&claims.aud))
+                .one(&self.db)
+                .await
+                .map_err(|_| ())?;
+
+            match db_client {
+                Some(c) => c.redirect_uri,
+                None => return Err(()),
+            }
         };
 
         Ok(Some(Grant {
@@ -230,7 +263,7 @@ impl Issuer for JwtIssuer {
 
             extensions: Default::default(),
 
-            redirect_uri: Url::from_str(redirect_uri).expect("valid url"),
+            redirect_uri: Url::from_str(&redirect_uri).expect("valid url"),
         }))
     }
 

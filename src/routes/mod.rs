@@ -88,8 +88,8 @@ impl RouteState {
         Ok(Self {
             db: db.clone(),
             kv,
-            issuer: JwtIssuer,
-            authorizer: JwtAuthorizer,
+            issuer: JwtIssuer::new(db.clone()),
+            authorizer: JwtAuthorizer::new(db.clone()),
             registry,
         })
     }
