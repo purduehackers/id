@@ -46,7 +46,7 @@ pub struct ClientData<'a> {
     pub scope: &'a str,
 }
 
-pub const VALID_CLIENTS: [ClientData<'static>; 9] = [
+pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
     ClientData {
         client_id: "id-dash",
 
@@ -89,30 +89,30 @@ pub const VALID_CLIENTS: [ClientData<'static>; 9] = [
 
         scope: "user:read",
     },
-    ClientData {
-        client_id: "shad-moe",
+    // ClientData {
+    //     client_id: "shad-moe",
 
-        url: "https://auth.shad.moe/source/oauth/callback/purduehackers-id/",
+    //     url: "https://auth.shad.moe/source/oauth/callback/purduehackers-id/",
 
-        scope: "user:read",
-    },
-    ClientData {
-        client_id: "shquid",
+    //     scope: "user:read",
+    // },
+    // ClientData {
+    //     client_id: "shquid",
 
-        url: "https://www.imsqu.id/auth/callback/purduehackers-id",
+    //     url: "https://www.imsqu.id/auth/callback/purduehackers-id",
 
-        scope: "user:read",
-    },
-    ClientData {
-        client_id: "fiestadothorse",
+    //     scope: "user:read",
+    // },
+    // ClientData {
+    //     client_id: "fiestadothorse",
 
-        url: "https://fiesta.horse/api/auth/callback/purduehackers-id",
+    //     url: "https://fiesta.horse/api/auth/callback/purduehackers-id",
 
-        scope: "user:read",
-    },
+    //     scope: "user:read",
+    // },
 ];
 
-pub fn client_registry() -> ClientMap {
+fn client_registry() -> ClientMap {
     let mut clients = ClientMap::new();
     for ClientData {
         client_id,
