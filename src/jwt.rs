@@ -76,7 +76,7 @@ fn get_validator(iss: IdIsuser) -> Validation {
     }]);
 
     // Audience is validated manually after decoding to support database clients
-    val.validate_aud = false;
+    // (not calling set_audience() means no aud validation by jsonwebtoken)
 
     val
 }
