@@ -189,11 +189,10 @@ fn Auth(
     set_totp: WriteSignal<String>,
     passport_id: ReadSignal<Option<i32>>,
 ) -> impl IntoView {
-    let (allow, set_allow) = signal(false);
     let query = use_query_map();
-    let submit = move || {
+    let make_submit_url = move |allow: bool| {
         let mut q = query.get();
-        q.insert("allow", allow().to_string());
+        q.insert("allow", allow.to_string());
         q.insert("id", passport_id().unwrap_or_default().to_string());
         if totp_needed() {
             q.insert("code", totp());
@@ -247,33 +246,26 @@ fn Auth(
                         />
                     </div>
                 </Show>
-                <form method="post" action=submit>
-                    <Show when=move || totp_needed()>
-                        <input type="hidden" name="code" value=totp/>
-                    </Show>
-                    <div class="flex flex-row gap-2">
+                <div class="flex flex-row gap-2">
+                    <form method="post" action=move || make_submit_url(false)>
                         <button
                             class="w-full px-3 py-2 text-xl font-bold bg-red-300 hover:bg-red-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
                             type="submit"
-                            on:click=move |_| {
-                                set_allow(false);
-                            }
                             disabled=move || totp_needed() && totp().len() < 6
                         >
                             DENY
                         </button>
+                    </form>
+                    <form method="post" action=move || make_submit_url(true)>
                         <button
                             class="w-full px-3 py-2 text-xl font-bold bg-green-300 hover:bg-green-500 border-2 border-black shadow-blocks-tiny disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
                             type="submit"
-                            on:click=move |_| {
-                                set_allow(true);
-                            }
                             disabled=move || totp_needed() && totp().len() < 6
                         >
                             ACCEPT
                         </button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </div>
         </div>
     }
