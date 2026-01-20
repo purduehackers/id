@@ -1,11 +1,10 @@
 use leptos::prelude::*;
-use leptos::tachys::view::any_view::AnyView;
 use leptos_router::hooks::use_query_map;
 
 use crate::{ClientCreatedResponse, ClientResponse, CreateClientRequest, UserInfo};
 
 #[component]
-pub fn Dash() -> AnyView {
+pub fn Dash() -> impl IntoView {
     let query = use_query_map();
     let user_resource: Resource<Option<UserInfo>> = Resource::new(
         move || query.read().get("code").unwrap_or_default(),
@@ -14,23 +13,18 @@ pub fn Dash() -> AnyView {
 
     view! {
         <Suspense fallback=|| view! { <div class="p-4">"Loading..."</div> }>
-            {move || {
-                user_resource
-                    .get()
-                    .map(|user| {
-                        match user {
-                            Some(user) => view! { <DashboardContent user=user/> },
-                            None => view! { <LoginPrompt/> },
-                        }
-                    })
-            }}
+            {move || Suspend::new(async move {
+                match user_resource.await {
+                    Some(user) => view! { <DashboardContent user=user/> }.into_any(),
+                    None => view! { <LoginPrompt/> }.into_any(),
+                }
+            })}
         </Suspense>
     }
-    .into_any()
 }
 
 #[component]
-fn LoginPrompt() -> AnyView {
+fn LoginPrompt() -> impl IntoView {
     view! {
         <div class="min-h-screen flex flex-col justify-center items-center gap-4 p-4">
             <h1 class="text-3xl font-bold">"Client Dashboard"</h1>
@@ -45,11 +39,10 @@ fn LoginPrompt() -> AnyView {
             </a>
         </div>
     }
-    .into_any()
 }
 
 #[component]
-fn DashboardContent(user: UserInfo) -> AnyView {
+fn DashboardContent(user: UserInfo) -> impl IntoView {
     let clients_resource: Resource<Vec<ClientResponse>> = Resource::new(
         || (),
         |_| async { crate::get_my_clients().await.unwrap_or_default() },
@@ -74,137 +67,80 @@ fn DashboardContent(user: UserInfo) -> AnyView {
 
     view! {
         <div class="min-h-screen p-4 max-w-4xl mx-auto">
-            <DashboardHeader user_id=user_id user_role=user_role on_create=move || set_show_create_form(true)/>
-            <CreateFormSection
-                show=show_create_form
-                is_admin=is_admin
-                on_created=move |client| {
-                    set_created_client(Some(client));
-                    set_show_create_form(false);
-                    refetch_clients();
-                }
-                on_cancel=move || set_show_create_form(false)
-            />
-            <ModalSection client=created_client on_close=move || set_created_client(None)/>
-            <ClientListSection clients_resource=clients_resource refetch=refetch_clients/>
-        </div>
-    }
-    .into_any()
-}
-
-#[component]
-fn DashboardHeader(
-    user_id: i32,
-    user_role: String,
-    on_create: impl Fn() + Copy + Send + Sync + 'static,
-) -> AnyView {
-    view! {
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-            <div>
-                <h1 class="text-3xl font-bold">"Client Dashboard"</h1>
-                <p class="text-gray-600">
-                    "Logged in as user #" {user_id} " (" {user_role} ")"
-                </p>
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold">"Client Dashboard"</h1>
+                    <p class="text-gray-600">"Logged in as user #" {user_id} " (" {user_role} ")"</p>
+                </div>
+                <button
+                    class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
+                    on:click=move |_| set_show_create_form(true)
+                >
+                    "Create Client"
+                </button>
             </div>
-            <button
-                class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
-                on:click=move |_| on_create()
-            >
-                "Create Client"
-            </button>
+
+            <Show when=move || show_create_form()>
+                <CreateClientForm
+                    is_admin=is_admin
+                    on_created=move |client| {
+                        set_created_client(Some(client));
+                        set_show_create_form(false);
+                        refetch_clients();
+                    }
+                    on_cancel=move || set_show_create_form(false)
+                />
+            </Show>
+
+            <Show when=move || created_client().is_some()>
+                {move || created_client().map(|client| view! {
+                    <ClientCreatedModal client=client on_close=move || set_created_client(None)/>
+                })}
+            </Show>
+
+            <Suspense fallback=|| view! { <div>"Loading clients..."</div> }>
+                {move || Suspend::new(async move {
+                    let clients = clients_resource.await;
+                    view! { <ClientList clients=clients refetch=refetch_clients/> }
+                })}
+            </Suspense>
         </div>
     }
-    .into_any()
 }
 
 #[component]
-fn CreateFormSection<FC, FX>(
-    show: ReadSignal<bool>,
-    is_admin: bool,
-    on_created: FC,
-    on_cancel: FX,
-) -> AnyView
-where
-    FC: Fn(ClientCreatedResponse) + Copy + Send + Sync + 'static,
-    FX: Fn() + Copy + Send + Sync + 'static,
-{
-    view! {
-        {move || {
-            if show() {
-                Some(view! { <CreateClientForm is_admin=is_admin on_created=on_created on_cancel=on_cancel/> })
-            } else {
-                None
-            }
-        }}
-    }
-    .into_any()
-}
-
-#[component]
-fn ModalSection<F>(client: ReadSignal<Option<ClientCreatedResponse>>, on_close: F) -> AnyView
-where
-    F: Fn() + Copy + Send + Sync + 'static,
-{
-    view! {
-        {move || {
-            client().map(|c| view! { <ClientCreatedModal client=c on_close=on_close/> })
-        }}
-    }
-    .into_any()
-}
-
-#[component]
-fn ClientListSection(
-    clients_resource: Resource<Vec<ClientResponse>>,
-    refetch: impl Fn() + Copy + Send + Sync + 'static,
-) -> AnyView {
-    view! {
-        <Suspense fallback=|| view! { <div>"Loading clients..."</div> }>
-            {move || {
-                clients_resource.get().map(|clients| view! { <ClientList clients=clients refetch=refetch/> })
-            }}
-        </Suspense>
-    }
-    .into_any()
-}
-
-#[component]
-fn ClientList(clients: Vec<ClientResponse>, refetch: impl Fn() + Copy + Send + Sync + 'static) -> AnyView {
+fn ClientList(clients: Vec<ClientResponse>, refetch: impl Fn() + Copy + Send + Sync + 'static) -> impl IntoView {
     if clients.is_empty() {
         return view! {
             <div class="text-center py-8 text-gray-500">
                 <p>"No clients yet. Create one to get started!"</p>
             </div>
-        }
-        .into_any();
+        }.into_any();
     }
-
-    let cards: Vec<AnyView> = clients
-        .into_iter()
-        .map(|client| view! { <ClientCard client=client refetch=refetch/> }.into_any())
-        .collect();
 
     view! {
         <div class="space-y-4">
             <h2 class="text-xl font-bold">"Your Clients"</h2>
-            <div class="grid gap-4">{cards}</div>
+            <div class="grid gap-4">
+                {clients.into_iter().map(|client| view! {
+                    <ClientCard client=client refetch=refetch/>
+                }).collect_view()}
+            </div>
         </div>
-    }
-    .into_any()
+    }.into_any()
 }
 
 #[component]
-fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 'static) -> AnyView {
+fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 'static) -> impl IntoView {
     let (deleting, set_deleting) = signal(false);
     let (confirm_delete, set_confirm_delete) = signal(false);
-
     let client_id_for_delete = client.id;
+
     let handle_delete = move |_| {
         if !confirm_delete() {
             set_confirm_delete(true);
             return;
         }
-
         set_deleting(true);
         leptos::task::spawn_local(async move {
             match crate::delete_client(client_id_for_delete).await {
@@ -216,12 +152,6 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 
         });
     };
 
-    let button_text = move || {
-        if deleting() { "Deleting..." }
-        else if confirm_delete() { "Confirm?" }
-        else { "Delete" }
-    };
-
     let client_type = if client.is_confidential { "Confidential" } else { "Public" };
 
     view! {
@@ -230,22 +160,10 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 
                 <div class="flex-1 min-w-0">
                     <h3 class="font-bold text-lg truncate">{client.name}</h3>
                     <div class="mt-2 space-y-1 text-sm">
-                        <div>
-                            <span class="text-gray-500">"Client ID: "</span>
-                            <code class="bg-gray-100 px-1 rounded break-all">{client.client_id}</code>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">"Redirect URI: "</span>
-                            <code class="bg-gray-100 px-1 rounded break-all">{client.redirect_uri}</code>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">"Scopes: "</span>
-                            <code class="bg-gray-100 px-1 rounded">{client.scopes}</code>
-                        </div>
-                        <div>
-                            <span class="text-gray-500">"Type: "</span>
-                            {client_type}
-                        </div>
+                        <div><span class="text-gray-500">"Client ID: "</span><code class="bg-gray-100 px-1 rounded break-all">{client.client_id}</code></div>
+                        <div><span class="text-gray-500">"Redirect URI: "</span><code class="bg-gray-100 px-1 rounded break-all">{client.redirect_uri}</code></div>
+                        <div><span class="text-gray-500">"Scopes: "</span><code class="bg-gray-100 px-1 rounded">{client.scopes}</code></div>
+                        <div><span class="text-gray-500">"Type: "</span>{client_type}</div>
                     </div>
                 </div>
                 <button
@@ -253,20 +171,19 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 
                     disabled=deleting
                     on:click=handle_delete
                 >
-                    {button_text}
+                    {move || if deleting() { "Deleting..." } else if confirm_delete() { "Confirm?" } else { "Delete" }}
                 </button>
             </div>
         </div>
     }
-    .into_any()
 }
 
 #[component]
-fn CreateClientForm<FC, FX>(is_admin: bool, on_created: FC, on_cancel: FX) -> AnyView
-where
-    FC: Fn(ClientCreatedResponse) + Copy + Send + Sync + 'static,
-    FX: Fn() + Copy + Send + Sync + 'static,
-{
+fn CreateClientForm(
+    is_admin: bool,
+    on_created: impl Fn(ClientCreatedResponse) + Copy + Send + Sync + 'static,
+    on_cancel: impl Fn() + Copy + Send + Sync + 'static,
+) -> impl IntoView {
     let (name, set_name) = signal(String::new());
     let (redirect_uri, set_redirect_uri) = signal(String::new());
     let (is_confidential, set_is_confidential) = signal(false);
@@ -274,24 +191,26 @@ where
     let (submitting, set_submitting) = signal(false);
     let (error, set_error) = signal(None::<String>);
 
+    let available_scopes: Vec<&'static str> = if is_admin {
+        vec!["user:read", "user", "admin:read", "admin"]
+    } else {
+        vec!["user:read", "user"]
+    };
+
     let handle_submit = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
-
         if name().is_empty() || redirect_uri().is_empty() || selected_scopes().is_empty() {
             set_error(Some("Please fill in all required fields".to_string()));
             return;
         }
-
         set_submitting(true);
         set_error(None);
-
         let req = CreateClientRequest {
             name: name(),
             redirect_uri: redirect_uri(),
             scopes: selected_scopes(),
             is_confidential: is_confidential(),
         };
-
         leptos::task::spawn_local(async move {
             match crate::create_client(req).await {
                 Ok(client) => on_created(client),
@@ -305,180 +224,70 @@ where
         <div class="border-2 border-black rounded p-4 bg-amber-50 shadow-blocks-tiny mb-6">
             <h2 class="text-xl font-bold mb-4">"Create New Client"</h2>
             <form on:submit=handle_submit class="space-y-4">
-                <NameField name=name set_name=set_name/>
-                <RedirectField redirect_uri=redirect_uri set_redirect_uri=set_redirect_uri/>
-                <ScopeSelector is_admin=is_admin selected_scopes=selected_scopes set_selected_scopes=set_selected_scopes/>
-                <ConfidentialCheckbox is_confidential=is_confidential set_is_confidential=set_is_confidential/>
-                <ErrorDisplay error=error/>
-                <FormButtons submitting=submitting on_cancel=on_cancel/>
+                <div>
+                    <label class="block font-medium mb-1">"Name"</label>
+                    <input type="text" class="w-full border-2 border-black rounded p-2" placeholder="My Application"
+                        on:input:target=move |ev| set_name(ev.target().value()) prop:value=name/>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1">"Redirect URI"</label>
+                    <input type="text" class="w-full border-2 border-black rounded p-2" placeholder="https://example.com/callback"
+                        on:input:target=move |ev| set_redirect_uri(ev.target().value()) prop:value=redirect_uri/>
+                </div>
+                <div>
+                    <label class="block font-medium mb-1">"Scopes"</label>
+                    <div class="flex flex-wrap gap-2">
+                        {available_scopes.into_iter().map(|scope| {
+                            let scope_str = scope.to_string();
+                            let scope_check = scope_str.clone();
+                            let scope_toggle = scope_str.clone();
+                            view! {
+                                <label class="inline-flex items-center gap-1 cursor-pointer">
+                                    <input type="checkbox" class="w-4 h-4"
+                                        checked=move || selected_scopes().contains(&scope_check)
+                                        on:change=move |_| {
+                                            let s = scope_toggle.clone();
+                                            set_selected_scopes.update(|scopes| {
+                                                if scopes.contains(&s) { scopes.retain(|x| x != &s); }
+                                                else { scopes.push(s); }
+                                            });
+                                        }/>
+                                    <span class="bg-gray-100 px-2 py-1 rounded text-sm">{scope}</span>
+                                </label>
+                            }
+                        }).collect_view()}
+                    </div>
+                </div>
+                <div>
+                    <label class="inline-flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" class="w-4 h-4"
+                            on:change:target=move |ev| set_is_confidential(ev.target().checked()) prop:checked=is_confidential/>
+                        <span>"Confidential client (generates a client secret)"</span>
+                    </label>
+                </div>
+                <Show when=move || error().is_some()>
+                    <div class="text-red-600 text-sm">{move || error()}</div>
+                </Show>
+                <div class="flex gap-2">
+                    <button type="submit" disabled=submitting
+                        class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black rounded font-bold transition disabled:bg-gray-200">
+                        {move || if submitting() { "Creating..." } else { "Create" }}
+                    </button>
+                    <button type="button" on:click=move |_| on_cancel()
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition">
+                        "Cancel"
+                    </button>
+                </div>
             </form>
         </div>
     }
-    .into_any()
 }
 
 #[component]
-fn NameField(name: ReadSignal<String>, set_name: WriteSignal<String>) -> AnyView {
-    view! {
-        <div>
-            <label class="block font-medium mb-1">"Name"</label>
-            <input
-                type="text"
-                class="w-full border-2 border-black rounded p-2"
-                placeholder="My Application"
-                on:input:target=move |ev| set_name(ev.target().value())
-                prop:value=name
-            />
-        </div>
-    }
-    .into_any()
-}
-
-#[component]
-fn RedirectField(redirect_uri: ReadSignal<String>, set_redirect_uri: WriteSignal<String>) -> AnyView {
-    view! {
-        <div>
-            <label class="block font-medium mb-1">"Redirect URI"</label>
-            <input
-                type="text"
-                class="w-full border-2 border-black rounded p-2"
-                placeholder="https://example.com/callback"
-                on:input:target=move |ev| set_redirect_uri(ev.target().value())
-                prop:value=redirect_uri
-            />
-        </div>
-    }
-    .into_any()
-}
-
-#[component]
-fn ScopeSelector(
-    is_admin: bool,
-    selected_scopes: ReadSignal<Vec<String>>,
-    set_selected_scopes: WriteSignal<Vec<String>>,
-) -> AnyView {
-    let available_scopes: &[&str] = if is_admin {
-        &["user:read", "user", "admin:read", "admin"]
-    } else {
-        &["user:read", "user"]
-    };
-
-    let checkboxes: Vec<AnyView> = available_scopes
-        .iter()
-        .map(|&scope| {
-            let scope_string = scope.to_string();
-            let scope_for_check = scope_string.clone();
-            let scope_for_toggle = scope_string.clone();
-            let toggle = move |_| {
-                let s = scope_for_toggle.clone();
-                set_selected_scopes.update(|scopes| {
-                    if scopes.contains(&s) {
-                        scopes.retain(|x| x != &s);
-                    } else {
-                        scopes.push(s);
-                    }
-                });
-            };
-            view! {
-                <label class="inline-flex items-center gap-1 cursor-pointer">
-                    <input
-                        type="checkbox"
-                        class="w-4 h-4"
-                        checked=move || selected_scopes().contains(&scope_for_check)
-                        on:change=toggle
-                    />
-                    <span class="bg-gray-100 px-2 py-1 rounded text-sm">{scope}</span>
-                </label>
-            }
-            .into_any()
-        })
-        .collect();
-
-    view! {
-        <div>
-            <label class="block font-medium mb-1">"Scopes"</label>
-            <div class="flex flex-wrap gap-2">{checkboxes}</div>
-        </div>
-    }
-    .into_any()
-}
-
-#[component]
-fn ConfidentialCheckbox(is_confidential: ReadSignal<bool>, set_is_confidential: WriteSignal<bool>) -> AnyView {
-    view! {
-        <div>
-            <label class="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                    type="checkbox"
-                    class="w-4 h-4"
-                    on:change:target=move |ev| set_is_confidential(ev.target().checked())
-                    prop:checked=is_confidential
-                />
-                <span>"Confidential client (generates a client secret)"</span>
-            </label>
-        </div>
-    }
-    .into_any()
-}
-
-#[component]
-fn ErrorDisplay(error: ReadSignal<Option<String>>) -> AnyView {
-    view! {
-        {move || error().map(|e| view! { <div class="text-red-600 text-sm">{e}</div> })}
-    }
-    .into_any()
-}
-
-#[component]
-fn FormButtons<F>(
-    submitting: ReadSignal<bool>,
-    on_cancel: F,
-) -> AnyView
-where
-    F: Fn() + Copy + Send + Sync + 'static,
-{
-    let submit_text = move || if submitting() { "Creating..." } else { "Create" };
-
-    view! {
-        <div class="flex gap-2">
-            <button
-                type="submit"
-                class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black rounded font-bold transition disabled:bg-gray-200"
-                disabled=submitting
-            >
-                {submit_text}
-            </button>
-            <button
-                type="button"
-                class="px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition"
-                on:click=move |_| on_cancel()
-            >
-                "Cancel"
-            </button>
-        </div>
-    }
-    .into_any()
-}
-
-#[component]
-fn ClientCreatedModal<F>(client: ClientCreatedResponse, on_close: F) -> AnyView
-where
-    F: Fn() + Copy + Send + Sync + 'static,
-{
-    let secret_section = client.client_secret.clone().map(|secret| {
-        view! {
-            <div>
-                <span class="text-gray-500">"Client Secret:"</span>
-                <div class="bg-amber-100 border-2 border-amber-400 rounded p-2 mt-1">
-                    <p class="text-amber-800 text-sm mb-2 font-bold">
-                        "Save this secret now! It will not be shown again."
-                    </p>
-                    <code class="block bg-white p-2 rounded break-all select-all">{secret}</code>
-                </div>
-            </div>
-        }
-    });
-
+fn ClientCreatedModal(
+    client: ClientCreatedResponse,
+    on_close: impl Fn() + Copy + Send + Sync + 'static,
+) -> impl IntoView {
     view! {
         <div class="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
             <div class="bg-white border-2 border-black rounded p-6 max-w-lg w-full shadow-blocks-sm">
@@ -486,20 +295,23 @@ where
                 <div class="space-y-3 mb-4">
                     <div>
                         <span class="text-gray-500">"Client ID:"</span>
-                        <code class="block bg-gray-100 p-2 rounded mt-1 break-all select-all">
-                            {client.client_id}
-                        </code>
+                        <code class="block bg-gray-100 p-2 rounded mt-1 break-all select-all">{client.client_id.clone()}</code>
                     </div>
-                    {secret_section}
+                    {client.client_secret.clone().map(|secret| view! {
+                        <div>
+                            <span class="text-gray-500">"Client Secret:"</span>
+                            <div class="bg-amber-100 border-2 border-amber-400 rounded p-2 mt-1">
+                                <p class="text-amber-800 text-sm mb-2 font-bold">"Save this secret now! It will not be shown again."</p>
+                                <code class="block bg-white p-2 rounded break-all select-all">{secret}</code>
+                            </div>
+                        </div>
+                    })}
                 </div>
-                <button
-                    class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition"
-                    on:click=move |_| on_close()
-                >
+                <button on:click=move |_| on_close()
+                    class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition">
                     "Close"
                 </button>
             </div>
         </div>
     }
-    .into_any()
 }
