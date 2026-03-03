@@ -32,6 +32,9 @@ struct Claims {
     aud: String, // Audience
 
     scope: Scope,
+
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    redirect_uri: Option<String>,
 }
 
 /// Not currently in use but can be switched to whenever
@@ -100,6 +103,8 @@ impl Authorizer for JwtAuthorizer {
             aud: grant.client_id,
 
             scope: grant.scope,
+
+            redirect_uri: Some(grant.redirect_uri.to_string()),
         };
 
         let jwk = get_jwk();
@@ -123,11 +128,13 @@ impl Authorizer for JwtAuthorizer {
             return Err(());
         };
 
-        // Check client exists - first in static list (fast), then database if needed
-        let redirect_uri = if let Some(client) = VALID_CLIENTS.iter().find(|c| c.client_id == claims.aud) {
+        // Use the redirect_uri from the JWT if present (new tokens),
+        // otherwise fall back to looking up the client's primary URI (legacy tokens)
+        let redirect_uri = if let Some(uri) = claims.redirect_uri {
+            uri
+        } else if let Some(client) = VALID_CLIENTS.iter().find(|c| c.client_id == claims.aud) {
             client.url.to_string()
         } else {
-            // Query database for this specific client
             let db_client = OAuthClient::find()
                 .filter(oauth_client::Column::ClientId.eq(&claims.aud))
                 .one(&self.db)
@@ -135,7 +142,10 @@ impl Authorizer for JwtAuthorizer {
                 .map_err(|_| ())?;
 
             match db_client {
-                Some(c) => c.redirect_uri,
+                Some(c) => {
+                    let uris: Vec<String> = serde_json::from_value(c.redirect_uris).map_err(|_| ())?;
+                    uris.into_iter().next().ok_or(())?
+                }
                 None => return Err(()),
             }
         };
@@ -188,6 +198,8 @@ impl Issuer for JwtIssuer {
             aud: grant.client_id,
 
             scope: grant.scope,
+
+            redirect_uri: Some(grant.redirect_uri.to_string()),
         };
 
         let jwk = get_jwk();
@@ -235,11 +247,13 @@ impl Issuer for JwtIssuer {
             return Err(());
         };
 
-        // Check client exists - first in static list (fast), then database if needed
-        let redirect_uri = if let Some(client) = VALID_CLIENTS.iter().find(|c| c.client_id == claims.aud) {
+        // Use the redirect_uri from the JWT if present (new tokens),
+        // otherwise fall back to looking up the client's primary URI (legacy tokens)
+        let redirect_uri = if let Some(uri) = claims.redirect_uri {
+            uri
+        } else if let Some(client) = VALID_CLIENTS.iter().find(|c| c.client_id == claims.aud) {
             client.url.to_string()
         } else {
-            // Query database for this specific client
             let db_client = OAuthClient::find()
                 .filter(oauth_client::Column::ClientId.eq(&claims.aud))
                 .one(&self.db)
@@ -247,7 +261,10 @@ impl Issuer for JwtIssuer {
                 .map_err(|_| ())?;
 
             match db_client {
-                Some(c) => c.redirect_uri,
+                Some(c) => {
+                    let uris: Vec<String> = serde_json::from_value(c.redirect_uris).map_err(|_| ())?;
+                    uris.into_iter().next().ok_or(())?
+                }
                 None => return Err(()),
             }
         };

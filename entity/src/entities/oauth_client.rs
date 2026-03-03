@@ -12,7 +12,7 @@ pub struct Model {
     pub client_id: String,
     pub client_secret: Option<String>,
     pub owner_id: i32,
-    pub redirect_uri: String,
+    pub redirect_uris: Json,
     pub default_scope: String,
     pub name: String,
     pub created_at: DateTimeWithTimeZone,

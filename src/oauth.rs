@@ -181,16 +181,43 @@ impl DbClientRegistry {
                 continue;
             }
 
-            let redirect_url = match Url::from_str(&client.redirect_uri) {
-                Ok(url) => url,
+            let redirect_uris: Vec<String> = match serde_json::from_value(client.redirect_uris) {
+                Ok(uris) => uris,
                 Err(e) => {
                     eprintln!(
-                        "Warning: skipping client {} with invalid redirect_uri '{}': {e}",
-                        client.client_id, client.redirect_uri
+                        "Warning: skipping client {} with invalid redirect_uris JSON: {e}",
+                        client.client_id
                     );
                     continue;
                 }
             };
+
+            if redirect_uris.is_empty() {
+                eprintln!(
+                    "Warning: skipping client {} with no redirect URIs",
+                    client.client_id
+                );
+                continue;
+            }
+
+            let mut parsed_urls: Vec<Url> = Vec::new();
+            let mut skip = false;
+            for uri in &redirect_uris {
+                match Url::from_str(uri) {
+                    Ok(url) => parsed_urls.push(url),
+                    Err(e) => {
+                        eprintln!(
+                            "Warning: skipping client {} with invalid redirect_uri '{}': {e}",
+                            client.client_id, uri
+                        );
+                        skip = true;
+                        break;
+                    }
+                }
+            }
+            if skip {
+                continue;
+            }
 
             let scope = format!("{} auth", client.default_scope);
             let parsed_scope = match scope.parse() {
@@ -204,22 +231,30 @@ impl DbClientRegistry {
                 }
             };
 
-            if let Some(secret) = &client.client_secret {
-                // Confidential client with secret
-                clients.register_client(Client::confidential(
+            let primary_url = parsed_urls.remove(0);
+            let additional_urls: Vec<RegisteredUrl> = parsed_urls
+                .into_iter()
+                .map(RegisteredUrl::Semantic)
+                .collect();
+
+            let base_client = if let Some(secret) = &client.client_secret {
+                Client::confidential(
                     &client.client_id,
-                    RegisteredUrl::Semantic(redirect_url),
+                    RegisteredUrl::Semantic(primary_url),
                     parsed_scope,
                     secret.as_bytes(),
-                ));
+                )
             } else {
-                // Public client
-                clients.register_client(Client::public(
+                Client::public(
                     &client.client_id,
-                    RegisteredUrl::Semantic(redirect_url),
+                    RegisteredUrl::Semantic(primary_url),
                     parsed_scope,
-                ));
-            }
+                )
+            };
+
+            clients.register_client(
+                base_client.with_additional_redirect_uris(additional_urls),
+            );
         }
 
         Ok(())

@@ -170,14 +170,18 @@ pub async fn get_my_clients() -> Result<Vec<ClientResponse>, LeptosRouteError> {
 
     Ok(clients
         .into_iter()
-        .map(|c| ClientResponse {
-            id: c.id,
-            client_id: c.client_id,
-            name: c.name,
-            redirect_uri: c.redirect_uri,
-            scopes: c.default_scope,
-            is_confidential: c.client_secret.is_some(),
-            created_at: c.created_at.to_rfc3339(),
+        .map(|c| {
+            let redirect_uris: Vec<String> =
+                serde_json::from_value(c.redirect_uris).unwrap_or_default();
+            ClientResponse {
+                id: c.id,
+                client_id: c.client_id,
+                name: c.name,
+                redirect_uris,
+                scopes: c.default_scope,
+                is_confidential: c.client_secret.is_some(),
+                created_at: c.created_at.to_rfc3339(),
+            }
         })
         .collect())
 }
@@ -239,9 +243,14 @@ pub async fn create_client(
         }
     }
 
-    // Validate redirect_uri is a valid URL
-    if url::Url::parse(&req.redirect_uri).is_err() {
+    // Validate redirect URIs
+    if req.redirect_uris.is_empty() {
         return Err(LeptosRouteError::BadRequest);
+    }
+    for uri in &req.redirect_uris {
+        if url::Url::parse(uri).is_err() {
+            return Err(LeptosRouteError::BadRequest);
+        }
     }
 
     // Generate client_id and optional client_secret
@@ -260,7 +269,7 @@ pub async fn create_client(
         client_id: ActiveValue::Set(client_id.clone()),
         client_secret: ActiveValue::Set(client_secret.clone()),
         owner_id: ActiveValue::Set(session.owner_id),
-        redirect_uri: ActiveValue::Set(req.redirect_uri.clone()),
+        redirect_uris: ActiveValue::Set(serde_json::to_value(&req.redirect_uris).expect("vec to serialize")),
         default_scope: ActiveValue::Set(scope_str.clone()),
         name: ActiveValue::Set(req.name.clone()),
         created_at: ActiveValue::Set(Utc::now().into()),
@@ -278,11 +287,14 @@ pub async fn create_client(
         .await
         .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
 
+    let redirect_uris: Vec<String> =
+        serde_json::from_value(model.redirect_uris).unwrap_or_default();
+
     Ok(ClientCreatedResponse {
         id: model.id,
         client_id: model.client_id,
         name: model.name,
-        redirect_uri: model.redirect_uri,
+        redirect_uris,
         scopes: model.default_scope,
         is_confidential: model.client_secret.is_some(),
         created_at: model.created_at.to_rfc3339(),
@@ -350,6 +362,82 @@ pub async fn delete_client(id: i32) -> Result<(), LeptosRouteError> {
     Ok(())
 }
 
+#[server]
+pub async fn update_client_redirect_uris(
+    id: i32,
+    redirect_uris: Vec<String>,
+) -> Result<(), LeptosRouteError> {
+    use axum_extra::extract::CookieJar;
+    use chrono::Utc;
+    use entity::prelude::{AuthSession, OAuthClient};
+    use entity::{auth_session, oauth_client};
+    use leptos_axum::extract;
+    use sea_orm::{ActiveValue, Condition, IntoActiveModel, prelude::*};
+
+    let state: crate::routes::RouteState = use_context()
+        .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
+
+    let cookies: CookieJar = extract().await.map_err(|e| {
+        LeptosRouteError::InternalServerError(format!("Failed to extract cookies: {e:?}"))
+    })?;
+
+    let session_token = cookies
+        .get("session")
+        .ok_or(LeptosRouteError::Unauthorized)?
+        .value()
+        .to_string();
+
+    let session = AuthSession::find()
+        .filter(
+            Condition::all()
+                .add(auth_session::Column::Token.eq(&session_token))
+                .add(auth_session::Column::Until.gte(Utc::now())),
+        )
+        .one(&state.db)
+        .await
+        .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?
+        .ok_or(LeptosRouteError::Unauthorized)?;
+
+    // Find the client and verify ownership
+    let client: oauth_client::Model = OAuthClient::find_by_id(id)
+        .one(&state.db)
+        .await
+        .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?
+        .ok_or(LeptosRouteError::BadRequest)?;
+
+    if client.owner_id != session.owner_id {
+        return Err(LeptosRouteError::Forbidden);
+    }
+
+    // Validate all redirect URIs
+    if redirect_uris.is_empty() {
+        return Err(LeptosRouteError::BadRequest);
+    }
+    for uri in &redirect_uris {
+        if url::Url::parse(uri).is_err() {
+            return Err(LeptosRouteError::BadRequest);
+        }
+    }
+
+    // Update the client
+    let mut active = client.into_active_model();
+    active.redirect_uris =
+        ActiveValue::Set(serde_json::to_value(&redirect_uris).expect("vec to serialize"));
+    active
+        .update(&state.db)
+        .await
+        .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
+
+    // Refresh the client registry cache
+    state
+        .registry
+        .refresh_cache()
+        .await
+        .map_err(|e| LeptosRouteError::InternalServerError(e.to_string()))?;
+
+    Ok(())
+}
+
 #[cfg(feature = "hydrate")]
 #[wasm_bindgen::prelude::wasm_bindgen]
 pub fn hydrate() {
@@ -388,7 +476,7 @@ pub struct ClientResponse {
     pub id: i32,
     pub client_id: String,
     pub name: String,
-    pub redirect_uri: String,
+    pub redirect_uris: Vec<String>,
     pub scopes: String,
     pub is_confidential: bool,
     pub created_at: String,
@@ -399,7 +487,7 @@ pub struct ClientCreatedResponse {
     pub id: i32,
     pub client_id: String,
     pub name: String,
-    pub redirect_uri: String,
+    pub redirect_uris: Vec<String>,
     pub scopes: String,
     pub is_confidential: bool,
     pub created_at: String,
@@ -409,7 +497,7 @@ pub struct ClientCreatedResponse {
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct CreateClientRequest {
     pub name: String,
-    pub redirect_uri: String,
+    pub redirect_uris: Vec<String>,
     pub scopes: Vec<String>,
     pub is_confidential: bool,
 }

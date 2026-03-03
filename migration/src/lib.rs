@@ -11,6 +11,7 @@ mod m20240917_210754_ceremonies;
 mod m20240920_155703_auth_session;
 mod m20240924_225432_passport_ceremony_fk;
 mod m20260119_000000_oauth_client;
+mod m20260303_194119_redirect_uris_json;
 
 pub struct Migrator;
 
@@ -29,6 +30,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20240920_155703_auth_session::Migration),
             Box::new(m20240924_225432_passport_ceremony_fk::Migration),
             Box::new(m20260119_000000_oauth_client::Migration),
+            Box::new(m20260303_194119_redirect_uris_json::Migration),
         ]
     }
 }
