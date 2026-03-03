@@ -20,8 +20,8 @@ pub fn Dash() -> impl IntoView {
         <div class="p-4">
             {move || match user_resource.get() {
                 None => view! { <div>"Loading..."</div> }.into_any(),
-                Some(None) => view! { <LoginPrompt/> }.into_any(),
-                Some(Some(user)) => view! { <DashboardContent user=user/> }.into_any(),
+                Some(None) => view! { <LoginPrompt /> }.into_any(),
+                Some(Some(user)) => view! { <DashboardContent user=user /> }.into_any(),
             }}
         </div>
     }
@@ -35,7 +35,8 @@ fn LoginPrompt() -> impl IntoView {
             <p class="text-gray-600 max-w-md text-center">
                 "You need to be logged in to manage OAuth clients. Please authenticate with your passport."
             </p>
-            <a rel="external"
+            <a
+                rel="external"
                 href="/api/authorize?client_id=id-dash&redirect_uri=https://id.purduehackers.com/dash&scope=user:read%20auth&response_type=code"
                 class="px-4 py-2 bg-amber-400 hover:bg-amber-500 border-2 border-black shadow-blocks-tiny rounded font-bold transition"
             >
@@ -101,42 +102,61 @@ fn DashboardContent(user: UserInfo) -> impl IntoView {
                 />
             </Show>
 
-            {move || created_client().map(|client| view! {
-                <ClientCreatedModal client=client on_close=move || set_created_client(None)/>
-            })}
+            {move || {
+                created_client()
+                    .map(|client| {
+                        view! {
+                            <ClientCreatedModal
+                                client=client
+                                on_close=move || set_created_client(None)
+                            />
+                        }
+                    })
+            }}
 
             {move || match clients_resource.get() {
                 None => view! { <div>"Loading clients..."</div> }.into_any(),
-                Some(clients) => view! { <ClientList clients=clients refetch=refetch_clients/> }.into_any(),
+                Some(clients) => {
+                    view! { <ClientList clients=clients refetch=refetch_clients /> }.into_any()
+                }
             }}
         </div>
     }
 }
 
 #[component]
-fn ClientList(clients: Vec<ClientResponse>, refetch: impl Fn() + Copy + Send + Sync + 'static) -> impl IntoView {
+fn ClientList(
+    clients: Vec<ClientResponse>,
+    refetch: impl Fn() + Copy + Send + Sync + 'static,
+) -> impl IntoView {
     if clients.is_empty() {
         return view! {
             <div class="text-center py-8 text-gray-500">
                 <p>"No clients yet. Create one to get started!"</p>
             </div>
-        }.into_any();
+        }
+        .into_any();
     }
 
     view! {
         <div class="space-y-4">
             <h2 class="text-xl font-bold">"Your Clients"</h2>
             <div class="grid gap-4">
-                {clients.into_iter().map(|client| view! {
-                    <ClientCard client=client refetch=refetch/>
-                }).collect_view()}
+                {clients
+                    .into_iter()
+                    .map(|client| view! { <ClientCard client=client refetch=refetch /> })
+                    .collect_view()}
             </div>
         </div>
-    }.into_any()
+    }
+    .into_any()
 }
 
 #[component]
-fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 'static) -> impl IntoView {
+fn ClientCard(
+    client: ClientResponse,
+    refetch: impl Fn() + Copy + Send + Sync + 'static,
+) -> impl IntoView {
     let (deleting, set_deleting) = signal(false);
     let (confirm_delete, set_confirm_delete) = signal(false);
     let (editing_uris, set_editing_uris) = signal(false);
@@ -160,7 +180,11 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 
         });
     };
 
-    let client_type = if client.is_confidential { "Confidential" } else { "Public" };
+    let client_type = if client.is_confidential {
+        "Confidential"
+    } else {
+        "Public"
+    };
     let uris_display = client.redirect_uris.join(", ");
 
     view! {
@@ -169,7 +193,12 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 
                 <div class="flex-1 min-w-0">
                     <h3 class="font-bold text-lg truncate">{client.name}</h3>
                     <div class="mt-2 space-y-1 text-sm">
-                        <div><span class="text-gray-500">"Client ID: "</span><code class="bg-gray-100 px-1 rounded break-all">{client.client_id}</code></div>
+                        <div>
+                            <span class="text-gray-500">"Client ID: "</span>
+                            <code class="bg-gray-100 px-1 rounded break-all">
+                                {client.client_id}
+                            </code>
+                        </div>
                         <div>
                             <div class="flex items-center gap-2">
                                 <span class="text-gray-500">"Redirect URIs: "</span>
@@ -180,27 +209,42 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 
                                     "Edit"
                                 </button>
                             </div>
-                            <Show when=move || !editing_uris() fallback=move || view! {
-                                <EditRedirectUris
-                                    client_id=client_id_for_edit
-                                    initial_uris=initial_uris.clone()
-                                    on_saved=move || {
-                                        set_editing_uris(false);
-                                        refetch();
+                            <Show
+                                when=move || !editing_uris()
+                                fallback=move || {
+                                    view! {
+                                        <EditRedirectUris
+                                            client_id=client_id_for_edit
+                                            initial_uris=initial_uris.clone()
+                                            on_saved=move || {
+                                                set_editing_uris(false);
+                                                refetch();
+                                            }
+                                            on_cancel=move || set_editing_uris(false)
+                                        />
                                     }
-                                    on_cancel=move || set_editing_uris(false)
-                                />
-                            }>
+                                }
+                            >
                                 <div class="mt-1 space-y-0.5">
                                     {
                                         let uris = uris_display.clone();
-                                        view! { <code class="bg-gray-100 px-1 rounded break-all">{uris}</code> }
+                                        view! {
+                                            <code class="bg-gray-100 px-1 rounded break-all">
+                                                {uris}
+                                            </code>
+                                        }
                                     }
                                 </div>
                             </Show>
                         </div>
-                        <div><span class="text-gray-500">"Scopes: "</span><code class="bg-gray-100 px-1 rounded">{client.scopes}</code></div>
-                        <div><span class="text-gray-500">"Type: "</span>{client_type}</div>
+                        <div>
+                            <span class="text-gray-500">"Scopes: "</span>
+                            <code class="bg-gray-100 px-1 rounded">{client.scopes}</code>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">"Type: "</span>
+                            {client_type}
+                        </div>
                     </div>
                 </div>
                 <button
@@ -208,7 +252,15 @@ fn ClientCard(client: ClientResponse, refetch: impl Fn() + Copy + Send + Sync + 
                     disabled=deleting
                     on:click=handle_delete
                 >
-                    {move || if deleting() { "Deleting..." } else if confirm_delete() { "Confirm?" } else { "Delete" }}
+                    {move || {
+                        if deleting() {
+                            "Deleting..."
+                        } else if confirm_delete() {
+                            "Confirm?"
+                        } else {
+                            "Delete"
+                        }
+                    }}
                 </button>
             </div>
         </div>
@@ -250,9 +302,7 @@ fn EditRedirectUris(
     view! {
         <div class="mt-2 space-y-2">
             <For
-                each=move || {
-                    uris().into_iter().enumerate().collect::<Vec<_>>()
-                }
+                each=move || { uris().into_iter().enumerate().collect::<Vec<_>>() }
                 key=|&(i, _)| i
                 children=move |(i, uri)| {
                     view! {
@@ -263,19 +313,24 @@ fn EditRedirectUris(
                                 placeholder="https://example.com/callback"
                                 prop:value=uri
                                 on:input:target=move |ev| {
-                                    set_uris.update(|u| {
-                                        if let Some(entry) = u.get_mut(i) {
-                                            *entry = ev.target().value();
-                                        }
-                                    });
+                                    set_uris
+                                        .update(|u| {
+                                            if let Some(entry) = u.get_mut(i) {
+                                                *entry = ev.target().value();
+                                            }
+                                        });
                                 }
                             />
                             <button
                                 type="button"
                                 class="px-2 py-1 bg-red-100 hover:bg-red-200 border border-red-300 rounded text-xs transition"
                                 on:click=move |_| {
-                                    set_uris.update(|u| { u.remove(i); });
+                                    set_uris
+                                        .update(|u| {
+                                            u.remove(i);
+                                        });
                                 }
+                                disabled=move || { uris().len() <= 1 }
                             >
                                 "Remove"
                             </button>
@@ -326,9 +381,7 @@ fn RedirectUriInputList(
     view! {
         <div class="space-y-2">
             <For
-                each=move || {
-                    uris().into_iter().enumerate().collect::<Vec<_>>()
-                }
+                each=move || { uris().into_iter().enumerate().collect::<Vec<_>>() }
                 key=|&(i, _)| i
                 children=move |(i, uri)| {
                     view! {
@@ -339,11 +392,12 @@ fn RedirectUriInputList(
                                 placeholder="https://example.com/callback"
                                 prop:value=uri
                                 on:input:target=move |ev| {
-                                    set_uris.update(|u| {
-                                        if let Some(entry) = u.get_mut(i) {
-                                            *entry = ev.target().value();
-                                        }
-                                    });
+                                    set_uris
+                                        .update(|u| {
+                                            if let Some(entry) = u.get_mut(i) {
+                                                *entry = ev.target().value();
+                                            }
+                                        });
                                 }
                             />
                             <Show when=move || { uris().len() > 1 }>
@@ -351,7 +405,10 @@ fn RedirectUriInputList(
                                     type="button"
                                     class="px-2 py-2 bg-red-100 hover:bg-red-200 border-2 border-black rounded text-sm transition"
                                     on:click=move |_| {
-                                        set_uris.update(|u| { u.remove(i); });
+                                        set_uris
+                                            .update(|u| {
+                                                u.remove(i);
+                                            });
                                     }
                                 >
                                     "Remove"
@@ -393,7 +450,10 @@ fn CreateClientForm(
 
     let handle_submit = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
-        let uris: Vec<String> = redirect_uris().into_iter().filter(|u| !u.is_empty()).collect();
+        let uris: Vec<String> = redirect_uris()
+            .into_iter()
+            .filter(|u| !u.is_empty())
+            .collect();
         if name().is_empty() || uris.is_empty() || selected_scopes().is_empty() {
             set_error(Some("Please fill in all required fields".to_string()));
             return;
@@ -421,51 +481,71 @@ fn CreateClientForm(
             <form on:submit=handle_submit class="space-y-4">
                 <div>
                     <label class="block font-medium mb-1">"Name"</label>
-                    <input type="text" class="w-full border-2 border-black rounded p-2" placeholder="My Application"
-                        on:input:target=move |ev| set_name(ev.target().value()) prop:value=name/>
+                    <input
+                        type="text"
+                        class="w-full border-2 border-black rounded p-2"
+                        placeholder="My Application"
+                        on:input:target=move |ev| set_name(ev.target().value())
+                        prop:value=name
+                    />
                 </div>
                 <div>
                     <label class="block font-medium mb-1">"Redirect URIs"</label>
-                    <RedirectUriInputList uris=redirect_uris set_uris=set_redirect_uris/>
+                    <RedirectUriInputList uris=redirect_uris set_uris=set_redirect_uris />
                 </div>
                 <div>
                     <label class="block font-medium mb-1">"Scopes"</label>
                     <div class="flex flex-wrap gap-2">
-                        {available_scopes.into_iter().map(|scope| {
-                            let scope_str = scope.to_string();
-                            let scope_check = scope_str.clone();
-                            let scope_toggle = scope_str.clone();
-                            view! {
-                                <label class="inline-flex items-center gap-1 cursor-pointer">
-                                    <input type="checkbox" class="w-4 h-4"
-                                        checked=move || selected_scopes().contains(&scope_check)
-                                        on:change=move |_| {
-                                            let s = scope_toggle.clone();
-                                            set_selected_scopes.update(|scopes| {
-                                                if scopes.contains(&s) {
-                                                    scopes.retain(|x| x != &s);
-                                                } else {
-                                                    scopes.push(s.clone());
-                                                    // Auto-select read scope when write scope is selected
-                                                    if s == "user" && !scopes.contains(&"user:read".to_string()) {
-                                                        scopes.push("user:read".to_string());
-                                                    }
-                                                    if s == "admin" && !scopes.contains(&"admin:read".to_string()) {
-                                                        scopes.push("admin:read".to_string());
-                                                    }
-                                                }
-                                            });
-                                        }/>
-                                    <span class="bg-gray-100 px-2 py-1 rounded text-sm">{scope}</span>
-                                </label>
-                            }
-                        }).collect_view()}
+                        {available_scopes
+                            .into_iter()
+                            .map(|scope| {
+                                let scope_str = scope.to_string();
+                                let scope_check = scope_str.clone();
+                                let scope_toggle = scope_str.clone();
+                                view! {
+                                    <label class="inline-flex items-center gap-1 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            class="w-4 h-4"
+                                            checked=move || selected_scopes().contains(&scope_check)
+                                            on:change=move |_| {
+                                                let s = scope_toggle.clone();
+                                                set_selected_scopes
+                                                    .update(|scopes| {
+                                                        if scopes.contains(&s) {
+                                                            scopes.retain(|x| x != &s);
+                                                        } else {
+                                                            scopes.push(s.clone());
+                                                            if s == "user" && !scopes.contains(&"user:read".to_string())
+                                                            {
+                                                                scopes.push("user:read".to_string());
+                                                            }
+                                                            if s == "admin"
+                                                                && !scopes.contains(&"admin:read".to_string())
+                                                            {
+                                                                scopes.push("admin:read".to_string());
+                                                            }
+                                                        }
+                                                    });
+                                            }
+                                        />
+                                        <span class="bg-gray-100 px-2 py-1 rounded text-sm">
+                                            {scope}
+                                        </span>
+                                    </label>
+                                }
+                            })
+                            .collect_view()}
                     </div>
                 </div>
                 <div>
                     <label class="inline-flex items-center gap-2 cursor-pointer">
-                        <input type="checkbox" class="w-4 h-4"
-                            on:change:target=move |ev| set_is_confidential(ev.target().checked()) prop:checked=is_confidential/>
+                        <input
+                            type="checkbox"
+                            class="w-4 h-4"
+                            on:change:target=move |ev| set_is_confidential(ev.target().checked())
+                            prop:checked=is_confidential
+                        />
                         <span>"Confidential client (generates a client secret)"</span>
                     </label>
                 </div>
@@ -473,12 +553,18 @@ fn CreateClientForm(
                     <div class="text-red-600 text-sm">{move || error()}</div>
                 </Show>
                 <div class="flex gap-2">
-                    <button type="submit" disabled=submitting
-                        class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black rounded font-bold transition disabled:bg-gray-200">
+                    <button
+                        type="submit"
+                        disabled=submitting
+                        class="px-4 py-2 bg-green-400 hover:bg-green-500 border-2 border-black rounded font-bold transition disabled:bg-gray-200"
+                    >
                         {move || if submitting() { "Creating..." } else { "Create" }}
                     </button>
-                    <button type="button" on:click=move |_| on_cancel()
-                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition">
+                    <button
+                        type="button"
+                        on:click=move |_| on_cancel()
+                        class="px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition"
+                    >
                         "Cancel"
                     </button>
                 </div>
@@ -501,24 +587,39 @@ fn ClientCreatedModal(
                 <div class="space-y-3 mb-4">
                     <div>
                         <span class="text-gray-500">"Client ID:"</span>
-                        <code class="block bg-gray-100 p-2 rounded mt-1 break-all select-all">{client.client_id.clone()}</code>
+                        <code class="block bg-gray-100 p-2 rounded mt-1 break-all select-all">
+                            {client.client_id.clone()}
+                        </code>
                     </div>
                     <div>
                         <span class="text-gray-500">"Redirect URIs:"</span>
-                        <code class="block bg-gray-100 p-2 rounded mt-1 break-all select-all">{uris_display}</code>
+                        <code class="block bg-gray-100 p-2 rounded mt-1 break-all select-all">
+                            {uris_display}
+                        </code>
                     </div>
-                    {client.client_secret.clone().map(|secret| view! {
-                        <div>
-                            <span class="text-gray-500">"Client Secret:"</span>
-                            <div class="bg-amber-100 border-2 border-amber-400 rounded p-2 mt-1">
-                                <p class="text-amber-800 text-sm mb-2 font-bold">"Save this secret now! It will not be shown again."</p>
-                                <code class="block bg-white p-2 rounded break-all select-all">{secret}</code>
-                            </div>
-                        </div>
-                    })}
+                    {client
+                        .client_secret
+                        .clone()
+                        .map(|secret| {
+                            view! {
+                                <div>
+                                    <span class="text-gray-500">"Client Secret:"</span>
+                                    <div class="bg-amber-100 border-2 border-amber-400 rounded p-2 mt-1">
+                                        <p class="text-amber-800 text-sm mb-2 font-bold">
+                                            "Save this secret now! It will not be shown again."
+                                        </p>
+                                        <code class="block bg-white p-2 rounded break-all select-all">
+                                            {secret}
+                                        </code>
+                                    </div>
+                                </div>
+                            }
+                        })}
                 </div>
-                <button on:click=move |_| on_close()
-                    class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition">
+                <button
+                    on:click=move |_| on_close()
+                    class="w-full px-4 py-2 bg-gray-200 hover:bg-gray-300 border-2 border-black rounded font-bold transition"
+                >
                     "Close"
                 </button>
             </div>
