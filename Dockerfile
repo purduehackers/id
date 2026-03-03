@@ -3,7 +3,7 @@
 FROM rustlang/rust:nightly-alpine AS builder
 
 RUN apk update
-RUN apk add musl-dev openssl-libs-static openssl-dev binaryen zlib-dev zlib-static build-base linux-headers
+RUN apk add musl-dev openssl-libs-static openssl-dev binaryen zlib-dev zlib-static build-base linux-headers curl
 
 ENV OPENSSL_STATIC=1 OPENSSL_LIB_DIR=/usr/lib OPENSSL_INCLUDE_DIR=/usr/include/openssl RUST_BACKTRACE=1 ZLIB_USE_STATIC_LIBS=ON
 
@@ -14,9 +14,8 @@ RUN rustup target add wasm32-unknown-unknown
 # If you’re using stable, use this instead
 # FROM rust:1.70-bullseye as builder
 
-# Install cargo-binstall, which makes it easier to install other
-# cargo extensions like cargo-leptos
-RUN cargo install cargo-binstall
+# Install cargo-binstall from prebuilt binary (auto-detects architecture)
+RUN curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
 
 # Install cargo-leptos
 RUN cargo binstall cargo-leptos -y
