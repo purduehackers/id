@@ -256,8 +256,17 @@ pub async fn handle_post(
 pub async fn handle_get(
     cookies: CookieJar,
     State(state): State<RouteState>,
+    uri: OriginalUri,
     oauth: OAuthRequest,
 ) -> Result<impl IntoResponse, RouteError> {
+    // Extract state param from original request to forward through the UI
+    let original_url = Url::parse(&format!("https://example.com{}", uri.0)).ok();
+    let oauth_state: Option<String> = original_url.as_ref().and_then(|u| {
+        u.query_pairs()
+            .find(|(k, _)| k == "state")
+            .map(|(_, v)| v.to_string())
+    });
+
     let res = AuthorizationFlow::prepare(OAuthEndpoint::new(
         FnSolicitor(move |_req: &mut OAuthRequest, pre_grant: Solicitation| {
             let has_session = cookies.get("session").is_some();
@@ -276,6 +285,10 @@ pub async fn handle_get(
 
             if has_session {
                 params.push(("session", "true"));
+            }
+
+            if let Some(ref s) = oauth_state {
+                params.push(("state", s.as_str()));
             }
 
             let url = frontends::dev::Url::parse_with_params(
