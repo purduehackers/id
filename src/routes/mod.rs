@@ -167,7 +167,7 @@ pub mod scope {
     use oxide_auth::endpoint;
 
     use super::*;
-    #[derive(Debug, PartialEq, Eq, ConstParamTy)]
+    #[derive(Debug, PartialEq, Eq, ConstParamTy, Clone, Copy)]
     pub struct Scope(u64);
 
     impl BitOr for Scope {

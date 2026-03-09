@@ -13,7 +13,7 @@ use oxide_auth_async::{
 };
 use oxide_auth_axum::{OAuthRequest, OAuthResponse};
 use rand::distributions::{Alphanumeric, DistString};
-use sea_orm::{ActiveValue, Condition, DatabaseConnection, IntoActiveModel, prelude::*};
+use sea_orm::{prelude::*, ActiveValue, Condition, DatabaseConnection, IntoActiveModel};
 use tokio::sync::RwLock;
 
 use crate::{
@@ -44,6 +44,8 @@ pub struct ClientData<'a> {
     pub url: &'a str,
 
     pub scope: &'a str,
+
+    pub name: &'a str,
 }
 
 pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
@@ -53,6 +55,8 @@ pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
         url: "https://id.purduehackers.com/dash",
 
         scope: "user:read user",
+
+        name: "ID Dashboard",
     },
     ClientData {
         client_id: "dashboard",
@@ -60,6 +64,8 @@ pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
         url: "https://dash.purduehackers.com/api/callback",
 
         scope: "user:read",
+
+        name: "Dashboard",
     },
     ClientData {
         client_id: "passports",
@@ -67,6 +73,8 @@ pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
         url: "https://passports.purduehackers.com/callback",
 
         scope: "user:read user",
+
+        name: "Passports",
     },
     ClientData {
         client_id: "authority",
@@ -74,6 +82,8 @@ pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
         url: "authority://callback",
 
         scope: "admin:read admin",
+
+        name: "Passport Authority",
     },
     ClientData {
         client_id: "auth-test",
@@ -81,6 +91,8 @@ pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
         url: "https://id-auth.purduehackers.com/api/auth/callback/purduehackers-id",
 
         scope: "user:read",
+
+        name: "Auth Test",
     },
     ClientData {
         client_id: "vulcan-auth",
@@ -88,6 +100,8 @@ pub const VALID_CLIENTS: [ClientData<'static>; 6] = [
         url: "https://auth.purduehackers.com/source/oauth/callback/purduehackers-id/",
 
         scope: "user:read",
+
+        name: "Vulcan Auth",
     },
     // ClientData {
     //     client_id: "shad-moe",
@@ -118,6 +132,7 @@ fn client_registry() -> ClientMap {
         client_id,
         url,
         scope,
+        ..
     } in VALID_CLIENTS
     {
         clients.register_client(Client::public(
@@ -252,9 +267,7 @@ impl DbClientRegistry {
                 )
             };
 
-            clients.register_client(
-                base_client.with_additional_redirect_uris(additional_urls),
-            );
+            clients.register_client(base_client.with_additional_redirect_uris(additional_urls));
         }
 
         Ok(())

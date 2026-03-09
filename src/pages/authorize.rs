@@ -8,6 +8,16 @@ use leptos_router::{
 
 use crate::{LeptosRouteError, ScanPost};
 
+fn scope_explanation(scope: &str) -> &'static str {
+    match scope {
+        "user:read" => "Read user data including passports.",
+        "user" => "Write user data including passports.",
+        "admin:read" => "Read ALL user data including passports.",
+        "admin" => "Write ALL user data including passports.",
+        _ => "",
+    }
+}
+
 #[server]
 pub async fn scan_get(id: i32) -> Result<bool, LeptosRouteError> {
     Ok(crate::routes::scan::get_handler(id).await?)
@@ -29,10 +39,10 @@ struct AuthQuery {
 }
 
 #[server]
-pub async fn valid_clients_list() -> Result<Vec<String>, LeptosRouteError> {
+pub async fn valid_clients_list() -> Result<Vec<(String, String)>, LeptosRouteError> {
     let state: crate::routes::RouteState = use_context()
         .ok_or_else(|| LeptosRouteError::InternalServerError("No state".to_string()))?;
-    Ok(crate::routes::client::handler(&state.db).await?)
+    Ok(crate::routes::client::client_names(&state.db).await?)
 }
 
 #[component]
@@ -52,12 +62,26 @@ pub fn Authorize() -> impl IntoView {
             .unwrap_or_default()
     };
     let has_session = move || query().map(|q| q.session.is_some()).unwrap_or_default();
-    let is_valid_client_id: Resource<bool> = Resource::new(query, |q| async move {
-        valid_clients_list()
-            .await
-            .map(|vc| vc.contains(&q.map(|q| q.client_id).unwrap_or_default()))
+    let clients_resource: Resource<Vec<(String, String)>> = Resource::new(
+        || (),
+        |_| async move { valid_clients_list().await.unwrap_or_default() },
+    );
+    let is_valid_client_id = move || {
+        clients_resource
+            .get()
+            .map(|vc| vc.iter().any(|(id, _)| *id == client_id()))
             .unwrap_or_default()
-    });
+    };
+    let client_name = move || {
+        clients_resource
+            .get()
+            .and_then(|vc| {
+                vc.iter()
+                    .find(|(id, _)| *id == client_id())
+                    .map(|(_, name)| name.clone())
+            })
+            .unwrap_or_else(client_id)
+    };
 
     let (passport_number, set_passport_number) = signal(None::<i32>);
     let (totp_needed, set_totp_needed) = signal(None::<bool>);
@@ -74,7 +98,7 @@ pub fn Authorize() -> impl IntoView {
             AuthState::WaitForScan
         } else {
             match (
-                is_valid_client_id.get().unwrap_or_default(),
+                is_valid_client_id(),
                 has_session() || totp_needed().is_some(),
             ) {
                 (true, true) => AuthState::Authorize,
@@ -162,7 +186,7 @@ pub fn Authorize() -> impl IntoView {
                     AuthState::Authorize => {
                         view! {
                             <Auth
-                                client_id=client_id()
+                                client_name=client_name()
                                 scopes=scopes()
                                 totp_needed=Signal::derive(move || {
                                     totp_needed().unwrap_or_default()
@@ -185,7 +209,7 @@ pub fn Authorize() -> impl IntoView {
 
 #[component]
 fn Auth(
-    client_id: String,
+    client_name: String,
     scopes: Vec<String>,
     totp_needed: Signal<bool>,
     totp: ReadSignal<String>,
@@ -208,7 +232,7 @@ fn Auth(
             <div class="flex flex-col gap-2">
                 <h1 class="text-4xl text-center font-bold">Authorize?</h1>
                 <p>
-                    <span class="bg-gray-100 rounded px-2 inline-block">{client_id}</span>
+                    <span class="bg-gray-100 rounded px-2 inline-block">{client_name}</span>
                     {" "}
                     wants to authenticate with your passport and use the following
                     scopes:
@@ -218,9 +242,12 @@ fn Auth(
                         each=move || scopes.clone()
                         key=|s| s.clone()
                         children=move |s| {
+                            let explanation = scope_explanation(&s);
                             view! {
                                 <li>
                                     <span class="bg-gray-100 rounded px-2 inline-block">{s}</span>
+                                    ": "
+                                    {explanation}
                                 </li>
                             }
                         }
