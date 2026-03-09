@@ -46,6 +46,7 @@ pub fn Authorize() -> impl IntoView {
                 q.scope
                     .split_whitespace()
                     .map(|s| s.to_owned())
+                    .filter(|s| s != "auth") // hide internal auth scope
                     .collect::<Vec<_>>()
             })
             .unwrap_or_default()
@@ -131,51 +132,53 @@ pub fn Authorize() -> impl IntoView {
     });
 
     view! {
-        <Transition fallback=|| view! {"Loading..."}>
-        <div class="min-h-screen flex flex-col justify-center items-center font-main">
-            {move || match auth_state() {
-                AuthState::EnterNumber => {
-                    view! {
-                        <EnterNumber
-                            action=select_action
-                            is_error=false
-                            passport_num=passport_number
-                            set_passport_num=set_passport_number
-                        />
+        <Transition fallback=|| view! { "Loading..." }>
+            <div class="min-h-screen flex flex-col justify-center items-center font-main">
+                {move || match auth_state() {
+                    AuthState::EnterNumber => {
+                        view! {
+                            <EnterNumber
+                                action=select_action
+                                is_error=false
+                                passport_num=passport_number
+                                set_passport_num=set_passport_number
+                            />
+                        }
+                            .into_any()
                     }
-                        .into_any()
-                }
-                AuthState::WaitForScan => {
-                    view! {
-                        <div class="w-11/12 sm:w-auto p-4 sm:p-12 border-2 rounded border-black shadow-blocks-sm bg-gradient-to-tr from-amber-100 to-amber-200 flex flex-col gap-2">
-                            <p class="font-bold text-2xl sm:text-3xl text-center">
-                                SCAN YOUR PASSPORT NOW
-                            </p>
-                            <p class="text-center leading-5">
-                                Hold your phone near your passport and open the URL.
-                            </p>
-                        </div>
+                    AuthState::WaitForScan => {
+                        view! {
+                            <div class="w-11/12 sm:w-auto p-4 sm:p-12 border-2 rounded border-black shadow-blocks-sm bg-gradient-to-tr from-amber-100 to-amber-200 flex flex-col gap-2">
+                                <p class="font-bold text-2xl sm:text-3xl text-center">
+                                    SCAN YOUR PASSPORT NOW
+                                </p>
+                                <p class="text-center leading-5">
+                                    Hold your phone near your passport and open the URL.
+                                </p>
+                            </div>
+                        }
+                            .into_any()
                     }
-                        .into_any()
-                }
-                AuthState::Authorize => {
-                    view! {
-                        <Auth
-                            client_id=client_id()
-                            scopes=scopes()
-                            totp_needed=Signal::derive(move || totp_needed().unwrap_or_default())
-                            totp=totp_code
-                            set_totp=set_totp_code
-                            passport_id=passport_number
-                        />
+                    AuthState::Authorize => {
+                        view! {
+                            <Auth
+                                client_id=client_id()
+                                scopes=scopes()
+                                totp_needed=Signal::derive(move || {
+                                    totp_needed().unwrap_or_default()
+                                })
+                                totp=totp_code
+                                set_totp=set_totp_code
+                                passport_id=passport_number
+                            />
+                        }
+                            .into_any()
                     }
-                        .into_any()
-                }
-                AuthState::NoClient => {
-                    view! { <p class="font-bold text-2xl">Invalid client ID</p> }.into_any()
-                }
-            }}
-        </div>
+                    AuthState::NoClient => {
+                        view! { <p class="font-bold text-2xl">Invalid client ID</p> }.into_any()
+                    }
+                }}
+            </div>
         </Transition>
     }
 }
@@ -292,7 +295,7 @@ fn EnterNumber(
                     }
                 />
 
-                <input type="hidden" value="" name="secret"/>
+                <input type="hidden" value="" name="secret" />
 
                 <button
                     class="py-1 px-2 font-bold bg-amber-400 hover:bg-amber-500 transition duration-100 border-2 border-black shadow-blocks-tiny disabled:bg-gray-300"
