@@ -72,6 +72,7 @@ export const tokenRoute = new Elysia().post(
         expires_in: result.expiresIn,
       };
     } catch (e: any) {
+      console.error("Token exchange failed:", e);
       set.status = 400;
       return {
         error: "invalid_grant",

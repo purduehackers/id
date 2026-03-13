@@ -51,6 +51,7 @@ export const authorizeRoute = new Elysia()
           302,
         );
       } catch (e: any) {
+        console.error("Authorize GET failed:", e);
         if (redirect_uri) {
           const errorUrl = new URL(redirect_uri);
           errorUrl.searchParams.set("error", "invalid_request");
