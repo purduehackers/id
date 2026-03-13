@@ -46,14 +46,17 @@ export const authorizeRoute = new Elysia()
         });
         if (state) params.set("state", state);
 
-        set.redirect = `https://id.purduehackers.com/authorize?${params.toString()}`;
+        return Response.redirect(
+          `https://id.purduehackers.com/authorize?${params.toString()}`,
+          302,
+        );
       } catch (e: any) {
         if (redirect_uri) {
           const errorUrl = new URL(redirect_uri);
           errorUrl.searchParams.set("error", "invalid_request");
           errorUrl.searchParams.set("error_description", e?.message ?? "Invalid request");
           if (state) errorUrl.searchParams.set("state", state);
-          set.redirect = errorUrl.toString();
+          return Response.redirect(errorUrl.toString(), 302);
         } else {
           set.status = 400;
           return { error: "invalid_request", error_description: e?.message };
@@ -94,8 +97,7 @@ export const authorizeRoute = new Elysia()
         const errorUrl = new URL(redirect_uri);
         errorUrl.searchParams.set("error", "access_denied");
         if (state) errorUrl.searchParams.set("state", state);
-        set.redirect = errorUrl.toString();
-        return;
+        return Response.redirect(errorUrl.toString(), 302);
       }
 
       try {
@@ -134,24 +136,23 @@ export const authorizeRoute = new Elysia()
           }),
         );
 
-        cookie.session.set({
-          value: result.sessionToken,
-          maxAge: 5259492,
-          secure: true,
-          httpOnly: true,
-          path: "/",
-        });
-
         const successUrl = new URL(redirect_uri);
         successUrl.searchParams.set("code", result.code);
         if (state) successUrl.searchParams.set("state", state);
-        set.redirect = successUrl.toString();
+
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: successUrl.toString(),
+            "Set-Cookie": `session=${result.sessionToken}; Max-Age=5259492; Path=/; Secure; HttpOnly; SameSite=Lax`,
+          },
+        });
       } catch (e: any) {
         const errorUrl = new URL(redirect_uri);
         errorUrl.searchParams.set("error", "server_error");
         errorUrl.searchParams.set("error_description", e?.message ?? "Authorization failed");
         if (state) errorUrl.searchParams.set("state", state);
-        set.redirect = errorUrl.toString();
+        return Response.redirect(errorUrl.toString(), 302);
       }
     },
     {
