@@ -87,6 +87,21 @@
         <div>
           <h1 class="text-3xl font-bold">Client Dashboard</h1>
           <p class="text-gray-600">Logged in as {userName} ({data.user.role})</p>
+          <form method="POST" action="?/toggleSession" use:enhance={() => {
+            return async ({ result }) => {
+              if (result.type === "success") await invalidateAll();
+            };
+          }}>
+            <label class="inline-flex items-center gap-2 cursor-pointer text-sm mt-1">
+              <input
+                type="checkbox"
+                class="w-4 h-4"
+                checked={data.user.savesSession}
+                onchange={(e) => e.currentTarget.form?.requestSubmit()}
+              />
+              <span>Save session cookie</span>
+            </label>
+          </form>
         </div>
         <div class="flex gap-2">
           <button

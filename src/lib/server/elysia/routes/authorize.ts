@@ -130,10 +130,11 @@ export const authorizeRoute = new Elysia()
               redirectUri: redirect_uri,
             });
 
+            const user = yield* findUserById(ownerId);
             const session = yield* createSession(ownerId);
             yield* purgeExpiredSessions();
 
-            return { code, sessionToken: session.token, ownerId };
+            return { code, sessionToken: session.token, ownerId, savesSession: user.savesSession };
           }),
         );
 
@@ -141,12 +142,16 @@ export const authorizeRoute = new Elysia()
         successUrl.searchParams.set("code", result.code);
         if (state) successUrl.searchParams.set("state", state);
 
+        const headers: Record<string, string> = {
+          Location: successUrl.toString(),
+        };
+        if (result.savesSession) {
+          headers["Set-Cookie"] = `session=${result.sessionToken}; Max-Age=5259492; Path=/; Secure; HttpOnly; SameSite=Lax`;
+        }
+
         return new Response(null, {
           status: 302,
-          headers: {
-            Location: successUrl.toString(),
-            "Set-Cookie": `session=${result.sessionToken}; Max-Age=5259492; Path=/; Secure; HttpOnly; SameSite=Lax`,
-          },
+          headers,
         });
       } catch (e: any) {
         const errorUrl = new URL(redirect_uri);

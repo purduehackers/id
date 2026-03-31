@@ -9,6 +9,7 @@ import {
   deleteClient,
   updateClientRedirectUris,
 } from "$lib/server/services/ClientService.js";
+import { updateUserSavesSession } from "$lib/server/services/UserService.js";
 import { fail } from "@sveltejs/kit";
 
 export const load: PageServerLoad = async ({ cookies }) => {
@@ -31,6 +32,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
         discordId: user.discordId.toString(),
         role: user.role,
         name: passport ? `${passport.name} ${passport.surname}` : null,
+        savesSession: user.savesSession,
       },
       clients,
     };
@@ -123,5 +125,21 @@ export const actions: Actions = {
     } catch (e: any) {
       return fail(400, { error: e?.message ?? "Failed to update URIs" });
     }
+  },
+
+  toggleSession: async ({ cookies }) => {
+    const sessionToken = cookies.get("session");
+    if (!sessionToken) return fail(401, { error: "Not authenticated" });
+
+    let session;
+    try {
+      session = await runEffect(validateSession(sessionToken));
+    } catch {
+      return fail(401, { error: "Invalid session" });
+    }
+
+    const user = await runEffect(findUserById(session.ownerId));
+    await runEffect(updateUserSavesSession(session.ownerId, !user.savesSession));
+    return { toggled: true };
   },
 };

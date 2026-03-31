@@ -9,6 +9,7 @@ export const users = sqliteTable("user", {
   discordId: text("discord_id").notNull().unique(),
   role: text("role", { enum: ["admin", "hacker"] }).notNull(),
   totp: text("totp"),
+  savesSession: integer("saves_session", { mode: "boolean" }).notNull().default(false),
 });
 
 export const passports = sqliteTable("passport", {

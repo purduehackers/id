@@ -56,6 +56,21 @@ export function createUser(discordId: string) {
   });
 }
 
+export function updateUserSavesSession(userId: number, savesSession: boolean) {
+  return Effect.gen(function* () {
+    const db = yield* DbService;
+
+    yield* Effect.tryPromise({
+      try: () =>
+        db
+          .update(users)
+          .set({ savesSession })
+          .where(eq(users.id, userId)),
+      catch: (e) => new DbError({ cause: e }),
+    });
+  });
+}
+
 export function getUserWithPassport(userId: number) {
   return Effect.gen(function* () {
     const db = yield* DbService;
