@@ -65,6 +65,18 @@ export function deleteSession(token: string) {
   });
 }
 
+export function deleteSessionsByOwner(ownerId: number) {
+  return Effect.gen(function* () {
+    const db = yield* DbService;
+
+    yield* Effect.tryPromise({
+      try: () =>
+        db.delete(authSessions).where(eq(authSessions.ownerId, ownerId)),
+      catch: (e) => new DbError({ cause: e }),
+    });
+  });
+}
+
 export function purgeExpiredSessions() {
   return Effect.gen(function* () {
     const db = yield* DbService;

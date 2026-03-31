@@ -1,6 +1,6 @@
 import type { Actions, PageServerLoad } from "./$types.js";
 import { runEffect } from "$lib/server/effect/runtime.js";
-import { validateSession } from "$lib/server/services/SessionService.js";
+import { validateSession, createSession, deleteSessionsByOwner } from "$lib/server/services/SessionService.js";
 import { findUserById } from "$lib/server/services/UserService.js";
 import { getLatestActivatedPassport } from "$lib/server/services/PassportService.js";
 import {
@@ -139,7 +139,29 @@ export const actions: Actions = {
     }
 
     const user = await runEffect(findUserById(session.ownerId));
-    await runEffect(updateUserSavesSession(session.ownerId, !user.savesSession));
+    const enabling = !user.savesSession;
+    await runEffect(updateUserSavesSession(session.ownerId, enabling));
+
+    if (enabling) {
+      // Set session cookie for current session
+      cookies.set("session", session.token, {
+        maxAge: 5259492,
+        path: "/",
+        secure: true,
+        httpOnly: true,
+        sameSite: "lax",
+      });
+    } else {
+      // Invalidate all sessions and clear cookie
+      await runEffect(deleteSessionsByOwner(session.ownerId));
+      cookies.set("session", "", {
+        maxAge: 0,
+        path: "/",
+        secure: true,
+        httpOnly: true,
+      });
+    }
+
     return { toggled: true };
   },
 };
