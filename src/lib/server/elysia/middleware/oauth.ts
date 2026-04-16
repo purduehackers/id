@@ -1,6 +1,6 @@
 import { Effect } from "effect";
 import { recoverAccessToken } from "../../services/OAuthIssuer.js";
-import { UnauthorizedError } from "../../effect/errors.js";
+import { UnauthorizedError, ForbiddenError } from "../../effect/errors.js";
 import { parseScopes, type ScopeValue } from "../../shared/scopes.js";
 
 export interface OAuthUser {
@@ -29,7 +29,7 @@ export function extractBearerToken(
     for (const required of requiredScopes) {
       if (!grantedScopes.includes(required)) {
         return yield* Effect.fail(
-          new UnauthorizedError({
+          new ForbiddenError({
             message: `Missing required scope: ${required}`,
           }),
         );
