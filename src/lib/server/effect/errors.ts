@@ -50,9 +50,18 @@ export type AppError =
   | PassportDisabledError
   | TotpError;
 
+/** Unwrap Effect's FiberFailure to get the actual tagged error. */
+function unwrapError(e: unknown): unknown {
+  // FiberFailure wraps errors: { cause: { _tag: "Fail", failure: <actual error> } }
+  const cause = (e as any)?.cause;
+  if (cause?._tag === "Fail" && cause?.failure) return cause.failure;
+  return e;
+}
+
 /** Map an Effect tagged error to an HTTP status code. Unknown errors become 500. */
 export function errorToStatus(e: unknown): number {
-  const tag = (e as { _tag?: string })?._tag;
+  const err = unwrapError(e);
+  const tag = (err as { _tag?: string })?._tag;
   switch (tag) {
     case "UnauthorizedError":
     case "JwtError":
@@ -72,9 +81,10 @@ export function errorToStatus(e: unknown): number {
 
 /** Get a safe error message from a tagged error. Hides details for 500s. */
 export function errorMessage(e: unknown): string {
+  const err = unwrapError(e);
   const status = errorToStatus(e);
   if (status === 500) return "Internal server error";
-  const tag = (e as { _tag?: string })?._tag;
+  const tag = (err as { _tag?: string })?._tag;
   if (tag === "JwtError") return "Invalid or expired token";
-  return (e as { message?: string })?.message ?? "Unknown error";
+  return (err as { message?: string })?.message ?? "Unknown error";
 }
