@@ -1,6 +1,6 @@
 import Elysia, { t } from "elysia";
 import { Effect } from "effect";
-import { runEffect } from "../../effect/runtime.js";
+import { runRoute, runEffect } from "../../effect/runtime.js";
 import {
   resolveClient,
   validateRedirectUri,
@@ -33,36 +33,39 @@ export const authorizeRoute = new Elysia()
         return { error: "invalid_request", error_description: "Missing client_id or redirect_uri" };
       }
 
-      try {
-        const client = await runEffect(resolveClient(client_id));
-        await runEffect(validateRedirectUri(client, redirect_uri));
-        const validatedScope = validateScopes(client, scope ?? "");
+      const result = await runRoute(
+        Effect.gen(function* () {
+          const client = yield* resolveClient(client_id);
+          yield* validateRedirectUri(client, redirect_uri);
+          return validateScopes(client, scope ?? "");
+        }),
+      );
 
-        const params = new URLSearchParams({
-          client_id,
-          redirect_uri,
-          scope: validatedScope,
-          response_type: "code",
-        });
-        if (state) params.set("state", state);
-
-        return Response.redirect(
-          `https://id.purduehackers.com/authorize?${params.toString()}`,
-          302,
-        );
-      } catch (e: any) {
-        console.error("Authorize GET failed:", e);
+      if (!result.ok) {
         if (redirect_uri) {
           const errorUrl = new URL(redirect_uri);
           errorUrl.searchParams.set("error", "invalid_request");
-          errorUrl.searchParams.set("error_description", e?.message ?? "Invalid request");
+          errorUrl.searchParams.set("error_description", result.error);
           if (state) errorUrl.searchParams.set("state", state);
           return Response.redirect(errorUrl.toString(), 302);
         } else {
-          set.status = 400;
-          return { error: "invalid_request", error_description: e?.message };
+          set.status = result.status;
+          return { error: "invalid_request", error_description: result.error };
         }
       }
+
+      const params = new URLSearchParams({
+        client_id,
+        redirect_uri,
+        scope: result.data,
+        response_type: "code",
+      });
+      if (state) params.set("state", state);
+
+      return Response.redirect(
+        `https://id.purduehackers.com/authorize?${params.toString()}`,
+        302,
+      );
     },
     {
       query: t.Object({
@@ -101,65 +104,65 @@ export const authorizeRoute = new Elysia()
         return Response.redirect(errorUrl.toString(), 302);
       }
 
-      try {
-        const result = await runEffect(
-          Effect.gen(function* () {
-            const client = yield* resolveClient(client_id);
-            yield* validateRedirectUri(client, redirect_uri);
-            const validatedScope = validateScopes(client, scope ?? "");
+      const result = await runRoute(
+        Effect.gen(function* () {
+          const client = yield* resolveClient(client_id);
+          yield* validateRedirectUri(client, redirect_uri);
+          const validatedScope = validateScopes(client, scope ?? "");
 
-            let ownerId: number;
+          let ownerId: number;
 
-            // Check for session cookie first
-            const sessionToken = cookie?.session?.value as string | undefined;
-            if (sessionToken) {
-              const sessionResult = yield* Effect.either(validateSession(sessionToken));
-              if (sessionResult._tag === "Right") {
-                ownerId = sessionResult.right.ownerId;
-              } else {
-                ownerId = yield* authorizeViaPassport(passportIdStr, totpCode, validatedScope);
-              }
+          // Check for session cookie first
+          const sessionToken = cookie?.session?.value as string | undefined;
+          if (sessionToken) {
+            const sessionResult = yield* Effect.either(validateSession(sessionToken));
+            if (sessionResult._tag === "Right") {
+              ownerId = sessionResult.right.ownerId;
             } else {
               ownerId = yield* authorizeViaPassport(passportIdStr, totpCode, validatedScope);
             }
+          } else {
+            ownerId = yield* authorizeViaPassport(passportIdStr, totpCode, validatedScope);
+          }
 
-            const code = yield* createAuthorizationCode({
-              ownerId,
-              clientId: client_id,
-              scope: validatedScope,
-              redirectUri: redirect_uri,
-            });
+          const code = yield* createAuthorizationCode({
+            ownerId,
+            clientId: client_id,
+            scope: validatedScope,
+            redirectUri: redirect_uri,
+          });
 
-            const user = yield* findUserById(ownerId);
-            const session = yield* createSession(ownerId);
-            yield* purgeExpiredSessions();
+          const user = yield* findUserById(ownerId);
+          const session = yield* createSession(ownerId);
+          yield* purgeExpiredSessions();
 
-            return { code, sessionToken: session.token, ownerId, savesSession: user.savesSession };
-          }),
-        );
+          return { code, sessionToken: session.token, ownerId, savesSession: user.savesSession };
+        }),
+      );
 
-        const successUrl = new URL(redirect_uri);
-        successUrl.searchParams.set("code", result.code);
-        if (state) successUrl.searchParams.set("state", state);
-
-        const headers: Record<string, string> = {
-          Location: successUrl.toString(),
-        };
-        if (result.savesSession) {
-          headers["Set-Cookie"] = `session=${result.sessionToken}; Max-Age=5259492; Path=/; Secure; HttpOnly; SameSite=Lax`;
-        }
-
-        return new Response(null, {
-          status: 302,
-          headers,
-        });
-      } catch (e: any) {
+      if (!result.ok) {
         const errorUrl = new URL(redirect_uri);
         errorUrl.searchParams.set("error", "server_error");
-        errorUrl.searchParams.set("error_description", e?.message ?? "Authorization failed");
+        errorUrl.searchParams.set("error_description", result.error);
         if (state) errorUrl.searchParams.set("state", state);
         return Response.redirect(errorUrl.toString(), 302);
       }
+
+      const successUrl = new URL(redirect_uri);
+      successUrl.searchParams.set("code", result.data.code);
+      if (state) successUrl.searchParams.set("state", state);
+
+      const headers: Record<string, string> = {
+        Location: successUrl.toString(),
+      };
+      if (result.data.savesSession) {
+        headers["Set-Cookie"] = `session=${result.data.sessionToken}; Max-Age=5259492; Path=/; Secure; HttpOnly; SameSite=Lax`;
+      }
+
+      return new Response(null, {
+        status: 302,
+        headers,
+      });
     },
     {
       query: t.Object({

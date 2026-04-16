@@ -1,28 +1,26 @@
 import Elysia, { t } from "elysia";
-import { runEffect } from "../../effect/runtime.js";
+import { runRoute } from "../../effect/runtime.js";
 import { createPassport } from "../../services/NewPassportService.js";
-import { errorToStatus, errorMessage } from "../../effect/errors.js";
 
 export const newRoute = new Elysia().post(
   "/new",
   async ({ body, set }) => {
-    try {
-      const result = await runEffect(
-        createPassport({
-          discordId: body.discord_id,
-          name: body.name,
-          surname: body.surname,
-          dateOfBirth: body.date_of_birth,
-          dateOfIssue: body.date_of_issue,
-          placeOfOrigin: body.place_of_origin,
-          ceremonyTime: body.ceremony_time,
-        }),
-      );
-      return result;
-    } catch (e: any) {
-      set.status = errorToStatus(e);
-      return { error: errorMessage(e) };
+    const result = await runRoute(
+      createPassport({
+        discordId: body.discord_id,
+        name: body.name,
+        surname: body.surname,
+        dateOfBirth: body.date_of_birth,
+        dateOfIssue: body.date_of_issue,
+        placeOfOrigin: body.place_of_origin,
+        ceremonyTime: body.ceremony_time,
+      }),
+    );
+    if (!result.ok) {
+      set.status = result.status;
+      return { error: result.error };
     }
+    return result.data;
   },
   {
     body: t.Object({

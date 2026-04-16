@@ -1,19 +1,16 @@
 import Elysia, { t } from "elysia";
-import { runEffect } from "../../effect/runtime.js";
+import { runRoute } from "../../effect/runtime.js";
 import { completeScan, checkScanReady } from "../../services/PassportService.js";
-import { errorToStatus, errorMessage } from "../../effect/errors.js";
 
 export const scanRoute = new Elysia().post(
   "/scan",
   async ({ body, set }) => {
-    try {
-      await runEffect(completeScan(body.id, body.secret));
-      set.status = 200;
-      return;
-    } catch (e: any) {
-      set.status = errorToStatus(e);
-      return { error: errorMessage(e) };
+    const result = await runRoute(completeScan(body.id, body.secret));
+    if (!result.ok) {
+      set.status = result.status;
+      return { error: result.error };
     }
+    set.status = 200;
   },
   {
     body: t.Object({
