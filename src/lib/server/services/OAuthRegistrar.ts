@@ -78,11 +78,15 @@ export function validateScopes(
   client: ResolvedClient,
   requestedScope: string,
 ): string {
-  const allowed = new Set(client.allowedScopes.split(/\s+/));
+  const allowed = client.allowedScopes.split(/\s+/).filter((s) => s.length > 0);
   const requested = requestedScope.split(/\s+/).filter((s) => s.length > 0);
 
-  // Keep only allowed scopes (silently drop disallowed, matching oxide_auth behavior)
-  const finalScopes = requested.filter((s) => allowed.has(s));
+  // If no scopes requested, grant all allowed scopes
+  const finalScopes =
+    requested.length > 0
+      ? requested.filter((s) => allowed.includes(s))
+      : [...allowed];
+
   if (!finalScopes.includes("auth")) {
     finalScopes.push("auth");
   }
