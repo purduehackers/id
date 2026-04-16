@@ -55,6 +55,7 @@ export function errorToStatus(e: unknown): number {
   const tag = (e as { _tag?: string })?._tag;
   switch (tag) {
     case "UnauthorizedError":
+    case "JwtError":
       return 401;
     case "ForbiddenError":
     case "PassportDisabledError":
@@ -73,5 +74,7 @@ export function errorToStatus(e: unknown): number {
 export function errorMessage(e: unknown): string {
   const status = errorToStatus(e);
   if (status === 500) return "Internal server error";
+  const tag = (e as { _tag?: string })?._tag;
+  if (tag === "JwtError") return "Invalid or expired token";
   return (e as { message?: string })?.message ?? "Unknown error";
 }
