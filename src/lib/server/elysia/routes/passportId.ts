@@ -2,6 +2,7 @@ import Elysia, { t } from "elysia";
 import { runEffect } from "../../effect/runtime.js";
 import { extractBearerToken } from "../middleware/oauth.js";
 import { activatePassport } from "../../services/AdminPassportService.js";
+import { errorToStatus, errorMessage } from "../../effect/errors.js";
 import { SCOPES } from "../../shared/scopes.js";
 
 export const passportIdRoute = new Elysia().post(
@@ -22,17 +23,8 @@ export const passportIdRoute = new Elysia().post(
       set.status = 200;
       return;
     } catch (e: any) {
-      const tag = e?._tag;
-      if (tag === "UnauthorizedError") {
-        set.status = 401;
-        return { error: e.message };
-      }
-      if (tag === "NotFoundError") {
-        set.status = 404;
-        return { error: "Passport not found" };
-      }
-      set.status = 500;
-      return { error: e?.message ?? "Failed to activate passport" };
+      set.status = errorToStatus(e);
+      return { error: errorMessage(e) };
     }
   },
   {

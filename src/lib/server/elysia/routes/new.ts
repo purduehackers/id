@@ -1,6 +1,7 @@
 import Elysia, { t } from "elysia";
 import { runEffect } from "../../effect/runtime.js";
 import { createPassport } from "../../services/NewPassportService.js";
+import { errorToStatus, errorMessage } from "../../effect/errors.js";
 
 export const newRoute = new Elysia().post(
   "/new",
@@ -19,8 +20,8 @@ export const newRoute = new Elysia().post(
       );
       return result;
     } catch (e: any) {
-      set.status = 400;
-      return { error: e?.message ?? "Failed to create passport" };
+      set.status = errorToStatus(e);
+      return { error: errorMessage(e) };
     }
   },
   {

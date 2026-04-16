@@ -49,3 +49,29 @@ export type AppError =
   | BadRequestError
   | PassportDisabledError
   | TotpError;
+
+/** Map an Effect tagged error to an HTTP status code. Unknown errors become 500. */
+export function errorToStatus(e: unknown): number {
+  const tag = (e as { _tag?: string })?._tag;
+  switch (tag) {
+    case "UnauthorizedError":
+      return 401;
+    case "ForbiddenError":
+    case "PassportDisabledError":
+      return 403;
+    case "NotFoundError":
+      return 404;
+    case "BadRequestError":
+    case "TotpError":
+      return 400;
+    default:
+      return 500;
+  }
+}
+
+/** Get a safe error message from a tagged error. Hides details for 500s. */
+export function errorMessage(e: unknown): string {
+  const status = errorToStatus(e);
+  if (status === 500) return "Internal server error";
+  return (e as { message?: string })?.message ?? "Unknown error";
+}

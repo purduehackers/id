@@ -2,6 +2,7 @@ import Elysia from "elysia";
 import { runEffect } from "../../effect/runtime.js";
 import { extractBearerToken } from "../middleware/oauth.js";
 import { getUserWithPassport } from "../../services/UserService.js";
+import { errorToStatus, errorMessage } from "../../effect/errors.js";
 import { SCOPES } from "../../shared/scopes.js";
 
 export const userRoute = new Elysia().get(
@@ -15,8 +16,8 @@ export const userRoute = new Elysia().get(
       const result = await runEffect(getUserWithPassport(oauthUser.ownerId));
       return result;
     } catch (e: any) {
-      set.status = e?._tag === "UnauthorizedError" ? 401 : 500;
-      return { error: e?.message ?? "Failed to get user" };
+      set.status = errorToStatus(e);
+      return { error: errorMessage(e) };
     }
   },
 );

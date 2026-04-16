@@ -4,7 +4,7 @@ import { runEffect } from "../../effect/runtime.js";
 import { extractAuthorizationCode } from "../../services/OAuthAuthorizer.js";
 import { issueAccessToken } from "../../services/OAuthIssuer.js";
 import { resolveClient, checkClientCredentials } from "../../services/OAuthRegistrar.js";
-import { BadRequestError } from "../../effect/errors.js";
+import { BadRequestError, errorToStatus } from "../../effect/errors.js";
 
 export const tokenRoute = new Elysia().post(
   "/token",
@@ -73,9 +73,10 @@ export const tokenRoute = new Elysia().post(
       };
     } catch (e: any) {
       console.error("Token exchange failed:", e);
-      set.status = 400;
+      const status = errorToStatus(e);
+      set.status = status === 500 ? 500 : 400;
       return {
-        error: "invalid_grant",
+        error: status === 401 ? "invalid_client" : "invalid_grant",
         error_description: e?.message ?? "Invalid authorization code",
       };
     }
