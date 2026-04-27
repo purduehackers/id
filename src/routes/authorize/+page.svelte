@@ -11,6 +11,7 @@
   let totpNeeded = $state<boolean | null>(null);
   let totpCode = $state("");
   let pollInterval = $state<ReturnType<typeof setInterval> | null>(null);
+  let authorizing = $state(false);
 
   let isValidClient = $derived(
     data.clientNames.some((c) => c.id === data.clientId)
@@ -191,20 +192,20 @@
           </div>
         {/if}
         <div class="flex flex-row gap-2">
-          <form method="post" action={makeSubmitUrl(false)}>
+          <form method="post" action={makeSubmitUrl(false)} onsubmit={() => { authorizing = true; }}>
             <button
               class="w-full px-3 py-2 text-xl font-bold bg-red-300 hover:bg-red-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
               type="submit"
-              disabled={totpNeeded === true && totpCode.length < 6}
+              disabled={authorizing || (totpNeeded === true && totpCode.length < 6)}
             >
               DENY
             </button>
           </form>
-          <form method="post" action={makeSubmitUrl(true)}>
+          <form method="post" action={makeSubmitUrl(true)} onsubmit={() => { authorizing = true; }}>
             <button
               class="w-full px-3 py-2 text-xl font-bold bg-green-300 hover:bg-green-500 border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] disabled:shadow-none rounded-sm disabled:bg-gray-100 disabled:hover:bg-gray-100 transition"
               type="submit"
-              disabled={totpNeeded === true && totpCode.length < 6}
+              disabled={authorizing || (totpNeeded === true && totpCode.length < 6)}
             >
               ACCEPT
             </button>

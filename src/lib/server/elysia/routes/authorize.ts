@@ -134,7 +134,7 @@ export const authorizeRoute = new Elysia()
 
           const user = yield* findUserById(ownerId);
           const session = yield* createSession(ownerId);
-          yield* purgeExpiredSessions();
+          yield* Effect.ignore(purgeExpiredSessions());
 
           return { code, sessionToken: session.token, ownerId, savesSession: user.savesSession };
         }),

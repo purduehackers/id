@@ -116,7 +116,7 @@ export function completeScan(passportId: number, secret: string) {
 
     if (currentValue === "false" && secret === passport.secret) {
       yield* Effect.tryPromise({
-        try: () => kvClient.set(String(passportId), "true", "EX", 60),
+        try: () => kvClient.set(String(passportId), "true", "EX", 300),
         catch: (e) => new KvError({ cause: e }),
       });
       return;
@@ -163,17 +163,13 @@ export function checkScanReady(passportId: number) {
   });
 }
 
-/** Consume the scan (GETDEL equivalent) */
+/** Consume the scan atomically */
 export function consumeScan(passportId: number) {
   return Effect.gen(function* () {
     const kvClient = yield* KvService;
 
     const value = yield* Effect.tryPromise({
-      try: async () => {
-        const val = await kvClient.get(String(passportId));
-        await kvClient.del(String(passportId));
-        return val;
-      },
+      try: () => kvClient.getdel(String(passportId)),
       catch: (e) => new KvError({ cause: e }),
     });
 
