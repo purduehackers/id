@@ -9,11 +9,10 @@ export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'pg' }),
-	emailAndPassword: { enabled: true },
 	socialProviders: {
-		github: {
-			clientId: env.GITHUB_CLIENT_ID,
-			clientSecret: env.GITHUB_CLIENT_SECRET
+		discord: {
+			clientId: env.DISCORD_CLIENT_ID,
+			clientSecret: env.DISCORD_CLIENT_SECRET
 		}
 	},
 	advanced: {
