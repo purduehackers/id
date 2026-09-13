@@ -20,6 +20,7 @@
 		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes && sed -i 's/pg_catalog.gen_random_uuid()/uuidv7()/g' src/lib/server/db/auth.schema.ts && prettier --write src/lib/server/db/auth.schema.ts"
 	},
 	"devDependencies": {
+		"@better-auth/oauth-provider": "^1.7.4",
 		"@eslint/js": "^10.0.1",
 		"@sveltejs/adapter-vercel": "^6.3.3",
 		"@sveltejs/kit": "^2.63.0",
