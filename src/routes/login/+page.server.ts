@@ -43,6 +43,10 @@ function message(error: unknown, fallback: string) {
 	return error instanceof APIError ? error.message || fallback : fallback;
 }
 
+function toVerify(email: string, next: string): never {
+	redirect(302, `/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`);
+}
+
 export const actions: Actions = {
 	signIn: async (event) => {
 		const formData = await event.request.formData();
@@ -53,6 +57,9 @@ export const actions: Actions = {
 		try {
 			await auth.api.signInEmail({ body: { email, password }, headers: event.request.headers });
 		} catch (error) {
+			if (error instanceof APIError && error.body?.code === 'EMAIL_NOT_VERIFIED') {
+				toVerify(email, next);
+			}
 			return fail(400, { email, message: message(error, 'Sign in failed.') });
 		}
 
@@ -77,7 +84,7 @@ export const actions: Actions = {
 			return fail(400, { email, message: message(error, 'Could not create the account.') });
 		}
 
-		redirect(302, next);
+		toVerify(email, next);
 	},
 
 	social: async (event) => {
