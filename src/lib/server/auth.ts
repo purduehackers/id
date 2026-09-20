@@ -12,17 +12,43 @@ export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'pg' }),
+
+	emailAndPassword: {
+		enabled: true,
+		minPasswordLength: 10,
+		// todo: turn on once we have an email sender
+		requireEmailVerification: false
+	},
+
 	socialProviders: {
 		discord: {
 			clientId: env.DISCORD_CLIENT_ID,
-			clientSecret: env.DISCORD_CLIENT_SECRET
+			clientSecret: env.DISCORD_CLIENT_SECRET,
+			disableSignUp: true,
+			scope: ['identify', 'email', 'guilds.members.read']
+		},
+		github: {
+			clientId: env.GITHUB_CLIENT_ID,
+			clientSecret: env.GITHUB_CLIENT_SECRET,
+			disableSignUp: true
 		}
 	},
+
+	account: {
+		accountLinking: {
+			enabled: true,
+			disableImplicitLinking: true,
+			allowDifferentEmails: true,
+			allowUnlinkingAll: false
+		}
+	},
+
 	advanced: {
 		database: {
 			generateId: 'uuid'
 		}
 	},
+
 	plugins: [
 		jwt(),
 		oauthProvider({
