@@ -1,4 +1,4 @@
-// import { env } from '$env/dynamic/private';
+import { env } from '$env/dynamic/private';
 import { betterAuth } from 'better-auth/minimal';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
