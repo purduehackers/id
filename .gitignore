@@ -23,5 +23,4 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 .direnv
-examples
 scripts
