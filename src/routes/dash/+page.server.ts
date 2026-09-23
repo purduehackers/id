@@ -1,16 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
-import { and, eq, inArray } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
-import { db } from '$lib/server/db';
-import {
-	oauthAccessToken,
-	oauthClient,
-	oauthConsent,
-	oauthRefreshToken
-} from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/guard';
-import { SCOPE_DESCRIPTIONS } from '$lib/server/scopes';
 import { APIError } from 'better-auth/api';
 
 const PROVIDERS = [
@@ -20,16 +11,9 @@ const PROVIDERS = [
 
 type Provider = (typeof PROVIDERS)[number]['id'];
 
-type Consent = {
-	id: string;
-	clientId: string;
-	scopes: string[];
-	createdAt: string | Date;
-};
-
 const LINK_ERRORS: Record<string, string> = {
 	state_security_mismatch:
-		'That linking attempt expired or was interrupted. It only stays valid for five minutes — try again.',
+		'That linking attempt expired or was interrupted. It only stays valid for five minutes, try again.',
 	state_not_found: 'That linking attempt expired or was interrupted. Try again.',
 	account_already_linked_to_different_user:
 		'That account is already attached to a different Purdue Hackers ID.',
@@ -37,32 +21,15 @@ const LINK_ERRORS: Record<string, string> = {
 };
 
 export const load: PageServerLoad = async (event) => {
-	const user = requireUser(event);
-	const headers = event.request.headers;
+	requireUser(event);
 
 	const linked = event.url.searchParams.get('linked');
 	const errorCode = event.url.searchParams.get('error');
-
-	const accounts = await auth.api.listUserAccounts({ headers });
-	const consents = (await auth.api.getOAuthConsents({ headers })) as unknown as Consent[];
-
-	const clientIds = [...new Set(consents.map((consent) => consent.clientId))];
-	const clients = clientIds.length
-		? await db
-				.select({ clientId: oauthClient.clientId, name: oauthClient.name })
-				.from(oauthClient)
-				.where(inArray(oauthClient.clientId, clientIds))
-		: [];
-	const nameFor = new Map(clients.map((client) => [client.clientId, client.name]));
+	const accounts = await auth.api.listUserAccounts({ headers: event.request.headers });
 
 	return {
 		notice: linked ? `${linked} connected.` : null,
 		error: errorCode ? (LINK_ERRORS[errorCode] ?? `Linking failed (${errorCode}).`) : null,
-		user: {
-			name: user.name,
-			email: user.email,
-			emailVerified: user.emailVerified
-		},
 		connections: PROVIDERS.map((provider) => {
 			const account = accounts.find((a) => a.providerId === provider.id);
 			return {
@@ -71,13 +38,7 @@ export const load: PageServerLoad = async (event) => {
 				accountId: account?.id ?? null,
 				connectedAt: account?.createdAt ?? null
 			};
-		}),
-		apps: consents.map((consent) => ({
-			id: consent.id,
-			name: nameFor.get(consent.clientId) ?? consent.clientId,
-			grantedAt: consent.createdAt,
-			scopes: consent.scopes.map((scope) => SCOPE_DESCRIPTIONS[scope] ?? scope)
-		}))
+		})
 	};
 };
 
@@ -135,43 +96,6 @@ export const actions: Actions = {
 		}
 
 		return { message: 'Disconnected.' };
-	},
-
-	revoke: async (event) => {
-		const user = requireUser(event);
-		const formData = await event.request.formData();
-		const id = formData.get('id')?.toString();
-		if (!id) return fail(400, { message: 'Nothing to revoke.' });
-
-		const [consent] = await db
-			.select({ clientId: oauthConsent.clientId })
-			.from(oauthConsent)
-			.where(and(eq(oauthConsent.id, id), eq(oauthConsent.userId, user.id)))
-			.limit(1);
-
-		if (!consent) return fail(404, { message: 'That app is not on your list.' });
-
-		try {
-			await auth.api.deleteOAuthConsent({
-				body: { id },
-				headers: event.request.headers
-			});
-		} catch (error) {
-			return fail(400, { message: messageFrom(error, 'Could not revoke that app.') });
-		}
-
-		await db
-			.delete(oauthAccessToken)
-			.where(
-				and(eq(oauthAccessToken.userId, user.id), eq(oauthAccessToken.clientId, consent.clientId))
-			);
-		await db
-			.delete(oauthRefreshToken)
-			.where(
-				and(eq(oauthRefreshToken.userId, user.id), eq(oauthRefreshToken.clientId, consent.clientId))
-			);
-
-		return { message: 'Access revoked and existing tokens killed.' };
 	},
 
 	signOut: async (event) => {

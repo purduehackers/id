@@ -24,3 +24,12 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 };
 
 export const ADMIN_SCOPES = new Set<string>(['admin:read', 'admin']);
+
+export const MEMBER_CLIENT_SCOPES: Scope[] = [
+	'openid',
+	'profile',
+	'email',
+	'offline_access',
+	'user:read',
+	'user'
+];
