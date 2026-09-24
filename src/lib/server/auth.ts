@@ -9,9 +9,9 @@ import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
 import { db } from '$lib/server/db';
 import { SCOPES } from '$lib/server/scopes';
-import { sendEmail } from '$lib/server/email';
+import { emailConfigured, sendEmail } from '$lib/server/email';
 
-const devFixedOtp = dev && !env.RESEND_API_KEY && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
+const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
 	console.warn(`[auth] DEV_FIXED_OTP is set: every verification code is "${devFixedOtp}"`);
 }
@@ -77,8 +77,7 @@ export const auth = betterAuth({
 					text: [
 						`Your verification code is ${otp}.`,
 						'',
-						'It expires in ten minutes. If you did not create a Purdue Hackers ID,',
-						'you can ignore this email.'
+						'It expires in ten minutes. If you did not create a Purdue Hackers ID, you can ignore this email.'
 					].join('\n')
 				});
 			}
