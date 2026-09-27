@@ -1,10 +1,13 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
 import * as schema from './schema';
 import { env } from '$env/dynamic/private';
 
-if (!env.DATABASE_URL) throw new Error('DATABASE_URL is not set');
+if (!env.TURSO_DATABASE_URL) throw new Error('TURSO_DATABASE_URL is not set');
 
-const client = postgres(env.DATABASE_URL);
+const client = createClient({
+	url: env.TURSO_DATABASE_URL,
+	authToken: env.TURSO_AUTH_TOKEN
+});
 
 export const db = drizzle(client, { schema });

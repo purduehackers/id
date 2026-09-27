@@ -4,12 +4,11 @@ The new Purdue Hackers ID, an OICD provider that other apps can sign in.
 
 ## Setup
 
-You need Deno, Docker, and Node 22 or `direnv allow` with Nix to host the project itself. After cloning:
+You need Deno and Node 22 or `direnv allow` with Nix to host the project itself. After cloning:
 
 ```sh
 cp .env.example .env
 deno install
-docker compose up -d
 deno task db:push
 deno task dev
 ```

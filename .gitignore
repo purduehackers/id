@@ -24,3 +24,7 @@ vite.config.ts.timestamp-*
 
 .direnv
 scripts
+
+*.db
+*.db-shm
+*.db-wal

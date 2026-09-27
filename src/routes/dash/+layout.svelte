@@ -1,14 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import { resolve } from '$app/paths';
 	import type { LayoutData } from './$types';
 	import type { Snippet } from 'svelte';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
 	const links = [
-		{ href: '/dash', label: 'Account' },
-		{ href: '/dash/authorized', label: 'Authorized apps' },
-		{ href: '/dash/applications', label: 'Your applications' }
+		{ href: resolve('/dash'), label: 'Account' },
+		{ href: resolve('/dash/authorized'), label: 'Authorized apps' },
+		{ href: resolve('/dash/applications'), label: 'Your applications' }
 	];
 </script>
 

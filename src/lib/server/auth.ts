@@ -8,6 +8,7 @@ import { oauthProvider } from '@better-auth/oauth-provider';
 import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
 import { db } from '$lib/server/db';
+import { uuidv7 } from '$lib/server/uuid';
 import { SCOPES } from '$lib/server/scopes';
 import { emailConfigured, sendEmail } from '$lib/server/email';
 
@@ -19,7 +20,7 @@ if (devFixedOtp) {
 export const auth = betterAuth({
 	baseURL: env.ORIGIN,
 	secret: env.BETTER_AUTH_SECRET,
-	database: drizzleAdapter(db, { provider: 'pg' }),
+	database: drizzleAdapter(db, { provider: 'sqlite' }),
 
 	emailAndPassword: {
 		enabled: true,
@@ -57,7 +58,7 @@ export const auth = betterAuth({
 
 	advanced: {
 		database: {
-			generateId: 'uuid'
+			generateId: () => uuidv7()
 		}
 	},
 

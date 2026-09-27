@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -52,6 +53,6 @@
 	</form>
 
 	<p class="mt-8 text-sm text-gray-500">
-		Wrong address? <a href="/login" class="underline">Start over</a>.
+		Wrong address? <a href={resolve('/login')} class="underline">Start over</a>.
 	</p>
 </main>
