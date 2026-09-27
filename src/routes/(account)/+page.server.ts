@@ -11,10 +11,11 @@ const PROVIDERS = [
 
 type Provider = (typeof PROVIDERS)[number]['id'];
 
+const EXPIRED = 'That linking attempt expired or was interrupted. Please try again.';
 const LINK_ERRORS: Record<string, string> = {
-	state_security_mismatch:
-		'That linking attempt expired or was interrupted. It only stays valid for five minutes, try again.',
-	state_not_found: 'That linking attempt expired or was interrupted. Try again.',
+	state_mismatch: EXPIRED,
+	state_not_found: EXPIRED,
+	state_invalid: EXPIRED,
 	account_already_linked_to_different_user:
 		'That account is already attached to a different Purdue Hackers ID.',
 	signup_disabled: 'That account is not attached to any ID yet.'

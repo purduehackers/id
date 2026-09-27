@@ -20,11 +20,13 @@ const PROVIDERS = [
 
 type Provider = (typeof PROVIDERS)[number]['id'];
 
+const EXPIRED = 'That linking attempt expired or was interrupted. Please try again.';
 const SIGN_IN_ERRORS: Record<string, string> = {
 	signup_disabled:
 		'That account is not connected to any Purdue Hackers ID. Sign in with your email and password, then connect it from your dashboard.',
-	state_security_mismatch: 'That sign-in attempt expired or was interrupted. Try again.',
-	state_not_found: 'That sign-in attempt expired or was interrupted. Try again.'
+	state_mismatch: EXPIRED,
+	state_not_found: EXPIRED,
+	state_invalid: EXPIRED
 };
 
 export const load: PageServerLoad = (event) => {
