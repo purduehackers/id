@@ -4,7 +4,7 @@ import { auth } from '$lib/server/auth';
 import { APIError } from 'better-auth/api';
 
 function safeNext(raw: string | null | undefined): string {
-	if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/dash';
+	if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
 	return raw;
 }
 

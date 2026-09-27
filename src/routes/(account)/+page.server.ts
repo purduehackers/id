@@ -61,8 +61,8 @@ export const actions: Actions = {
 			({ url } = await auth.api.linkSocialAccount({
 				body: {
 					provider: provider as Provider,
-					callbackURL: `/dash?linked=${provider}`,
-					errorCallbackURL: '/dash'
+					callbackURL: `/?linked=${provider}`,
+					errorCallbackURL: '/'
 				},
 				headers: event.request.headers
 			}));

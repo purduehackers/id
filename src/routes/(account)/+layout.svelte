@@ -7,9 +7,9 @@
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
 	const links = [
-		{ href: resolve('/dash'), label: 'Account' },
-		{ href: resolve('/dash/authorized'), label: 'Authorized apps' },
-		{ href: resolve('/dash/applications'), label: 'Your applications' }
+		{ href: resolve('/'), label: 'Account' },
+		{ href: resolve('/authorized'), label: 'Authorized apps' },
+		{ href: resolve('/applications'), label: 'Your applications' }
 	];
 </script>
 
@@ -29,7 +29,7 @@
 				{link.label}
 			</a>
 		{/each}
-		<form method="post" action="/dash?/signOut" class="ml-auto">
+		<form method="post" action="/?/signOut" class="ml-auto">
 			<button class="text-gray-500 underline">Sign out</button>
 		</form>
 	</nav>
