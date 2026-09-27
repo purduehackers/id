@@ -24,6 +24,8 @@ const EXPIRED = 'That linking attempt expired or was interrupted. Please try aga
 const SIGN_IN_ERRORS: Record<string, string> = {
 	signup_disabled:
 		'That account is not connected to any Purdue Hackers ID. Sign in with your email and password, then connect it from your dashboard.',
+	account_not_linked:
+		'There is a Purdue Hackers ID with that email, but this account is not connected to it. Sign in with your email and password, then connect it from the dashboard.',
 	state_mismatch: EXPIRED,
 	state_not_found: EXPIRED,
 	state_invalid: EXPIRED
