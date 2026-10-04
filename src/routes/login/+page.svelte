@@ -55,23 +55,35 @@
 					oninput={onUsernameInput}
 					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 				/>
-				<span class="text-sm text-gray-500">
-					{USERNAME_MIN_LENGTH} to {USERNAME_MAX_LENGTH} letters and numbers.
-				</span>
 			</label>
 		{/if}
 
-		<label class="mt-3 block">
-			Email
-			<input
-				name="email"
-				type="email"
-				required
-				autocomplete="email"
-				value={form?.email ?? ''}
-				class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
-			/>
-		</label>
+		{#if registering}
+			<label class="mt-3 block">
+				Email
+				<input
+					name="email"
+					type="email"
+					required
+					autocomplete="email"
+					value={form && 'email' in form ? form.email : ''}
+					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
+				/>
+			</label>
+		{:else}
+			<label class="mt-3 block">
+				Email or username
+				<input
+					name="identifier"
+					required
+					autocomplete="username"
+					autocapitalize="none"
+					spellcheck="false"
+					value={form && 'identifier' in form ? form.identifier : ''}
+					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
+				/>
+			</label>
+		{/if}
 
 		<label class="mt-3 block">
 			Password

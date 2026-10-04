@@ -7,6 +7,7 @@ export const load: LayoutServerLoad = (event) => {
 		user: {
 			name: user.name,
 			username: user.username,
+			role: user.role,
 			email: user.email,
 			emailVerified: user.emailVerified
 		}

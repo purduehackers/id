@@ -5,6 +5,8 @@ import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { jwt } from 'better-auth/plugins/jwt';
 import { emailOTP } from 'better-auth/plugins/email-otp';
 import { username } from 'better-auth/plugins/username';
+import { admin } from 'better-auth/plugins/admin';
+import { createAccessControl } from 'better-auth/plugins/access';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
@@ -18,10 +20,40 @@ import {
 	USERNAME_PATTERN,
 	normalizeUsername
 } from '$lib/username';
+import { grantedRoles } from '$lib/roles';
 
 const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
 	console.warn(`[auth] DEV_FIXED_OTP is set: every verification code is "${devFixedOtp}"`);
+}
+
+const lockedAc = createAccessControl({ user: [], session: [] });
+const noPermissions = lockedAc.newRole({ user: [], session: [] });
+const ADMIN_PLUGIN_PATHS = [
+	'set-role',
+	'get-user',
+	'create-user',
+	'update-user',
+	'list-users',
+	'list-user-sessions',
+	'ban-user',
+	'unban-user',
+	'impersonate-user',
+	'stop-impersonating',
+	'revoke-user-session',
+	'revoke-user-sessions',
+	'remove-user',
+	'set-user-password',
+	'has-permission'
+].map((path) => `/admin/${path}`);
+
+type ClaimInfo = { user: Record<string, unknown>; scopes: string[] };
+
+function identityClaims({ user, scopes }: ClaimInfo) {
+	return {
+		...(scopes.includes('profile') && { preferred_username: user.username }),
+		...(scopes.includes('roles') && { roles: grantedRoles(user.role as string) })
+	};
 }
 
 export const auth = betterAuth({
@@ -70,7 +102,17 @@ export const auth = betterAuth({
 		}
 	},
 
+	disabledPaths: ADMIN_PLUGIN_PATHS,
+
 	plugins: [
+		admin({
+			ac: lockedAc,
+			roles: { member: noPermissions, organizer: noPermissions, admin: noPermissions },
+			defaultRole: 'member',
+			adminRoles: ['admin'],
+			bannedUserMessage:
+				'This Purdue Hackers ID has been suspended. Reach out to an organizer if you think this is a mistake.'
+		}),
 		username({
 			minUsernameLength: USERNAME_MIN_LENGTH,
 			maxUsernameLength: USERNAME_MAX_LENGTH,
@@ -119,11 +161,11 @@ export const auth = betterAuth({
 			allowUnauthenticatedClientRegistration: false,
 			clientRegistrationRequirePKCE: true,
 			clientRegistrationDefaultScopes: ['openid', 'profile', 'email', 'user:read'],
-			clientRegistrationAllowedScopes: ['openid', 'profile', 'email', 'user:read', 'user'],
-			customUserInfoClaims: ({ user, scopes }) =>
-				scopes.includes('profile') ? { preferred_username: user.username } : {},
-			customIdTokenClaims: ({ user, scopes }) =>
-				scopes.includes('profile') ? { preferred_username: user.username } : {},
+			clientRegistrationAllowedScopes: ['openid', 'profile', 'email', 'roles', 'user:read', 'user'],
+			customUserInfoClaims: identityClaims,
+			customIdTokenClaims: identityClaims,
+			customAccessTokenClaims: ({ user, scopes }) =>
+				user && scopes.includes('roles') ? { roles: grantedRoles(user.role as string) } : {},
 			accessTokenExpiresIn: 60 * 60,
 			refreshTokenExpiresIn: 60 * 60 * 24 * 30,
 			prefix: {

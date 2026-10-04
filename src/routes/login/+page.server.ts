@@ -2,6 +2,9 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { APIError } from 'better-auth/api';
+import { eq } from 'drizzle-orm';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema';
 import { normalizeUsername, usernameProblem } from '$lib/username';
 
 function safeNext(raw: string | null | undefined): string {
@@ -48,6 +51,15 @@ function message(error: unknown, fallback: string) {
 	return error instanceof APIError ? error.message || fallback : fallback;
 }
 
+async function emailForUsername(username: string) {
+	const [row] = await db
+		.select({ email: user.email })
+		.from(user)
+		.where(eq(user.username, normalizeUsername(username)))
+		.limit(1);
+	return row?.email ?? '';
+}
+
 function toVerify(email: string, next: string): never {
 	redirect(302, `/verify?email=${encodeURIComponent(email)}&next=${encodeURIComponent(next)}`);
 }
@@ -56,16 +68,27 @@ export const actions: Actions = {
 	signIn: async (event) => {
 		const formData = await event.request.formData();
 		const next = safeNext(formData.get('next')?.toString());
-		const email = formData.get('email')?.toString() ?? '';
+		const identifier = formData.get('identifier')?.toString().trim() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
+		const byEmail = identifier.includes('@');
 
 		try {
-			await auth.api.signInEmail({ body: { email, password }, headers: event.request.headers });
+			if (byEmail) {
+				await auth.api.signInEmail({
+					body: { email: identifier, password },
+					headers: event.request.headers
+				});
+			} else {
+				await auth.api.signInUsername({
+					body: { username: normalizeUsername(identifier), password },
+					headers: event.request.headers
+				});
+			}
 		} catch (error) {
 			if (error instanceof APIError && error.body?.code === 'EMAIL_NOT_VERIFIED') {
-				toVerify(email, next);
+				toVerify(byEmail ? identifier : await emailForUsername(identifier), next);
 			}
-			return fail(400, { email, message: message(error, 'Sign in failed.') });
+			return fail(400, { identifier, message: message(error, 'Sign in failed.') });
 		}
 
 		redirect(302, next);

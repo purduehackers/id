@@ -3,14 +3,16 @@
 	import { resolve } from '$app/paths';
 	import type { LayoutData } from './$types';
 	import type { Snippet } from 'svelte';
+	import { ROLE_LABELS, type Role } from '$lib/roles';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
-	const links = [
+	const links = $derived([
 		{ href: resolve('/'), label: 'Account' },
 		{ href: resolve('/authorized'), label: 'Authorized apps' },
-		{ href: resolve('/applications'), label: 'Your applications' }
-	];
+		{ href: resolve('/applications'), label: 'Your applications' },
+		...(data.user.role === 'admin' ? [{ href: resolve('/users'), label: 'Users' }] : [])
+	]);
 </script>
 
 <main class="mx-auto max-w-xl px-4 py-16 font-serif text-gray-900">
@@ -19,6 +21,7 @@
 	</h1>
 	<p class="mt-1 text-gray-600">
 		{data.user.email}
+		{#if data.user.role !== 'member'}<span> · {ROLE_LABELS[data.user.role as Role]}</span>{/if}
 		{#if !data.user.emailVerified}<span class="text-amber-700"> not verified</span>{/if}
 	</p>
 
