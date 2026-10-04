@@ -4,6 +4,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { jwt } from 'better-auth/plugins/jwt';
 import { emailOTP } from 'better-auth/plugins/email-otp';
+import { username } from 'better-auth/plugins/username';
 import { oauthProvider } from '@better-auth/oauth-provider';
 import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
@@ -11,6 +12,12 @@ import { db } from '$lib/server/db';
 import { uuidv7 } from '$lib/server/uuid';
 import { SCOPES } from '$lib/server/scopes';
 import { emailConfigured, sendEmail } from '$lib/server/email';
+import {
+	USERNAME_MAX_LENGTH,
+	USERNAME_MIN_LENGTH,
+	USERNAME_PATTERN,
+	normalizeUsername
+} from '$lib/username';
 
 const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
@@ -25,7 +32,8 @@ export const auth = betterAuth({
 	emailAndPassword: {
 		enabled: true,
 		minPasswordLength: 10,
-		requireEmailVerification: true
+		requireEmailVerification: true,
+		revokeSessionsOnPasswordReset: true
 	},
 
 	emailVerification: {
@@ -35,13 +43,13 @@ export const auth = betterAuth({
 
 	socialProviders: {
 		discord: {
-			clientId: env.DISCORD_CLIENT_ID,
+			clientId: env.DISCORD_CLIENT_ID!,
 			clientSecret: env.DISCORD_CLIENT_SECRET,
 			disableSignUp: true,
 			scope: ['identify', 'email', 'guilds.members.read']
 		},
 		github: {
-			clientId: env.GITHUB_CLIENT_ID,
+			clientId: env.GITHUB_CLIENT_ID!,
 			clientSecret: env.GITHUB_CLIENT_SECRET,
 			disableSignUp: true
 		}
@@ -63,6 +71,14 @@ export const auth = betterAuth({
 	},
 
 	plugins: [
+		username({
+			minUsernameLength: USERNAME_MIN_LENGTH,
+			maxUsernameLength: USERNAME_MAX_LENGTH,
+			usernameNormalization: normalizeUsername,
+			usernameValidator: (value) => USERNAME_PATTERN.test(value),
+			validationOrder: { username: 'post-normalization' },
+			displayUsername: false
+		}),
 		emailOTP({
 			overrideDefaultEmailVerification: true,
 			otpLength: 6,
@@ -71,16 +87,27 @@ export const auth = betterAuth({
 			storeOTP: 'hashed',
 			generateOTP: () => devFixedOtp ?? '',
 			async sendVerificationOTP({ email, otp, type }) {
-				if (type !== 'email-verification') return;
-				await sendEmail({
-					to: email,
-					subject: `${otp} is your Purdue Hackers ID code`,
-					text: [
-						`Your verification code is ${otp}.`,
-						'',
-						'It expires in ten minutes. If you did not create a Purdue Hackers ID, you can ignore this email.'
-					].join('\n')
-				});
+				if (type === 'email-verification') {
+					await sendEmail({
+						to: email,
+						subject: `${otp} is your Purdue Hackers ID code`,
+						text: [
+							`Your verification code is ${otp}.`,
+							'',
+							'It expires in ten minutes. If you did not create a Purdue Hackers ID, you can ignore this email.'
+						].join('\n')
+					});
+				} else if (type === 'forget-password') {
+					await sendEmail({
+						to: email,
+						subject: `${otp} is your Purdue Hackers ID password reset code`,
+						text: [
+							`Your password reset code is ${otp}.`,
+							'',
+							'It expires in ten minutes. If you did not ask to reset your password, you can ignore this email.'
+						].join('\n')
+					});
+				}
 			}
 		}),
 		jwt(),
@@ -93,6 +120,10 @@ export const auth = betterAuth({
 			clientRegistrationRequirePKCE: true,
 			clientRegistrationDefaultScopes: ['openid', 'profile', 'email', 'user:read'],
 			clientRegistrationAllowedScopes: ['openid', 'profile', 'email', 'user:read', 'user'],
+			customUserInfoClaims: ({ user, scopes }) =>
+				scopes.includes('profile') ? { preferred_username: user.username } : {},
+			customIdTokenClaims: ({ user, scopes }) =>
+				scopes.includes('profile') ? { preferred_username: user.username } : {},
 			accessTokenExpiresIn: 60 * 60,
 			refreshTokenExpiresIn: 60 * 60 * 24 * 30,
 			prefix: {

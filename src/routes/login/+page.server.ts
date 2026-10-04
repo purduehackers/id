@@ -2,6 +2,7 @@ import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { APIError } from 'better-auth/api';
+import { normalizeUsername, usernameProblem } from '$lib/username';
 
 function safeNext(raw: string | null | undefined): string {
 	if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
@@ -76,16 +77,24 @@ export const actions: Actions = {
 		const email = formData.get('email')?.toString() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
 		const name = formData.get('name')?.toString().trim() ?? '';
+		const username = normalizeUsername(formData.get('username')?.toString() ?? '');
 
-		if (!name) return fail(400, { email, message: 'Tell us your name.' });
+		if (!name) return fail(400, { email, name, username, message: 'Tell us your name.' });
+		const problem = usernameProblem(username);
+		if (problem) return fail(400, { email, name, username, message: problem });
 
 		try {
 			await auth.api.signUpEmail({
-				body: { email, password, name },
+				body: { email, password, name, username },
 				headers: event.request.headers
 			});
 		} catch (error) {
-			return fail(400, { email, message: message(error, 'Could not create the account.') });
+			return fail(400, {
+				email,
+				name,
+				username,
+				message: message(error, 'Could not create the account.')
+			});
 		}
 
 		toVerify(email, next);

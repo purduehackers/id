@@ -1,9 +1,17 @@
 <script lang="ts">
+	import { untrack } from 'svelte';
+	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, normalizeUsername } from '$lib/username';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let registering = $state(false);
+	let registering = $state(untrack(() => form?.username !== undefined));
+
+	function onUsernameInput(event: Event & { currentTarget: HTMLInputElement }) {
+		const input = event.currentTarget;
+		input.value = normalizeUsername(input.value).replace(/[^a-z0-9]/g, '');
+	}
 </script>
 
 <svelte:head><title>Sign in - Purdue Hackers ID</title></svelte:head>
@@ -27,8 +35,29 @@
 				<input
 					name="name"
 					required
+					value={form?.name ?? ''}
 					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 				/>
+			</label>
+
+			<label class="mt-3 block">
+				Username
+				<input
+					name="username"
+					required
+					minlength={USERNAME_MIN_LENGTH}
+					maxlength={USERNAME_MAX_LENGTH}
+					pattern="[a-z0-9]+"
+					autocomplete="username"
+					autocapitalize="none"
+					spellcheck="false"
+					value={form?.username ?? ''}
+					oninput={onUsernameInput}
+					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
+				/>
+				<span class="text-sm text-gray-500">
+					{USERNAME_MIN_LENGTH} to {USERNAME_MAX_LENGTH} letters and numbers.
+				</span>
 			</label>
 		{/if}
 
@@ -60,6 +89,14 @@
 			{registering ? 'Create account' : 'Sign in'}
 		</button>
 	</form>
+
+	{#if !registering}
+		<p class="mt-3 text-sm text-gray-600">
+			<a href="{resolve('/forgot')}?next={encodeURIComponent(data.next)}" class="underline">
+				Forgot your password?
+			</a>
+		</p>
+	{/if}
 
 	{#if !registering}
 		<form method="post" action="?/social" class="mt-8">

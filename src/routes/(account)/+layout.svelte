@@ -14,7 +14,9 @@
 </script>
 
 <main class="mx-auto max-w-xl px-4 py-16 font-serif text-gray-900">
-	<h1 class="text-2xl">{data.user.name}</h1>
+	<h1 class="text-2xl">
+		{data.user.name} <span class="text-gray-500">@{data.user.username}</span>
+	</h1>
 	<p class="mt-1 text-gray-600">
 		{data.user.email}
 		{#if !data.user.emailVerified}<span class="text-amber-700"> not verified</span>{/if}
