@@ -57,7 +57,9 @@ function identityClaims({ user, scopes }: ClaimInfo) {
 }
 
 export const auth = betterAuth({
-	baseURL: env.ORIGIN,
+	baseURL: env.ORIGIN ?? {
+		allowedHosts: ['id.purduehackers.com', '*.vercel.app']
+	},
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 
