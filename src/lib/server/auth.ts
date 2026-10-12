@@ -20,7 +20,7 @@ import {
 	USERNAME_PATTERN,
 	normalizeUsername
 } from '$lib/username';
-import { grantedRoles } from '$lib/roles';
+import { accessTokenClaims, identityClaims } from '$lib/server/claims';
 
 const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
@@ -46,15 +46,6 @@ const ADMIN_PLUGIN_PATHS = [
 	'set-user-password',
 	'has-permission'
 ].map((path) => `/admin/${path}`);
-
-type ClaimInfo = { user: Record<string, unknown>; scopes: string[] };
-
-function identityClaims({ user, scopes }: ClaimInfo) {
-	return {
-		...(scopes.includes('profile') && { preferred_username: user.username }),
-		...(scopes.includes('roles') && { roles: grantedRoles(user.role as string) })
-	};
-}
 
 export const auth = betterAuth({
 	baseURL: env.ORIGIN ?? {
@@ -166,8 +157,7 @@ export const auth = betterAuth({
 			clientRegistrationAllowedScopes: ['openid', 'profile', 'email', 'roles', 'user:read', 'user'],
 			customUserInfoClaims: identityClaims,
 			customIdTokenClaims: identityClaims,
-			customAccessTokenClaims: ({ user, scopes }) =>
-				user && scopes.includes('roles') ? { roles: grantedRoles(user.role as string) } : {},
+			customAccessTokenClaims: accessTokenClaims,
 			accessTokenExpiresIn: 60 * 60,
 			refreshTokenExpiresIn: 60 * 60 * 24 * 30,
 			prefix: {

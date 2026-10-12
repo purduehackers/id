@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { requireUser } from '$lib/server/guard';
 import { MEMBER_CLIENT_SCOPES, SCOPE_DESCRIPTIONS } from '$lib/server/scopes';
+import { previewTokens } from '$lib/server/claims';
 
 type Client = {
 	client_id: string;
@@ -11,14 +12,16 @@ type Client = {
 	scope?: string;
 	token_endpoint_auth_method?: string;
 	client_id_issued_at?: number;
+	enable_end_session?: boolean;
 };
 
 export const load: PageServerLoad = async (event) => {
-	requireUser(event);
+	const user = requireUser(event);
 
 	const clients = (await auth.api.getOAuthClients({
 		headers: event.request.headers
 	})) as unknown as Client[];
+	const { baseURL: issuer } = await auth.$context;
 
 	return {
 		discovery: `${event.url.origin}/api/auth/.well-known/openid-configuration`,
@@ -26,14 +29,23 @@ export const load: PageServerLoad = async (event) => {
 			scope,
 			description: SCOPE_DESCRIPTIONS[scope]
 		})),
-		applications: clients.map((client) => ({
-			clientId: client.client_id,
-			name: client.client_name ?? client.client_id,
-			redirectUris: client.redirect_uris,
-			scopes: client.scope?.split(' ').filter(Boolean) ?? [],
-			confidential: client.token_endpoint_auth_method !== 'none',
-			createdAt: client.client_id_issued_at ? client.client_id_issued_at * 1000 : null
-		}))
+		applications: clients.map((client) => {
+			const scopes = client.scope?.split(' ').filter(Boolean) ?? [];
+			return {
+				clientId: client.client_id,
+				name: client.client_name ?? client.client_id,
+				redirectUris: client.redirect_uris,
+				scopes,
+				confidential: client.token_endpoint_auth_method !== 'none',
+				createdAt: client.client_id_issued_at ? client.client_id_issued_at * 1000 : null,
+				preview: previewTokens(
+					user,
+					{ clientId: client.client_id, enableEndSession: !!client.enable_end_session },
+					scopes,
+					issuer
+				)
+			};
+		})
 	};
 };
 

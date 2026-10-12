@@ -8,6 +8,7 @@
 
 	let issued = $derived(form?.created ?? form?.rotated);
 	const when = (ms: number | null) => (ms ? new Date(ms).toLocaleDateString() : '');
+	const json = (value: unknown) => JSON.stringify(value, null, 2);
 </script>
 
 <svelte:head><title>Your applications - Purdue Hackers ID</title></svelte:head>
@@ -74,6 +75,37 @@
 					<dt class="inline">scopes</dt>
 					<dd class="inline font-mono">{app.scopes.join(' ')}</dd>
 				</dl>
+
+				<details class="mt-2 text-sm">
+					<summary class="inline-block cursor-pointer border border-gray-900 px-3 py-1">
+						Preview token JSON
+					</summary>
+					{#if app.preview}
+						<p class="mt-2 text-gray-600">
+							Hypothetical data this app would get it if your account granted every scope above:
+						</p>
+						<h3 class="mt-3">ID token payload</h3>
+						<pre class="mt-1 overflow-x-auto bg-gray-100 p-2 font-mono text-xs">{json(
+								app.preview.idToken
+							)}</pre>
+						<h3 class="mt-3">
+							<span class="font-mono">GET /api/auth/oauth2/userinfo</span>
+						</h3>
+						<pre class="mt-1 overflow-x-auto bg-gray-100 p-2 font-mono text-xs">{json(
+								app.preview.userinfo
+							)}</pre>
+						{#if Object.keys(app.preview.accessToken).length}
+							<h3 class="mt-3">Extra access token claims (JWT access tokens and introspection)</h3>
+							<pre class="mt-1 overflow-x-auto bg-gray-100 p-2 font-mono text-xs">{json(
+									app.preview.accessToken
+								)}</pre>
+						{/if}
+					{:else}
+						<p class="mt-2 text-gray-600">
+							Without the <span class="font-mono">openid</span> scope there is no ID token.
+						</p>
+					{/if}
+				</details>
 			</li>
 		{/each}
 	</ul>
