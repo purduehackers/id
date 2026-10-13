@@ -1,7 +1,7 @@
 import { error, fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
-import { SCOPE_DESCRIPTIONS } from '$lib/server/scopes';
+import { SCOPE_DESCRIPTIONS, isDirectoryScope } from '$lib/server/scopes';
 
 function oauthQuery(url: URL): string {
 	return url.search.replace(/^\?/, '');
@@ -30,10 +30,14 @@ export const load: PageServerLoad = async (event) => {
 		error(400, 'Unknown application.');
 	}
 
-	const scopes = (event.url.searchParams.get('scope') ?? '')
-		.split(/\s+/)
-		.filter(Boolean)
-		.map((scope) => ({ scope, description: SCOPE_DESCRIPTIONS[scope] ?? scope }));
+	const requested = (event.url.searchParams.get('scope') ?? '').split(/\s+/).filter(Boolean);
+	if (requested.some(isDirectoryScope))
+		error(400, 'This application asked for access you cannot grant.');
+
+	const scopes = requested.map((scope) => ({
+		scope,
+		description: SCOPE_DESCRIPTIONS[scope] ?? scope
+	}));
 
 	return {
 		query,

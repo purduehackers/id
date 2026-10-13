@@ -5,7 +5,7 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const when = (value: string | Date) => new Date(value).toLocaleDateString();
-	const roleLabel = (role: string | null) => (isRole(role) ? ROLE_LABELS[role] : role);
+	const roleLabel = (role: string | null) => (isRole(role) ? ROLE_LABELS[role] : 'no role');
 
 	function confirmRole(event: SubmitEvent & { currentTarget: HTMLFormElement }, username: string) {
 		const role = new FormData(event.currentTarget).get('value');
@@ -73,6 +73,7 @@
 						>
 							<input type="hidden" name="userId" value={person.id} />
 							<select name="value" class="border border-gray-400 px-2 py-1 font-sans">
+								<option value="" selected={!isRole(person.role)}>No role</option>
 								{#each data.roles as { role, label } (role)}
 									<option value={role} selected={role === person.role}>{label}</option>
 								{/each}
@@ -111,7 +112,7 @@
 <h2 class="mt-12 text-lg">Recent changes</h2>
 
 {#if data.events.length === 0}
-	<p class="mt-2 text-gray-600">No role changes or bans yet.</p>
+	<p class="mt-2 text-gray-600">No role changes, bans or app access changes yet.</p>
 {:else}
 	<ul class="mt-2 text-sm">
 		{#each data.events as event (event.id)}
@@ -122,6 +123,9 @@
 						changed @{event.targetUsername} from {roleLabel(event.from)} to {roleLabel(event.to)}
 					{:else if event.action === 'ban'}
 						banned @{event.targetUsername}{event.to ? `: ${event.to}` : ''}
+					{:else if event.action === 'access'}
+						{event.to ? `gave ${event.appName} ${event.to}` : `revoked access for ${event.appName}`}
+						<span class="text-gray-500">(by @{event.targetUsername})</span>
 					{:else}
 						unbanned @{event.targetUsername}
 					{/if}

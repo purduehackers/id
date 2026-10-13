@@ -3,7 +3,7 @@
 	import { resolve } from '$app/paths';
 	import type { LayoutData } from './$types';
 	import type { Snippet } from 'svelte';
-	import { ROLE_LABELS, type Role } from '$lib/roles';
+	import { ROLE_LABELS, isRole } from '$lib/roles';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -11,7 +11,12 @@
 		{ href: resolve('/'), label: 'Account' },
 		{ href: resolve('/authorized'), label: 'Authorized apps' },
 		{ href: resolve('/applications'), label: 'Your applications' },
-		...(data.user.role === 'admin' ? [{ href: resolve('/users'), label: 'Users' }] : [])
+		...(data.user.role === 'admin'
+			? [
+					{ href: resolve('/users'), label: 'Users' },
+					{ href: resolve('/access'), label: 'App access' }
+				]
+			: [])
 	]);
 </script>
 
@@ -21,7 +26,7 @@
 	</h1>
 	<p class="mt-1 text-gray-600">
 		{data.user.email}
-		{#if data.user.role !== 'member'}<span> · {ROLE_LABELS[data.user.role as Role]}</span>{/if}
+		{#if isRole(data.user.role)}<span> · {ROLE_LABELS[data.user.role]}</span>{/if}
 		{#if !data.user.emailVerified}<span class="text-amber-700"> not verified</span>{/if}
 	</p>
 

@@ -1,10 +1,16 @@
-export const ROLES = ['member', 'organizer', 'admin'] as const;
+export const ROLES = ['alumni', 'organizer', 'admin'] as const;
 export type Role = (typeof ROLES)[number];
 
 export const ROLE_LABELS: Record<Role, string> = {
-	member: 'Member',
+	alumni: 'Alumni',
 	organizer: 'Organizer',
 	admin: 'Admin'
+};
+
+const GRANTS: Record<Role, Role[]> = {
+	alumni: ['alumni'],
+	organizer: ['organizer'],
+	admin: ['organizer', 'admin']
 };
 
 export function isRole(value: unknown): value is Role {
@@ -12,10 +18,10 @@ export function isRole(value: unknown): value is Role {
 }
 
 export function grantedRoles(role: string | null | undefined): Role[] {
-	const rank = ROLES.indexOf(isRole(role) ? role : 'member');
-	return ROLES.slice(0, rank + 1);
+	return isRole(role) ? GRANTS[role] : [];
 }
 
-export function outranks(a: Role, b: Role) {
-	return ROLES.indexOf(a) > ROLES.indexOf(b);
+export function losesRoles(from: string | null, to: string | null) {
+	const kept = new Set(grantedRoles(to));
+	return grantedRoles(from).some((role) => !kept.has(role));
 }

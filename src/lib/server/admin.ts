@@ -9,7 +9,8 @@ import {
 	user
 } from '$lib/server/db/schema';
 import { uuidv7 } from '$lib/server/uuid';
-import { isRole, outranks, type Role } from '$lib/roles';
+import { isRole, losesRoles } from '$lib/roles';
+import { banChanged, deliverSoon, enqueueForUser, rolesChanged } from '$lib/server/webhooks';
 
 type Actor = { id: string; username: string };
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -70,24 +71,28 @@ function audit(tx: Tx, actor: Actor, target: { id: string; username: string }) {
 		});
 }
 
-export async function setRole(actor: Actor, targetId: string, role: string) {
-	if (!isRole(role)) throw new AdminError('That is not a role.');
+export async function setRole(actor: Actor, targetId: string, value: string) {
+	const role = value || null;
+	if (role !== null && !isRole(role)) throw new AdminError('That is not a role.');
 
-	return db.transaction(async (tx) => {
+	const username = await db.transaction(async (tx) => {
 		const target = await findTarget(tx, actor, targetId);
-		const from = (isRole(target.role) ? target.role : 'member') as Role;
+		const from = isRole(target.role) ? target.role : null;
 		if (from === role) return target.username;
 
 		await tx.update(user).set({ role }).where(eq(user.id, target.id));
 		await audit(tx, actor, target)({ action: 'role', from, to: role });
-		if (outranks(from, role)) await revokeOAuthTokens(tx, target.id);
+		await enqueueForUser(tx, target, 'user.roles.changed', rolesChanged(from, role));
+		if (losesRoles(from, role)) await revokeOAuthTokens(tx, target.id);
 
 		return target.username;
 	});
+	deliverSoon();
+	return username;
 }
 
 export async function ban(actor: Actor, targetId: string, reason: string) {
-	return db.transaction(async (tx) => {
+	const username = await db.transaction(async (tx) => {
 		const target = await findTarget(tx, actor, targetId);
 		if (target.banned) return target.username;
 
@@ -98,13 +103,16 @@ export async function ban(actor: Actor, targetId: string, reason: string) {
 		await tx.delete(session).where(eq(session.userId, target.id));
 		await revokeOAuthTokens(tx, target.id);
 		await audit(tx, actor, target)({ action: 'ban', to: reason || null });
+		await enqueueForUser(tx, target, 'user.banned', banChanged);
 
 		return target.username;
 	});
+	deliverSoon();
+	return username;
 }
 
 export async function unban(actor: Actor, targetId: string) {
-	return db.transaction(async (tx) => {
+	const username = await db.transaction(async (tx) => {
 		const target = await findTarget(tx, actor, targetId);
 		if (!target.banned) return target.username;
 
@@ -113,7 +121,10 @@ export async function unban(actor: Actor, targetId: string) {
 			.set({ banned: false, banReason: null, banExpires: null })
 			.where(eq(user.id, target.id));
 		await audit(tx, actor, target)({ action: 'unban' });
+		await enqueueForUser(tx, target, 'user.unbanned', banChanged);
 
 		return target.username;
 	});
+	deliverSoon();
+	return username;
 }

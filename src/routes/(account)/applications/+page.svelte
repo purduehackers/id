@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -53,6 +54,10 @@
 						</span>
 					</span>
 					<span class="flex gap-2">
+						<a
+							href={resolve('/(account)/applications/[clientId]', { clientId: app.clientId })}
+							class="border border-gray-900 px-3 py-1">Manage</a
+						>
 						{#if app.confidential}
 							<form method="post" action="?/rotate">
 								<input type="hidden" name="clientId" value={app.clientId} />

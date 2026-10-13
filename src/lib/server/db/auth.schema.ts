@@ -15,7 +15,7 @@ export const user = sqliteTable('user', {
 		.$onUpdate(() => /* @__PURE__ */ new Date())
 		.notNull(),
 	username: text('username').notNull().unique(),
-	role: text('role').default('member').notNull(),
+	role: text('role'),
 	banned: integer('banned', { mode: 'boolean' }).default(false).notNull(),
 	banReason: text('ban_reason'),
 	banExpires: integer('ban_expires', { mode: 'timestamp_ms' })

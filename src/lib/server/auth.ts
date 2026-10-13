@@ -1,5 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { betterAuth } from 'better-auth/minimal';
+import { APIError, createAuthMiddleware } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { jwt } from 'better-auth/plugins/jwt';
@@ -12,7 +13,7 @@ import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
 import { db } from '$lib/server/db';
 import { uuidv7 } from '$lib/server/uuid';
-import { SCOPES } from '$lib/server/scopes';
+import { DIRECTORY_RESOURCE, DIRECTORY_SCOPES, SCOPES, isDirectoryScope } from '$lib/server/scopes';
 import { emailConfigured, sendEmail } from '$lib/server/email';
 import {
 	USERNAME_MAX_LENGTH,
@@ -21,6 +22,7 @@ import {
 	normalizeUsername
 } from '$lib/username';
 import { accessTokenClaims, identityClaims } from '$lib/server/claims';
+import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 
 const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
@@ -97,11 +99,54 @@ export const auth = betterAuth({
 
 	disabledPaths: ADMIN_PLUGIN_PATHS,
 
+	hooks: {
+		before: createAuthMiddleware(async (ctx) => {
+			if (
+				!['/oauth2/create-client', '/oauth2/update-client', '/oauth2/register'].includes(ctx.path)
+			) {
+				return;
+			}
+			const scope = String(ctx.body?.update?.scope ?? ctx.body?.scope ?? '');
+			if (scope.split(/\s+/).some(isDirectoryScope)) {
+				throw new APIError('BAD_REQUEST', {
+					error: 'invalid_scope',
+					error_description: 'Directory scopes are granted by admins.'
+				});
+			}
+		})
+	},
+
+	databaseHooks: {
+		user: {
+			create: {
+				before: async (data) => ({ data: { ...data, role: null } })
+			},
+			update: {
+				after: (updated) => recordProfileUpdate(updated)
+			}
+		},
+		account: {
+			create: {
+				async after(account) {
+					if (account.providerId === 'discord') {
+						await recordDiscordLink(account.userId, account.accountId, true);
+					}
+				}
+			},
+			delete: {
+				async after(account) {
+					if (account.providerId === 'discord') {
+						await recordDiscordLink(account.userId, account.accountId, false);
+					}
+				}
+			}
+		}
+	},
+
 	plugins: [
 		admin({
 			ac: lockedAc,
-			roles: { member: noPermissions, organizer: noPermissions, admin: noPermissions },
-			defaultRole: 'member',
+			roles: { alumni: noPermissions, organizer: noPermissions, admin: noPermissions },
 			adminRoles: ['admin'],
 			bannedUserMessage:
 				'This Purdue Hackers ID has been suspended. Reach out to an organizer if you think this is a mistake.'
@@ -158,6 +203,16 @@ export const auth = betterAuth({
 			customUserInfoClaims: identityClaims,
 			customIdTokenClaims: identityClaims,
 			customAccessTokenClaims: accessTokenClaims,
+			resources: [
+				{
+					identifier: DIRECTORY_RESOURCE,
+					name: 'Purdue Hackers directory',
+					allowedScopes: DIRECTORY_SCOPES,
+					accessTokenTtl: 60 * 5
+				}
+			],
+			clientPrivileges: ({ action, user }) =>
+				action !== 'configure-client-credentials-scopes' || user?.role === 'admin',
 			accessTokenExpiresIn: 60 * 60,
 			refreshTokenExpiresIn: 60 * 60 * 24 * 30,
 			prefix: {
