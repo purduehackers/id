@@ -75,7 +75,7 @@
 					<dd class="inline font-mono break-all">{app.clientId}</dd>
 					<br />
 					<dt class="inline">redirects</dt>
-					<dd class="inline font-mono break-all">{app.redirectUris.join(', ')}</dd>
+					<dd class="inline font-mono break-all">{app.redirectUris.join(', ') || 'none'}</dd>
 					<br />
 					<dt class="inline">scopes</dt>
 					<dd class="inline font-mono">{app.scopes.join(' ')}</dd>
@@ -133,7 +133,6 @@
 		Redirect URLs (one per line)
 		<textarea
 			name="redirectUris"
-			required
 			rows="3"
 			placeholder="https://myapp.com/api/auth/callback/purduehackers"
 			class="mt-1 block w-full border border-gray-400 px-2 py-1 font-mono text-sm"

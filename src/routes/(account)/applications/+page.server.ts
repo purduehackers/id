@@ -34,7 +34,7 @@ export const load: PageServerLoad = async (event) => {
 			return {
 				clientId: client.client_id,
 				name: client.client_name ?? client.client_id,
-				redirectUris: client.redirect_uris,
+				redirectUris: client.redirect_uris ?? [],
 				scopes,
 				confidential: client.token_endpoint_auth_method !== 'none',
 				createdAt: client.client_id_issued_at ? client.client_id_issued_at * 1000 : null,
@@ -61,7 +61,6 @@ function parseRedirectUris(raw: string): string[] | string {
 		.split(/\s+/)
 		.map((line) => line.trim())
 		.filter(Boolean);
-	if (uris.length === 0) return 'Add at least one redirect URL.';
 	for (const uri of uris) {
 		try {
 			new URL(uri);
@@ -87,6 +86,13 @@ export const actions: Actions = {
 		const redirectUris = parseRedirectUris(redirectRaw);
 		if (typeof redirectUris === 'string') return fail(400, { ...values, message: redirectUris });
 
+		const signIn = redirectUris.length > 0;
+		if (!signIn && !confidential)
+			return fail(400, {
+				...values,
+				message: 'An application without redirect URLs has to be confidential.'
+			});
+
 		const scopes = requested.filter((s) => (MEMBER_CLIENT_SCOPES as string[]).includes(s));
 		if (scopes.length === 0) return fail(400, { ...values, message: 'Pick at least one scope.' });
 
@@ -100,14 +106,22 @@ export const actions: Actions = {
 			created = (await auth.api.createOAuthClient({
 				body: {
 					client_name: name,
-					redirect_uris: redirectUris,
 					scope: scopes.join(' '),
 					token_endpoint_auth_method: confidential ? 'client_secret_basic' : 'none',
 					application_type: native ? 'native' : 'web',
-					grant_types: scopes.includes('offline_access')
-						? ['authorization_code', 'refresh_token']
-						: ['authorization_code'],
-					response_types: ['code']
+					...(signIn
+						? {
+								redirect_uris: redirectUris,
+								grant_types: scopes.includes('offline_access')
+									? ['authorization_code', 'refresh_token']
+									: ['authorization_code'],
+								response_types: ['code']
+							}
+						: {
+								// better-auth wants at least one grant. client_credentials stays unusable
+								// until directory access grants it scopes.
+								grant_types: ['client_credentials']
+							})
 				},
 				headers: event.request.headers
 			})) as { client_id: string; client_secret?: string };
