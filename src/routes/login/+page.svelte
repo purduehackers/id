@@ -6,7 +6,7 @@
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
-	let registering = $state(untrack(() => form?.username !== undefined));
+	let registering = $state(untrack(() => form?.username !== undefined || data.signup));
 
 	function onUsernameInput(event: Event & { currentTarget: HTMLInputElement }) {
 		const input = event.currentTarget;
@@ -35,7 +35,7 @@
 				<input
 					name="name"
 					required
-					value={form?.name ?? ''}
+					value={form?.name ?? data.name}
 					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 				/>
 			</label>
@@ -113,11 +113,15 @@
 	{#if !registering}
 		<form method="post" action="?/social" class="mt-8">
 			<input type="hidden" name="next" value={data.next} />
-			<p class="text-gray-600">Or, if you have connected one:</p>
-			<div class="mt-2 flex gap-2">
+			<p class="text-gray-600">Or continue with:</p>
+			<div class="mt-2 flex flex-wrap gap-2">
+				<a
+					href="{resolve('/passport')}?next={encodeURIComponent(data.next)}"
+					class="border border-gray-900 px-3 py-1">Passport</a
+				>
 				{#each data.providers as provider (provider.id)}
 					<button name="provider" value={provider.id} class="border border-gray-900 px-3 py-1">
-						Continue with {provider.label}
+						{provider.label}
 					</button>
 				{/each}
 			</div>

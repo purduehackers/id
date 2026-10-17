@@ -12,6 +12,11 @@
 	<p class="mt-4 text-red-700">{form?.message ?? data.error}</p>
 {:else if data.notice}
 	<p class="mt-4 text-green-700">{data.notice}</p>
+{:else if data.welcome}
+	<p class="mt-4 text-green-700">
+		Welcome back! Connect the Discord account you used with Purdue Hackers below, and your passport
+		comes with you.
+	</p>
 {/if}
 
 <h2 class="mt-8 text-lg">Connected accounts</h2>

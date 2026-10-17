@@ -16,6 +16,8 @@
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",
+		"passports:import": "deno run -A scripts/import-passports.ts",
+		"passports:check": "deno run -A scripts/check-passport-hash.ts",
 		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes && deno run -A scripts/fix-auth-schema.ts && prettier --write src/lib/server/db/auth.schema.ts"
 	},
 	"devDependencies": {

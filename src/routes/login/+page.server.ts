@@ -42,6 +42,8 @@ export const load: PageServerLoad = (event) => {
 	const code = event.url.searchParams.get('error');
 	return {
 		next,
+		signup: event.url.searchParams.has('signup'),
+		name: event.url.searchParams.get('name')?.slice(0, 100) ?? '',
 		providers: PROVIDERS,
 		error: code ? (SIGN_IN_ERRORS[code] ?? `Sign in failed (${code}).`) : null
 	};

@@ -74,3 +74,48 @@ export const directoryAccess = sqliteTable('directory_access', {
 	requestedAt: integer('requested_at', { mode: 'timestamp_ms' }).notNull(),
 	decidedAt: integer('decided_at', { mode: 'timestamp_ms' })
 });
+
+export const passport = sqliteTable('passport', {
+	id: integer('id').primaryKey(),
+	discordId: text('discord_id').notNull(),
+	secretHash: text('secret_hash').notNull(),
+	activated: integer('activated', { mode: 'boolean' }).default(false).notNull(),
+	importedAt: integer('imported_at', { mode: 'timestamp_ms' })
+		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+		.notNull()
+});
+
+export const passportLogin = sqliteTable(
+	'passport_login',
+	{
+		id: text('id').primaryKey(),
+		passportId: integer('passport_id')
+			.notNull()
+			.references(() => passport.id, { onDelete: 'cascade' }),
+		code: text('code').notNull(),
+		status: text('status', { enum: ['pending', 'approved', 'used'] })
+			.default('pending')
+			.notNull(),
+		userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
+		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull()
+	},
+	(table) => [index('passportLogin_passportId_idx').on(table.passportId)]
+);
+
+export const passportTap = sqliteTable('passport_tap', {
+	tokenHash: text('token_hash').primaryKey(),
+	passportId: integer('passport_id')
+		.notNull()
+		.references(() => passport.id, { onDelete: 'cascade' }),
+	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull()
+});
+
+export const legacyMember = sqliteTable('legacy_member', {
+	discordId: text('discord_id').primaryKey(),
+	oldUserId: text('old_user_id').notNull(),
+	name: text('name').notNull(),
+	givenName: text('given_name'),
+	familyName: text('family_name'),
+	claimedBy: text('claimed_by').references(() => user.id, { onDelete: 'set null' }),
+	claimedAt: integer('claimed_at', { mode: 'timestamp_ms' })
+});

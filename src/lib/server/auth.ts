@@ -23,6 +23,7 @@ import {
 } from '$lib/username';
 import { accessTokenClaims, identityClaims } from '$lib/server/claims';
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
+import { passportSignIn } from '$lib/server/passport-plugin';
 
 const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
@@ -191,6 +192,7 @@ export const auth = betterAuth({
 			}
 		}),
 		jwt(),
+		passportSignIn(),
 		oauthProvider({
 			loginPage: '/login',
 			consentPage: '/oauth2/consent',

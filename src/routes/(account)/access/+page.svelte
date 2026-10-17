@@ -24,7 +24,8 @@
 
 <h2 class="mt-8 text-lg">App access</h2>
 <p class="mt-1 text-sm text-gray-600">
-	Apps that asked to see every member. Granting lets them list members and receive webhooks about everyone (not just people who signed into them)
+	Apps that asked to see every member. Granting lets them list members and receive webhooks about
+	everyone (not just people who signed into them)
 </p>
 
 {#if data.apps.length === 0}
