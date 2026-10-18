@@ -2,6 +2,12 @@
 	import { invalidateAll } from '$app/navigation';
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import AuthShell from '$lib/components/AuthShell.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import Link from '$lib/components/ph/Link.svelte';
+	import LinkButton from '$lib/components/ph/LinkButton.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -22,38 +28,43 @@
 
 <svelte:head><title>Sign in with your passport - Purdue Hackers ID</title></svelte:head>
 
-<main class="mx-auto max-w-sm px-4 py-16 font-serif text-gray-900">
-	<h1 class="text-2xl">Sign in with your passport</h1>
+<AuthShell>
+	<PageTitle title="Sign in with your passport">
+		{#if data.approvedAs}
+			Your phone approved this sign-in.
+		{:else if data.code}
+			Tap your passport with your phone, then type this code there:
+		{/if}
+	</PageTitle>
 
 	{#if form?.message ?? data.error}
-		<p class="mt-4 text-red-700">{form?.message ?? data.error}</p>
+		<Notice>{form?.message ?? data.error}</Notice>
 	{/if}
 
 	{#if data.approvedAs}
-		<p class="mt-1 text-gray-600">Your phone approved this sign-in.</p>
-		<form method="post" action="?/complete" class="mt-6">
+		<form method="post" action="?/complete" class="enter" style="--i: 1">
 			<input type="hidden" name="next" value={data.next} />
-			<button class="border border-gray-900 bg-gray-900 px-3 py-1 text-white">
-				Continue as @{data.approvedAs.username}
-			</button>
+			<DitherButton type="submit">Continue as @{data.approvedAs.username}</DitherButton>
 		</form>
-		<form method="post" action="?/cancel" class="mt-4 text-sm text-gray-600">
+		<form method="post" action="?/cancel" class="enter" style="--i: 2">
 			<input type="hidden" name="next" value={data.next} />
-			Not you? <button class="underline">Start over</button>
+			Not you? <LinkButton>Start over</LinkButton>
 		</form>
 	{:else if data.code}
-		<p class="mt-1 text-gray-600">Tap your passport with your phone, then type this code there:</p>
-		<p class="mt-6 font-mono text-5xl tracking-widest">{pretty(data.code)}</p>
-		<p class="mt-6 text-sm text-gray-500">This page updates by itself once you approve it.</p>
-		<form method="post" action="?/cancel" class="mt-4 text-sm text-gray-600">
+		<p
+			class="enter border border-foreground grid-bg py-8 text-center font-mono text-5xl font-semibold tracking-[0.2em] sm:text-6xl"
+			style="--i: 1"
+		>
+			{pretty(data.code)}
+		</p>
+		<p class="enter" style="--i: 2">This page updates by itself once you approve it.</p>
+		<form method="post" action="?/cancel" class="enter" style="--i: 3">
 			<input type="hidden" name="next" value={data.next} />
-			<button class="underline">Get a new code</button>
+			<LinkButton>Get a new code</LinkButton>
 		</form>
 	{/if}
 
-	<p class="mt-8 text-sm text-gray-500">
-		<a href="{resolve('/login')}?next={encodeURIComponent(data.next)}" class="underline"
-			>Sign in another way</a
-		>
+	<p class="enter" style="--i: 4">
+		<Link href="{resolve('/login')}?next={encodeURIComponent(data.next)}">Sign in another way</Link>
 	</p>
-</main>
+</AuthShell>

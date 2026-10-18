@@ -3,6 +3,16 @@
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 	import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, normalizeUsername } from '$lib/username';
+	import AuthShell from '$lib/components/AuthShell.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import Button from '$lib/components/ph/Button.svelte';
+	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import Field from '$lib/components/ph/Field.svelte';
+	import Input from '$lib/components/ph/Input.svelte';
+	import Link from '$lib/components/ph/Link.svelte';
+	import LinkButton from '$lib/components/ph/LinkButton.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
+	import Separator from '$lib/components/ph/Separator.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -16,33 +26,33 @@
 
 <svelte:head><title>Sign in - Purdue Hackers ID</title></svelte:head>
 
-<main class="mx-auto max-w-sm px-4 py-16 font-serif text-gray-900">
-	<h1 class="text-2xl">Purdue Hackers ID</h1>
-	<p class="mt-1 text-gray-600">
-		{registering ? 'Make an account.' : 'Sign in to continue.'}
-	</p>
+<AuthShell>
+	<PageTitle title={registering ? 'Make an account' : 'Sign in'}>
+		{registering
+			? 'One account for every Purdue Hackers app.'
+			: 'Use your Purdue Hackers ID to continue.'}
+	</PageTitle>
 
 	{#if form?.message ?? data.error}
-		<p class="mt-4 text-red-700">{form?.message ?? data.error}</p>
+		<Notice>{form?.message ?? data.error}</Notice>
 	{/if}
 
-	<form method="post" action={registering ? '?/signUp' : '?/signIn'} class="mt-6">
+	<form
+		method="post"
+		action={registering ? '?/signUp' : '?/signIn'}
+		class="flex enter flex-col gap-4"
+		style="--i: 1"
+	>
 		<input type="hidden" name="next" value={data.next} />
 
 		{#if registering}
-			<label class="block">
-				Name
-				<input
-					name="name"
-					required
-					value={form?.name ?? data.name}
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
-				/>
-			</label>
+			<Field label="Name" for="name">
+				<Input id="name" name="name" required autocomplete="name" value={form?.name ?? data.name} />
+			</Field>
 
-			<label class="mt-3 block">
-				Username
-				<input
+			<Field label="Username" for="username" hint="Lowercase letters and numbers.">
+				<Input
+					id="username"
 					name="username"
 					required
 					minlength={USERNAME_MIN_LENGTH}
@@ -53,85 +63,89 @@
 					spellcheck="false"
 					value={form?.username ?? ''}
 					oninput={onUsernameInput}
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 				/>
-			</label>
-		{/if}
+			</Field>
 
-		{#if registering}
-			<label class="mt-3 block">
-				Email
-				<input
+			<Field label="Email" for="email">
+				<Input
+					id="email"
 					name="email"
 					type="email"
 					required
 					autocomplete="email"
 					value={form && 'email' in form ? form.email : ''}
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 				/>
-			</label>
+			</Field>
 		{:else}
-			<label class="mt-3 block">
-				Email or username
-				<input
+			<Field label="Email or username" for="identifier">
+				<Input
+					id="identifier"
 					name="identifier"
 					required
 					autocomplete="username"
 					autocapitalize="none"
 					spellcheck="false"
 					value={form && 'identifier' in form ? form.identifier : ''}
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 				/>
-			</label>
+			</Field>
 		{/if}
 
-		<label class="mt-3 block">
-			Password
-			<input
+		<Field
+			label="Password"
+			for="password"
+			hint={registering ? 'At least ten characters.' : undefined}
+		>
+			<Input
+				id="password"
 				name="password"
 				type="password"
 				required
-				minlength="10"
+				minlength={10}
 				autocomplete={registering ? 'new-password' : 'current-password'}
-				class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 			/>
-		</label>
+		</Field>
 
-		<button class="mt-4 border border-gray-900 bg-gray-900 px-3 py-1 text-white">
-			{registering ? 'Create account' : 'Sign in'}
-		</button>
+		<div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+			<DitherButton type="submit">{registering ? 'Create account' : 'Sign in'}</DitherButton>
+			{#if !registering}
+				<Link href="{resolve('/forgot')}?next={encodeURIComponent(data.next)}">
+					Forgot your password?
+				</Link>
+			{/if}
+		</div>
 	</form>
 
 	{#if !registering}
-		<p class="mt-3 text-sm text-gray-600">
-			<a href="{resolve('/forgot')}?next={encodeURIComponent(data.next)}" class="underline">
-				Forgot your password?
-			</a>
-		</p>
-	{/if}
-
-	{#if !registering}
-		<form method="post" action="?/social" class="mt-8">
+		<form method="post" action="?/social" class="flex enter flex-col gap-3" style="--i: 2">
 			<input type="hidden" name="next" value={data.next} />
-			<p class="text-gray-600">Or continue with:</p>
-			<div class="mt-2 flex flex-wrap gap-2">
-				<a
+			<Separator label="Or continue with" />
+			<div class="flex flex-wrap gap-2">
+				<Button
+					variant="outline"
+					icon="credit-card"
 					href="{resolve('/passport')}?next={encodeURIComponent(data.next)}"
-					class="border border-gray-900 px-3 py-1">Passport</a
 				>
+					Passport
+				</Button>
 				{#each data.providers as provider (provider.id)}
-					<button name="provider" value={provider.id} class="border border-gray-900 px-3 py-1">
+					<Button
+						type="submit"
+						variant="outline"
+						name="provider"
+						value={provider.id}
+						icon={provider.id === 'discord' || provider.id === 'github' ? provider.id : undefined}
+					>
 						{provider.label}
-					</button>
+					</Button>
 				{/each}
 			</div>
 		</form>
 	{/if}
 
-	<p class="mt-8 text-gray-600">
+	<p class="enter" style="--i: 3">
 		{registering ? 'Already have an account?' : 'No account yet?'}
-		<button class="underline" onclick={() => (registering = !registering)}>
+		<LinkButton type="button" onclick={() => (registering = !registering)}>
 			{registering ? 'Sign in' : 'Create one'}
-		</button>
+		</LinkButton>
 	</p>
-</main>
+</AuthShell>

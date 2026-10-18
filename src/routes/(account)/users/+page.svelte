@@ -1,6 +1,13 @@
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
 	import { ROLE_LABELS, isRole } from '$lib/roles';
+	import Section from '$lib/components/Section.svelte';
+	import Badge from '$lib/components/ph/Badge.svelte';
+	import Button from '$lib/components/ph/Button.svelte';
+	import Input from '$lib/components/ph/Input.svelte';
+	import LinkButton from '$lib/components/ph/LinkButton.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
+	import Select from '$lib/components/ph/Select.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -27,149 +34,168 @@
 <svelte:head><title>Users - Purdue Hackers ID</title></svelte:head>
 
 {#if form && 'message' in form}
-	<p class="mt-4 text-red-700">{form.message}</p>
+	<Notice>{form.message}</Notice>
 {:else if form && 'notice' in form}
-	<p class="mt-4 text-green-700">{form.notice}</p>
+	<Notice tone="success">{form.notice}</Notice>
 {/if}
 
-<h2 class="mt-8 text-lg">Users</h2>
+<Section title="Users">
+	<form method="get" class="flex gap-2">
+		<Input
+			name="q"
+			type="search"
+			value={data.query}
+			placeholder="Username, email or name"
+			aria-label="Search users"
+			class="flex-1"
+		/>
+		<Button type="submit" variant="outline" icon="search">Search</Button>
+	</form>
 
-<form method="get" class="mt-2 flex gap-2">
-	<input
-		name="q"
-		value={data.query}
-		placeholder="Username, email or name"
-		class="block w-full border border-gray-400 px-2 py-1 font-sans"
-	/>
-	<button class="border border-gray-900 px-3 py-1">Search</button>
-</form>
-
-{#if data.users.length === 0}
-	<p class="mt-4 text-gray-600">Nobody matches that.</p>
-{:else}
-	<ul class="mt-2">
-		{#each data.users as person (person.id)}
-			<li class="border-b border-gray-200 py-3">
-				<div class="flex items-baseline justify-between gap-4">
-					<span>
-						{person.name}
-						<span class="text-gray-500">@{person.username}</span>
-						{#if person.banned}<span class="text-red-700"> banned</span>{/if}
-					</span>
-					<span class="text-sm text-gray-500">joined {when(person.createdAt)}</span>
-				</div>
-				<p class="text-sm text-gray-600">{person.email}</p>
-				{#if person.banned && person.banReason}
-					<p class="text-sm text-gray-600">Reason: {person.banReason}</p>
-				{/if}
-
-				<div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
-					<span class="text-gray-600">Passports:</span>
-					{#each person.passports as id (id)}
-						<form method="post" action="?/passport" class="flex items-center gap-1">
-							<input type="hidden" name="passport" value={id} />
-							<span class="font-mono">#{id}</span>
-							<button class="text-gray-500 underline" aria-label="Take passport {id} back">
-								remove
-							</button>
-						</form>
-					{:else}
-						<span class="text-gray-500">none</span>
-					{/each}
-					<form method="post" action="?/passport" class="flex gap-1">
-						<input type="hidden" name="userId" value={person.id} />
-						<input
-							name="passport"
-							inputmode="numeric"
-							required
-							placeholder="Passport #"
-							class="w-28 border border-gray-400 px-2 py-0.5 font-mono"
-						/>
-						<button class="border border-gray-900 px-2 py-0.5">Give</button>
-					</form>
-				</div>
-
-				{#if person.id !== data.me}
-					<div class="mt-2 flex flex-wrap items-center gap-2">
-						<form
-							method="post"
-							action="?/role"
-							class="flex gap-2"
-							onsubmit={(event) => confirmRole(event, person.username)}
-						>
-							<input type="hidden" name="userId" value={person.id} />
-							<select name="value" class="border border-gray-400 px-2 py-1 font-sans">
-								<option value="" selected={!isRole(person.role)}>No role</option>
-								{#each data.roles as { role, label } (role)}
-									<option value={role} selected={role === person.role}>{label}</option>
-								{/each}
-							</select>
-							<button class="border border-gray-900 px-3 py-1">Save</button>
-						</form>
-
-						{#if person.banned}
-							<form method="post" action="?/unban">
-								<input type="hidden" name="userId" value={person.id} />
-								<button class="border border-gray-900 px-3 py-1">Unban</button>
-							</form>
-						{:else}
-							<form
-								method="post"
-								action="?/ban"
-								class="flex gap-2"
-								onsubmit={(event) => confirmBan(event, person.username)}
-							>
-								<input type="hidden" name="userId" value={person.id} />
-								<input
-									name="value"
-									placeholder="Reason (optional)"
-									class="border border-gray-400 px-2 py-1 font-sans"
-								/>
-								<button class="border border-red-700 px-3 py-1 text-red-700">Ban</button>
-							</form>
+	{#if data.users.length === 0}
+		<p>Nobody matches that.</p>
+	{:else}
+		<ul class="border-t border-border">
+			{#each data.users as person (person.id)}
+				<li class="flex flex-col gap-3 border-b border-border py-4">
+					<div class="flex flex-wrap items-center justify-between gap-3">
+						<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+							<span class="text-lg font-medium">{person.name}</span>
+							<span class="font-mono text-[13px] font-semibold">@{person.username}</span>
+							{#if isRole(person.role)}<Badge color="purple">{ROLE_LABELS[person.role]}</Badge>{/if}
+							{#if person.banned}<Badge color="orange">Banned</Badge>{/if}
+						</span>
+						<span class="font-mono text-[13px]">joined {when(person.createdAt)}</span>
+					</div>
+					<div class="flex flex-col gap-0.5">
+						<p class="break-all">{person.email}</p>
+						{#if person.banned && person.banReason}
+							<p>Reason: {person.banReason}</p>
 						{/if}
 					</div>
-				{/if}
-			</li>
-		{/each}
-	</ul>
-{/if}
 
-<h2 class="mt-12 text-lg">Recent changes</h2>
-
-{#if data.events.length === 0}
-	<p class="mt-2 text-gray-600">No role changes, bans or app access changes yet.</p>
-{:else}
-	<ul class="mt-2 text-sm">
-		{#each data.events as event (event.id)}
-			<li class="flex items-baseline justify-between gap-4 border-b border-gray-200 py-2">
-				<span>
-					<span class="text-gray-900">@{event.actorUsername}</span>
-					{#if event.action === 'role'}
-						changed @{event.targetUsername} from {roleLabel(event.from)} to {roleLabel(event.to)}
-					{:else if event.action === 'ban'}
-						banned @{event.targetUsername}{event.to ? `: ${event.to}` : ''}
-					{:else if event.action === 'passport'}
-						{#if event.targetUsername === 'nobody'}
-							took passport #{event.to} from @{event.from}
-						{:else if event.actorUsername === event.targetUsername}
-							{event.from
-								? `took passport #${event.to} back from @${event.from}`
-								: `claimed passport #${event.to}`}
+					<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+						<span class="ph-subheadline text-[12px]">Passports</span>
+						{#each person.passports as id (id)}
+							<form method="post" action="?/passport" class="flex items-center gap-1.5">
+								<input type="hidden" name="passport" value={id} />
+								<span class="font-mono font-semibold">#{id}</span>
+								<LinkButton aria-label="Take passport {id} back" class="text-[13px]">
+									remove
+								</LinkButton>
+							</form>
 						{:else}
-							gave passport #{event.to} to @{event.targetUsername}{event.from
-								? ` (was @${event.from})`
-								: ''}
-						{/if}
-					{:else if event.action === 'access'}
-						{event.to ? `gave ${event.appName} ${event.to}` : `revoked access for ${event.appName}`}
-						<span class="text-gray-500">(by @{event.targetUsername})</span>
-					{:else}
-						unbanned @{event.targetUsername}
+							<span class="font-mono text-[13px]">none</span>
+						{/each}
+						<form method="post" action="?/passport" class="flex gap-1.5">
+							<input type="hidden" name="userId" value={person.id} />
+							<Input
+								name="passport"
+								inputmode="numeric"
+								required
+								placeholder="Passport #"
+								aria-label="Passport number for @{person.username}"
+								class="h-8 w-28 font-mono text-[13px]"
+							/>
+							<Button type="submit" variant="outline" size="sm">Give</Button>
+						</form>
+					</div>
+
+					{#if person.id !== data.me}
+						<div class="flex flex-wrap items-center gap-2">
+							<form
+								method="post"
+								action="?/role"
+								class="flex gap-2"
+								onsubmit={(event) => confirmRole(event, person.username)}
+							>
+								<input type="hidden" name="userId" value={person.id} />
+								<Select name="value" aria-label="Role for @{person.username}">
+									<option value="" selected={!isRole(person.role)}>No role</option>
+									{#each data.roles as { role, label } (role)}
+										<option value={role} selected={role === person.role}>{label}</option>
+									{/each}
+								</Select>
+								<Button type="submit" variant="outline">Save</Button>
+							</form>
+
+							{#if person.banned}
+								<form method="post" action="?/unban">
+									<input type="hidden" name="userId" value={person.id} />
+									<Button type="submit" variant="outline">Unban</Button>
+								</form>
+							{:else}
+								<form
+									method="post"
+									action="?/ban"
+									class="flex gap-2"
+									onsubmit={(event) => confirmBan(event, person.username)}
+								>
+									<input type="hidden" name="userId" value={person.id} />
+									<Input
+										name="value"
+										placeholder="Reason (optional)"
+										aria-label="Ban reason for @{person.username}"
+										class="w-48"
+									/>
+									<Button
+										type="submit"
+										variant="outline"
+										class="hover:border-ph-orange hover:bg-ph-orange hover:text-ph-black"
+									>
+										Ban
+									</Button>
+								</form>
+							{/if}
+						</div>
 					{/if}
-				</span>
-				<span class="shrink-0 text-gray-500">{new Date(event.createdAt).toLocaleString()}</span>
-			</li>
-		{/each}
-	</ul>
-{/if}
+				</li>
+			{/each}
+		</ul>
+	{/if}
+</Section>
+
+<Section title="Recent changes">
+	{#if data.events.length === 0}
+		<p>No role changes, bans or app access changes yet.</p>
+	{:else}
+		<ul class="border-t border-border">
+			{#each data.events as event (event.id)}
+				<li
+					class="flex flex-col justify-between gap-x-4 gap-y-0.5 border-b border-border py-2.5 sm:flex-row sm:items-baseline"
+				>
+					<span>
+						<span class="font-mono font-semibold">@{event.actorUsername}</span>
+						{#if event.action === 'role'}
+							changed @{event.targetUsername} from {roleLabel(event.from)} to {roleLabel(event.to)}
+						{:else if event.action === 'ban'}
+							banned @{event.targetUsername}{event.to ? `: ${event.to}` : ''}
+						{:else if event.action === 'passport'}
+							{#if event.targetUsername === 'nobody'}
+								took passport #{event.to} from @{event.from}
+							{:else if event.actorUsername === event.targetUsername}
+								{event.from
+									? `took passport #${event.to} back from @${event.from}`
+									: `claimed passport #${event.to}`}
+							{:else}
+								gave passport #{event.to} to @{event.targetUsername}{event.from
+									? ` (was @${event.from})`
+									: ''}
+							{/if}
+						{:else if event.action === 'access'}
+							{event.to
+								? `gave ${event.appName} ${event.to}`
+								: `revoked access for ${event.appName}`}
+							(by @{event.targetUsername})
+						{:else}
+							unbanned @{event.targetUsername}
+						{/if}
+					</span>
+					<span class="shrink-0 font-mono text-[13px]">
+						{new Date(event.createdAt).toLocaleString()}
+					</span>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+</Section>

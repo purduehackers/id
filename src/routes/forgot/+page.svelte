@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import AuthShell from '$lib/components/AuthShell.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import Field from '$lib/components/ph/Field.svelte';
+	import Input from '$lib/components/ph/Input.svelte';
+	import Link from '$lib/components/ph/Link.svelte';
+	import LinkButton from '$lib/components/ph/LinkButton.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -11,96 +19,84 @@
 
 <svelte:head><title>Reset your password - Purdue Hackers ID</title></svelte:head>
 
-<main class="mx-auto max-w-sm px-4 py-16 font-serif text-gray-900">
-	<h1 class="text-2xl">Reset your password</h1>
-
-	{#if data.email}
-		<p class="mt-1 text-gray-600">
-			If <span class="text-gray-900">{data.email}</span> has a Purdue Hackers ID, we sent it a six-digit
+<AuthShell>
+	<PageTitle title="Reset your password">
+		{#if data.email}
+			If <strong class="font-medium">{data.email}</strong> has a Purdue Hackers ID, we sent it a six-digit
 			code. It is good for ten minutes.
-		</p>
-	{:else}
-		<p class="mt-1 text-gray-600">We will email you a code to set a new one.</p>
-	{/if}
+		{:else}
+			We will email you a code to set a new one.
+		{/if}
+	</PageTitle>
 
 	{#if form?.message}
-		<p class="mt-4 text-red-700">{form.message}</p>
+		<Notice>{form.message}</Notice>
 	{:else if form && 'notice' in form}
-		<p class="mt-4 text-green-700">{form.notice}</p>
+		<Notice tone="success">{form.notice}</Notice>
 	{/if}
 
 	{#if data.email}
-		<form method="post" action="?/reset&{keep}" class="mt-6">
+		<form method="post" action="?/reset&{keep}" class="flex enter flex-col gap-4" style="--i: 1">
 			<input type="hidden" name="email" value={data.email} />
 			<input type="hidden" name="next" value={data.next} />
 
-			<label class="block">
-				Code
-				<input
+			<Field label="Code" for="otp">
+				<Input
+					id="otp"
 					name="otp"
 					inputmode="numeric"
 					autocomplete="one-time-code"
 					pattern="[0-9 ]*"
-					maxlength="7"
+					maxlength={7}
 					required
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-mono text-lg tracking-widest"
+					class="h-14 font-mono text-2xl tracking-[0.3em]"
 				/>
-			</label>
+			</Field>
 
-			<label class="mt-3 block">
-				New password
-				<input
+			<Field label="New password" for="password" hint="At least ten characters.">
+				<Input
+					id="password"
 					name="password"
 					type="password"
 					required
-					minlength="10"
+					minlength={10}
 					autocomplete="new-password"
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
 				/>
-			</label>
+			</Field>
 
-			<button class="mt-4 border border-gray-900 bg-gray-900 px-3 py-1 text-white">
-				Set new password
-			</button>
+			<DitherButton type="submit" class="mt-2">Set new password</DitherButton>
 		</form>
 
-		<form method="post" action="?/resend&{keep}" class="mt-8 text-gray-600">
+		<form method="post" action="?/resend&{keep}" class="enter" style="--i: 2">
 			<input type="hidden" name="email" value={data.email} />
-			Nothing arrived?
-			<button class="underline">Send another code</button>
+			Nothing arrived? <LinkButton>Send another code</LinkButton>
 		</form>
 
-		<p class="mt-8 text-sm text-gray-500">
-			Wrong address? <a
-				href="{resolve('/forgot')}?next={encodeURIComponent(data.next)}"
-				class="underline">Start over</a
+		<p class="enter" style="--i: 3">
+			Wrong address? <Link href="{resolve('/forgot')}?next={encodeURIComponent(data.next)}"
+				>Start over</Link
 			>.
 		</p>
 	{:else}
-		<form method="post" action="?/request&next={encodeURIComponent(data.next)}" class="mt-6">
+		<form
+			method="post"
+			action="?/request&next={encodeURIComponent(data.next)}"
+			class="flex enter flex-col gap-4"
+			style="--i: 1"
+		>
 			<input type="hidden" name="next" value={data.next} />
 
-			<label class="block">
-				Email
-				<input
-					name="email"
-					type="email"
-					required
-					autocomplete="email"
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
-				/>
-			</label>
+			<Field label="Email" for="email">
+				<Input id="email" name="email" type="email" required autocomplete="email" />
+			</Field>
 
-			<button class="mt-4 border border-gray-900 bg-gray-900 px-3 py-1 text-white">
-				Send code
-			</button>
+			<DitherButton type="submit" class="mt-2">Send code</DitherButton>
 		</form>
 
-		<p class="mt-8 text-sm text-gray-500">
-			Remembered it? <a
-				href="{resolve('/login')}?next={encodeURIComponent(data.next)}"
-				class="underline">Sign in</a
+		<p class="enter" style="--i: 2">
+			Remembered it? <Link href="{resolve('/login')}?next={encodeURIComponent(data.next)}"
+				>Sign in</Link
 			>.
 		</p>
 	{/if}
-</main>
+</AuthShell>

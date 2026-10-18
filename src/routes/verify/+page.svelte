@@ -1,6 +1,14 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import AuthShell from '$lib/components/AuthShell.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import Field from '$lib/components/ph/Field.svelte';
+	import Input from '$lib/components/ph/Input.svelte';
+	import Link from '$lib/components/ph/Link.svelte';
+	import LinkButton from '$lib/components/ph/LinkButton.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -13,46 +21,44 @@
 
 <svelte:head><title>Verify your email - Purdue Hackers ID</title></svelte:head>
 
-<main class="mx-auto max-w-sm px-4 py-16 font-serif text-gray-900">
-	<h1 class="text-2xl">Check your email</h1>
-	<p class="mt-1 text-gray-600">
-		We sent a six-digit code to <span class="text-gray-900">{data.email}</span>. It is good for ten
-		minutes.
-	</p>
+<AuthShell>
+	<PageTitle title="Check your email">
+		We sent a six-digit code to <strong class="font-medium">{data.email}</strong>. It is good for
+		ten minutes.
+	</PageTitle>
 
 	{#if form?.message}
-		<p class="mt-4 text-red-700">{form.message}</p>
+		<Notice>{form.message}</Notice>
 	{:else if form?.notice}
-		<p class="mt-4 text-green-700">{form.notice}</p>
+		<Notice tone="success">{form.notice}</Notice>
 	{/if}
 
-	<form method="post" action="?/verify&{keep}" class="mt-6">
+	<form method="post" action="?/verify&{keep}" class="flex enter flex-col gap-4" style="--i: 1">
 		<input type="hidden" name="email" value={data.email} />
 		<input type="hidden" name="next" value={data.next} />
 
-		<label class="block">
-			Code
-			<input
+		<Field label="Code" for="otp">
+			<Input
+				id="otp"
 				name="otp"
 				inputmode="numeric"
 				autocomplete="one-time-code"
 				pattern="[0-9 ]*"
-				maxlength="7"
+				maxlength={7}
 				required
-				class="mt-1 block w-full border border-gray-400 px-2 py-1 font-mono text-lg tracking-widest"
+				class="h-14 font-mono text-2xl tracking-[0.3em]"
 			/>
-		</label>
+		</Field>
 
-		<button class="mt-4 border border-gray-900 bg-gray-900 px-3 py-1 text-white">Verify</button>
+		<DitherButton type="submit" class="mt-2">Verify</DitherButton>
 	</form>
 
-	<form method="post" action="?/resend&{keep}" class="mt-8 text-gray-600">
+	<form method="post" action="?/resend&{keep}" class="enter" style="--i: 2">
 		<input type="hidden" name="email" value={data.email} />
-		Nothing arrived?
-		<button class="underline">Send another code</button>
+		Nothing arrived? <LinkButton>Send another code</LinkButton>
 	</form>
 
-	<p class="mt-8 text-sm text-gray-500">
-		Wrong address? <a href={resolve('/login')} class="underline">Start over</a>.
+	<p class="enter" style="--i: 3">
+		Wrong address? <Link href={resolve('/login')}>Start over</Link>.
 	</p>
-</main>
+</AuthShell>

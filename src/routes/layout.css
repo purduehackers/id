@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import './ph.css';
 @plugin '@tailwindcss/typography';
 
 @layer base {

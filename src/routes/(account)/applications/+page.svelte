@@ -1,6 +1,18 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import Section from '$lib/components/Section.svelte';
+	import Badge from '$lib/components/ph/Badge.svelte';
+	import Button from '$lib/components/ph/Button.svelte';
+	import Callout from '$lib/components/ph/Callout.svelte';
+	import Checkbox from '$lib/components/ph/Checkbox.svelte';
+	import Code from '$lib/components/ph/Code.svelte';
+	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import Field from '$lib/components/ph/Field.svelte';
+	import Icon from '$lib/components/ph/Icon.svelte';
+	import Input from '$lib/components/ph/Input.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
+	import Textarea from '$lib/components/ph/Textarea.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -15,160 +27,160 @@
 <svelte:head><title>Your applications - Purdue Hackers ID</title></svelte:head>
 
 {#if form?.message}
-	<p class="mt-4 text-red-700">{form.message}</p>
+	<Notice>{form.message}</Notice>
 {:else if form?.deleted}
-	<p class="mt-4 text-green-700">Deleted.</p>
+	<Notice tone="success">Deleted.</Notice>
 {/if}
 
 {#if issued}
-	<div class="mt-6 border border-gray-900 p-4">
-		<p>
-			{form?.created ? `Created ${form.created.name}.` : 'New secret issued.'}
-			{#if issued.clientSecret}Copy the secret now, as it will not be shown again.{/if}
-		</p>
-		<dl class="mt-3 font-mono text-sm">
-			<dt class="text-gray-500">client_id</dt>
-			<dd class="break-all">{issued.clientId}</dd>
+	<Callout icon="lock" title={form?.created ? `Created ${form.created.name}` : 'New secret issued'}>
+		{#if issued.clientSecret}<p>Copy the secret now, as it will not be shown again.</p>{/if}
+		<dl class="mt-3 flex flex-col gap-1 font-mono text-[13px]">
+			<dt class="font-semibold uppercase">client_id</dt>
+			<dd class="border border-border bg-card px-2 py-1 break-all select-all">{issued.clientId}</dd>
 			{#if issued.clientSecret}
-				<dt class="mt-2 text-gray-500">client_secret</dt>
-				<dd class="break-all">{issued.clientSecret}</dd>
+				<dt class="mt-2 font-semibold uppercase">client_secret</dt>
+				<dd class="border border-border bg-card px-2 py-1 break-all select-all">
+					{issued.clientSecret}
+				</dd>
 			{/if}
 		</dl>
-	</div>
+	</Callout>
 {/if}
 
-<h2 class="mt-8 text-lg">Your applications</h2>
+<Section title="Your applications">
+	{#snippet description()}
+		{#if data.applications.length === 0}
+			You have not registered any applications.
+		{:else}
+			Apps that sign people in with Purdue Hackers ID.
+		{/if}
+	{/snippet}
 
-{#if data.applications.length === 0}
-	<p class="mt-2 text-gray-600">You have not registered any applications.</p>
-{:else}
-	<ul class="mt-2">
-		{#each data.applications as app (app.clientId)}
-			<li class="border-b border-gray-200 py-3">
-				<div class="flex items-baseline justify-between gap-4">
-					<span>
-						{app.name}
-						<span class="text-sm text-gray-500">
-							{app.confidential ? 'confidential' : 'public'}
-							{#if app.device}device{/if}
-							{when(app.createdAt)}
+	{#if data.applications.length}
+		<ul class="border-t border-border">
+			{#each data.applications as app (app.clientId)}
+				<li class="flex flex-col gap-3 border-b border-border py-4">
+					<div class="flex flex-wrap items-center justify-between gap-3">
+						<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
+							<a
+								href={resolve('/(account)/applications/[clientId]', { clientId: app.clientId })}
+								class="text-lg font-medium no-underline hover:text-ph-purple">{app.name}</a
+							>
+							<Badge color={app.confidential ? 'blue' : 'outline'}>
+								{app.confidential ? 'Confidential' : 'Public'}
+							</Badge>
+							{#if app.device}<Badge color="teal">Device</Badge>{/if}
+							<span class="font-mono text-[13px]">{when(app.createdAt)}</span>
 						</span>
-					</span>
-					<span class="flex gap-2">
-						<a
-							href={resolve('/(account)/applications/[clientId]', { clientId: app.clientId })}
-							class="border border-gray-900 px-3 py-1">Manage</a
-						>
-						{#if app.confidential}
-							<form method="post" action="?/rotate">
+						<span class="flex flex-wrap gap-2">
+							<Button
+								size="sm"
+								iconEnd="arrow-right"
+								href={resolve('/(account)/applications/[clientId]', { clientId: app.clientId })}
+							>
+								Manage
+							</Button>
+							{#if app.confidential}
+								<form method="post" action="?/rotate">
+									<input type="hidden" name="clientId" value={app.clientId} />
+									<Button type="submit" variant="outline" size="sm" icon="refresh"
+										>New secret</Button
+									>
+								</form>
+							{/if}
+							<form method="post" action="?/delete">
 								<input type="hidden" name="clientId" value={app.clientId} />
-								<button class="border border-gray-900 px-3 py-1">New secret</button>
+								<Button type="submit" variant="ghost" size="sm" icon="trash">Delete</Button>
 							</form>
-						{/if}
-						<form method="post" action="?/delete">
-							<input type="hidden" name="clientId" value={app.clientId} />
-							<button class="border border-gray-900 px-3 py-1">Delete</button>
-						</form>
-					</span>
-				</div>
-				<dl class="mt-1 text-sm text-gray-600">
-					<dt class="inline">client_id</dt>
-					<dd class="inline font-mono break-all">{app.clientId}</dd>
-					<br />
-					<dt class="inline">redirects</dt>
-					<dd class="inline font-mono break-all">{app.redirectUris.join(', ') || 'none'}</dd>
-					<br />
-					<dt class="inline">scopes</dt>
-					<dd class="inline font-mono">{app.scopes.join(' ')}</dd>
-				</dl>
+						</span>
+					</div>
 
-				<details class="mt-2 text-sm">
-					<summary class="inline-block cursor-pointer border border-gray-900 px-3 py-1">
-						Preview token JSON
-					</summary>
-					{#if app.preview}
-						<p class="mt-2 text-gray-600">
-							Hypothetical data this app would get it if your account granted every scope above:
-						</p>
-						<h3 class="mt-3">ID token payload</h3>
-						<pre class="mt-1 overflow-x-auto bg-gray-100 p-2 font-mono text-xs">{json(
-								app.preview.idToken
-							)}</pre>
-						<h3 class="mt-3">
-							<span class="font-mono">GET /api/auth/oauth2/userinfo</span>
-						</h3>
-						<pre class="mt-1 overflow-x-auto bg-gray-100 p-2 font-mono text-xs">{json(
-								app.preview.userinfo
-							)}</pre>
-						{#if Object.keys(app.preview.accessToken).length}
-							<h3 class="mt-3">Extra access token claims (JWT access tokens and introspection)</h3>
-							<pre class="mt-1 overflow-x-auto bg-gray-100 p-2 font-mono text-xs">{json(
-									app.preview.accessToken
-								)}</pre>
-						{/if}
-					{:else}
-						<p class="mt-2 text-gray-600">
-							Without the <span class="font-mono">openid</span> scope there is no ID token.
-						</p>
-					{/if}
-				</details>
-			</li>
-		{/each}
-	</ul>
-{/if}
+					<dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-[13px]">
+						<dt class="ph-subheadline">client_id</dt>
+						<dd class="font-mono break-all">{app.clientId}</dd>
+						<dt class="ph-subheadline">redirects</dt>
+						<dd class="font-mono break-all">{app.redirectUris.join(', ') || 'none'}</dd>
+						<dt class="ph-subheadline">scopes</dt>
+						<dd class="font-mono">{app.scopes.join(' ')}</dd>
+					</dl>
 
-<h2 class="mt-10 text-lg">Register an application</h2>
+					<details class="group">
+						<summary
+							class="inline-flex h-8 cursor-pointer list-none items-center gap-1.5 px-2 font-mono text-[13px] font-semibold tracking-wide uppercase hover:bg-foreground/[0.08] [&::-webkit-details-marker]:hidden"
+						>
+							<Icon name="code" />
+							Preview token JSON
+							<Icon name="chevron-down" class="transition-transform group-open:rotate-180" />
+						</summary>
+						<div class="mt-3 flex flex-col gap-3">
+							{#if app.preview}
+								<p>
+									Hypothetical data this app would get if your account granted every scope above:
+								</p>
+								<h3 class="ph-subheadline text-[12px]">ID token payload</h3>
+								<Code code={json(app.preview.idToken)} />
+								<h3 class="ph-subheadline text-[12px]">GET /api/auth/oauth2/userinfo</h3>
+								<Code code={json(app.preview.userinfo)} />
+								{#if Object.keys(app.preview.accessToken).length}
+									<h3 class="ph-subheadline text-[12px]">
+										Extra access token claims (JWT access tokens and introspection)
+									</h3>
+									<Code code={json(app.preview.accessToken)} />
+								{/if}
+							{:else}
+								<p>Without the <span class="font-mono">openid</span> scope there is no ID token.</p>
+							{/if}
+						</div>
+					</details>
+				</li>
+			{/each}
+		</ul>
+	{/if}
+</Section>
 
-<form method="post" action="?/create" class="mt-3">
-	<label class="block">
-		Name
-		<input
-			name="name"
-			required
-			value={form?.name ?? ''}
-			class="mt-1 block w-full border border-gray-400 px-2 py-1 font-sans"
-		/>
-	</label>
+<Section title="Register an application">
+	<form method="post" action="?/create" class="flex flex-col gap-5">
+		<Field label="Name" for="app-name">
+			<Input id="app-name" name="name" required value={form?.name ?? ''} />
+		</Field>
 
-	<label class="mt-3 block">
-		Redirect URLs (one per line)
-		<textarea
-			name="redirectUris"
-			rows="3"
-			placeholder="https://myapp.com/api/auth/callback/purduehackers"
-			class="mt-1 block w-full border border-gray-400 px-2 py-1 font-mono text-sm"
-			>{form?.redirectUris ?? ''}</textarea
-		>
-	</label>
+		<Field label="Redirect URLs" for="app-redirects" hint="One per line.">
+			<Textarea
+				id="app-redirects"
+				name="redirectUris"
+				rows={3}
+				placeholder="https://myapp.com/api/auth/callback/purduehackers"
+				class="font-mono text-[13px]"
+				value={form?.redirectUris ?? ''}
+			/>
+		</Field>
 
-	<label class="mt-3 block">
-		<input type="checkbox" name="device" checked={!!form?.device} />
-		Device sign-in (CLIs and devices without a browser enter a code at
-		<span class="font-mono text-sm">/device</span>)
-	</label>
+		<Checkbox name="device" checked={!!form?.device}>
+			<span class="font-medium">Device sign-in.</span> CLIs and devices without a browser enter a
+			code at <span class="font-mono">/device</span>.
+		</Checkbox>
 
-	<fieldset class="mt-3">
-		<legend>Type</legend>
-		<label class="block">
-			<input type="radio" name="type" value="public" checked={!form?.confidential} />
-			Public (runs in a browser or on a phone without secret)
-		</label>
-		<label class="block">
-			<input type="radio" name="type" value="confidential" checked={!!form?.confidential} />
-			Confidential (has a server that can keep a secret)
-		</label>
-	</fieldset>
+		<fieldset class="flex flex-col gap-2.5">
+			<legend class="mb-2.5 ph-subheadline text-[12px]">Type</legend>
+			<Checkbox type="radio" name="type" value="public" checked={!form?.confidential}>
+				<span class="font-medium">Public.</span> Runs in a browser or on a phone without a secret.
+			</Checkbox>
+			<Checkbox type="radio" name="type" value="confidential" checked={!!form?.confidential}>
+				<span class="font-medium">Confidential.</span> Has a server that can keep a secret.
+			</Checkbox>
+		</fieldset>
 
-	<fieldset class="mt-3">
-		<legend>Scopes</legend>
-		{#each data.scopes as { scope, description } (scope)}
-			<label class="block">
-				<input type="checkbox" name="scope" value={scope} checked={checked(scope)} />
-				<span class="font-mono text-sm">{scope}</span>
-				<span class="text-sm text-gray-600">{description}</span>
-			</label>
-		{/each}
-	</fieldset>
+		<fieldset class="flex flex-col gap-2.5">
+			<legend class="mb-2.5 ph-subheadline text-[12px]">Scopes</legend>
+			{#each data.scopes as { scope, description } (scope)}
+				<Checkbox name="scope" value={scope} checked={checked(scope)}>
+					<span class="font-mono font-semibold">{scope}</span>
+					{description}
+				</Checkbox>
+			{/each}
+		</fieldset>
 
-	<button class="mt-4 border border-gray-900 bg-gray-900 px-3 py-1 text-white">Register</button>
-</form>
+		<DitherButton type="submit" class="mt-2">Register</DitherButton>
+	</form>
+</Section>

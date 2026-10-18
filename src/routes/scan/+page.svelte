@@ -1,93 +1,91 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import AuthShell from '$lib/components/AuthShell.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import Button from '$lib/components/ph/Button.svelte';
+	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import Field from '$lib/components/ph/Field.svelte';
+	import Input from '$lib/components/ph/Input.svelte';
+	import LinkButton from '$lib/components/ph/LinkButton.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
 <svelte:head><title>Passport - Purdue Hackers ID</title></svelte:head>
 
-<main class="mx-auto max-w-sm px-4 py-16 font-serif text-gray-900">
+<AuthShell>
 	{#if form && 'claimed' in form}
-		<h1 class="text-2xl">Passport {form.claimed} is yours</h1>
-		<p class="mt-1 text-gray-600">From now on, tapping it signs you in.</p>
-		<p class="mt-6">
-			<a href={resolve('/')} class="border border-gray-900 bg-gray-900 px-3 py-1 text-white"
-				>Go to your account</a
-			>
-		</p>
+		<PageTitle title="Passport {form.claimed} is yours">
+			From now on, tapping it signs you in.
+		</PageTitle>
+		<DitherButton href={resolve('/')} class="enter" style="--i: 1">Go to your account</DitherButton>
 	{:else if form && 'approved' in form}
-		<h1 class="text-2xl">Approved</h1>
-		<p class="mt-1 text-gray-600">
+		<PageTitle title="Approved">
 			Your other screen will continue signing you in as @{form.approved}. You can close this page.
-		</p>
+		</PageTitle>
 	{:else if data.error || (form && 'message' in form)}
-		<h1 class="text-2xl">That did not work</h1>
-		<p class="mt-4 text-red-700">{form && 'message' in form ? form.message : data.error}</p>
+		<PageTitle title="That did not work" />
+		<Notice>{form && 'message' in form ? form.message : data.error}</Notice>
 	{:else if !data.tap}
-		<h1 class="text-2xl">Tap your passport</h1>
-		<p class="mt-1 text-gray-600">Hold your phone against your passport to sign in with it.</p>
+		<PageTitle title="Tap your passport">
+			Hold your phone against your passport to sign in with it.
+		</PageTitle>
 	{:else if !data.tap.owner}
-		<h1 class="text-2xl">
-			{#if data.tap.returning}
-				Welcome back, {data.tap.returning.givenName ?? data.tap.returning.name}!
-			{:else}
-				Passport {data.tap.passportId}
-			{/if}
-		</h1>
-		<p class="mt-1 text-gray-600">
+		<PageTitle
+			title={data.tap.returning
+				? `Welcome back, ${data.tap.returning.givenName ?? data.tap.returning.name}!`
+				: `Passport ${data.tap.passportId}`}
+		>
 			{#if data.tap.returning}
 				Passport {data.tap.passportId} is from the previous Purdue Hackers ID.
 			{/if}
 			It is not linked to an account yet.
-		</p>
+		</PageTitle>
 
 		{#if data.me}
-			<form method="post" action="?/claim" class="mt-6">
-				<button class="border border-gray-900 bg-gray-900 px-3 py-1 text-white">
-					Add it to @{data.me.username}
-				</button>
+			<form method="post" action="?/claim" class="enter" style="--i: 1">
+				<DitherButton type="submit">Add it to @{data.me.username}</DitherButton>
 			</form>
 		{:else}
-			<p class="mt-6 flex flex-wrap gap-2">
-				<a
+			<div class="flex enter flex-wrap items-center gap-3" style="--i: 1">
+				<DitherButton
 					href="{resolve('/login')}?signup&name={encodeURIComponent(
 						data.tap.returning?.name ?? ''
-					)}&next={encodeURIComponent('/scan/claim')}"
-					class="border border-gray-900 bg-gray-900 px-3 py-1 text-white">Create an account</a
+					)}&next={encodeURIComponent('/scan/claim')}">Create an account</DitherButton
 				>
-				<a
-					href="{resolve('/login')}?next={encodeURIComponent('/scan/claim')}"
-					class="border border-gray-900 px-3 py-1">Log in</a
+				<Button
+					variant="outline"
+					size="lg"
+					href="{resolve('/login')}?next={encodeURIComponent('/scan/claim')}">Log in</Button
 				>
-			</p>
-			<p class="mt-4 text-sm text-gray-600">Then this passport is yours, and signs you in.</p>
+			</div>
+			<p class="enter" style="--i: 2">Then this passport is yours, and signs you in.</p>
 		{/if}
 	{:else}
-		<h1 class="text-2xl">Hi, {data.tap.owner.name}</h1>
-		<p class="mt-1 text-gray-600">Passport {data.tap.passportId}, @{data.tap.owner.username}</p>
+		<PageTitle title="Hi, {data.tap.owner.name}">
+			Passport {data.tap.passportId}, @{data.tap.owner.username}
+		</PageTitle>
 
-		<form method="post" action="?/approve" class="mt-6">
-			<label class="block">
-				Code from your other screen
-				<input
+		<form method="post" action="?/approve" class="flex enter flex-col gap-4" style="--i: 1">
+			<Field label="Code from your other screen" for="code">
+				<Input
+					id="code"
 					name="code"
 					inputmode="numeric"
 					autocomplete="off"
 					pattern="[0-9]*"
-					maxlength="7"
+					maxlength={7}
 					required
-					class="mt-1 block w-full border border-gray-400 px-2 py-1 font-mono text-3xl tracking-widest"
+					class="h-16 font-mono text-4xl tracking-[0.3em]"
 				/>
-			</label>
-			<button class="mt-4 border border-gray-900 bg-gray-900 px-3 py-1 text-white">
-				Approve sign-in
-			</button>
+			</Field>
+			<DitherButton type="submit" class="mt-2">Approve sign-in</DitherButton>
 		</form>
 
-		<form method="post" action="?/here" class="mt-8 text-gray-600">
-			Signing in on this phone instead?
-			<button class="underline">Sign in here</button>
+		<form method="post" action="?/here" class="enter" style="--i: 2">
+			Signing in on this phone instead? <LinkButton>Sign in here</LinkButton>
 		</form>
 	{/if}
-</main>
+</AuthShell>

@@ -1,40 +1,42 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import AuthShell from '$lib/components/AuthShell.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import BackLink from '$lib/components/ph/BackLink.svelte';
+	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 </script>
 
 <svelte:head><title>Add your passport - Purdue Hackers ID</title></svelte:head>
 
-<main class="mx-auto max-w-sm px-4 py-16 font-serif text-gray-900">
+<AuthShell>
 	{#if form && 'claimed' in form}
-		<h1 class="text-2xl">Passport {form.claimed} is yours</h1>
-		<p class="mt-1 text-gray-600">From now on, tapping it signs you in.</p>
+		<PageTitle title="Passport {form.claimed} is yours">
+			From now on, tapping it signs you in.
+		</PageTitle>
 	{:else if form && 'message' in form}
-		<h1 class="text-2xl">That did not work</h1>
-		<p class="mt-4 text-red-700">{form.message}</p>
+		<PageTitle title="That did not work" />
+		<Notice>{form.message}</Notice>
 	{:else if !data.passportId}
-		<h1 class="text-2xl">Tap your passport again</h1>
-		<p class="mt-1 text-gray-600">
+		<PageTitle title="Tap your passport again">
 			That tap expired. Hold your phone against your passport to add it to @{data.me.username}.
-		</p>
+		</PageTitle>
 	{:else if data.ownedBy === data.me.username}
-		<h1 class="text-2xl">Passport {data.passportId} is already yours</h1>
+		<PageTitle title="Passport {data.passportId} is already yours" />
 	{:else if data.ownedBy}
-		<h1 class="text-2xl">Passport {data.passportId}</h1>
-		<p class="mt-4 text-red-700">This passport already belongs to someone else.</p>
+		<PageTitle title="Passport {data.passportId}" />
+		<Notice>This passport already belongs to someone else.</Notice>
 	{:else}
-		<h1 class="text-2xl">Add passport {data.passportId}</h1>
-		<p class="mt-1 text-gray-600">It will belong to @{data.me.username} and sign you in.</p>
-		<form method="post" class="mt-6">
-			<button class="border border-gray-900 bg-gray-900 px-3 py-1 text-white">
-				Add to @{data.me.username}
-			</button>
+		<PageTitle title="Add passport {data.passportId}">
+			It will belong to @{data.me.username} and sign you in.
+		</PageTitle>
+		<form method="post" class="enter" style="--i: 1">
+			<DitherButton type="submit">Add to @{data.me.username}</DitherButton>
 		</form>
 	{/if}
 
-	<p class="mt-8">
-		<a href={resolve('/')} class="text-sm text-gray-500 underline">Go to your account</a>
-	</p>
-</main>
+	<BackLink href={resolve('/')} class="mt-4">Go to your account</BackLink>
+</AuthShell>
