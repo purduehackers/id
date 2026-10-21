@@ -41,7 +41,7 @@ export const load: PageServerLoad = async (event) => {
 			id: consent.id,
 			name: nameFor.get(consent.clientId) ?? consent.clientId,
 			grantedAt: consent.createdAt,
-			scopes: consent.scopes.map((scope) => SCOPE_DESCRIPTIONS[scope] ?? scope)
+			scopes: [...new Set(consent.scopes)].map((scope) => SCOPE_DESCRIPTIONS[scope] ?? scope)
 		}))
 	};
 };

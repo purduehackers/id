@@ -102,6 +102,17 @@ export const auth = betterAuth({
 
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
+			const unique = (scope: unknown) =>
+				typeof scope === 'string'
+					? [...new Set(scope.split(/\s+/).filter(Boolean))].join(' ')
+					: scope;
+			if (ctx.path === '/oauth2/authorize' && ctx.query?.scope) {
+				return { context: { query: { ...ctx.query, scope: unique(ctx.query.scope) } } };
+			}
+			if (ctx.path === '/oauth2/token' && ctx.body?.scope) {
+				return { context: { body: { ...ctx.body, scope: unique(ctx.body.scope) } } };
+			}
+
 			if (
 				!['/oauth2/create-client', '/oauth2/update-client', '/oauth2/register'].includes(ctx.path)
 			) {
