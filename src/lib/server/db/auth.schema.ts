@@ -297,6 +297,21 @@ export const oauthClientAssertion = sqliteTable('oauth_client_assertion', {
 	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull()
 });
 
+export const deviceCode = sqliteTable('device_code', {
+	id: text('id').primaryKey(),
+	deviceCode: text('device_code').notNull().unique(),
+	userCode: text('user_code').notNull().unique(),
+	userId: text('user_id'),
+	expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
+	status: text('status').notNull(),
+	lastPolledAt: integer('last_polled_at', { mode: 'timestamp_ms' }),
+	pollingInterval: integer('polling_interval'),
+	clientId: text('client_id'),
+	scope: text('scope'),
+	resources: text('resources', { mode: 'json' }),
+	oauthClientId: text('oauth_client_id')
+});
+
 export const userRelations = relations(user, ({ many }) => ({
 	sessions: many(session),
 	accounts: many(account),

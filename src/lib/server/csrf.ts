@@ -8,7 +8,8 @@ const FORM_CONTENT_TYPES = new Set([
 const SERVER_OAUTH_PATHS = new Set([
 	'/api/auth/oauth2/token',
 	'/api/auth/oauth2/introspect',
-	'/api/auth/oauth2/revoke'
+	'/api/auth/oauth2/revoke',
+	'/api/auth/device/code'
 ]);
 
 export function isServerOAuthPath(pathname: string): boolean {

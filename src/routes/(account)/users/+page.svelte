@@ -63,6 +63,32 @@
 					<p class="text-sm text-gray-600">Reason: {person.banReason}</p>
 				{/if}
 
+				<div class="mt-2 flex flex-wrap items-center gap-2 text-sm">
+					<span class="text-gray-600">Passports:</span>
+					{#each person.passports as id (id)}
+						<form method="post" action="?/passport" class="flex items-center gap-1">
+							<input type="hidden" name="passport" value={id} />
+							<span class="font-mono">#{id}</span>
+							<button class="text-gray-500 underline" aria-label="Take passport {id} back">
+								remove
+							</button>
+						</form>
+					{:else}
+						<span class="text-gray-500">none</span>
+					{/each}
+					<form method="post" action="?/passport" class="flex gap-1">
+						<input type="hidden" name="userId" value={person.id} />
+						<input
+							name="passport"
+							inputmode="numeric"
+							required
+							placeholder="Passport #"
+							class="w-28 border border-gray-400 px-2 py-0.5 font-mono"
+						/>
+						<button class="border border-gray-900 px-2 py-0.5">Give</button>
+					</form>
+				</div>
+
 				{#if person.id !== data.me}
 					<div class="mt-2 flex flex-wrap items-center gap-2">
 						<form
@@ -123,6 +149,18 @@
 						changed @{event.targetUsername} from {roleLabel(event.from)} to {roleLabel(event.to)}
 					{:else if event.action === 'ban'}
 						banned @{event.targetUsername}{event.to ? `: ${event.to}` : ''}
+					{:else if event.action === 'passport'}
+						{#if event.targetUsername === 'nobody'}
+							took passport #{event.to} from @{event.from}
+						{:else if event.actorUsername === event.targetUsername}
+							{event.from
+								? `took passport #${event.to} back from @${event.from}`
+								: `claimed passport #${event.to}`}
+						{:else}
+							gave passport #{event.to} to @{event.targetUsername}{event.from
+								? ` (was @${event.from})`
+								: ''}
+						{/if}
 					{:else if event.action === 'access'}
 						{event.to ? `gave ${event.appName} ${event.to}` : `revoked access for ${event.appName}`}
 						<span class="text-gray-500">(by @{event.targetUsername})</span>

@@ -8,7 +8,7 @@ import { emailOTP } from 'better-auth/plugins/email-otp';
 import { username } from 'better-auth/plugins/username';
 import { admin } from 'better-auth/plugins/admin';
 import { createAccessControl } from 'better-auth/plugins/access';
-import { oauthProvider } from '@better-auth/oauth-provider';
+import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
 import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
 import { db } from '$lib/server/db';
@@ -24,6 +24,7 @@ import {
 import { accessTokenClaims, identityClaims } from '$lib/server/claims';
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
+import { recoverByDiscord } from '$lib/server/passport';
 
 const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
@@ -109,7 +110,7 @@ export const auth = betterAuth({
 			if (ctx.path === '/oauth2/authorize' && ctx.query?.scope) {
 				return { context: { query: { ...ctx.query, scope: unique(ctx.query.scope) } } };
 			}
-			if (ctx.path === '/oauth2/token' && ctx.body?.scope) {
+			if ((ctx.path === '/oauth2/token' || ctx.path === '/device/code') && ctx.body?.scope) {
 				return { context: { body: { ...ctx.body, scope: unique(ctx.body.scope) } } };
 			}
 
@@ -141,6 +142,7 @@ export const auth = betterAuth({
 			create: {
 				async after(account) {
 					if (account.providerId === 'discord') {
+						await recoverByDiscord(account.userId, account.accountId);
 						await recordDiscordLink(account.userId, account.accountId, true);
 					}
 				}
@@ -233,6 +235,11 @@ export const auth = betterAuth({
 				refreshToken: 'phid_rt_',
 				clientSecret: 'phid_cs_'
 			}
+		}),
+		oauthDeviceAuthorization({
+			verificationUri: '/device',
+			expiresIn: '10m',
+			interval: '5s'
 		}),
 		sveltekitCookies(getRequestEvent)
 	]

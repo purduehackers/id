@@ -8,7 +8,7 @@ export const auditEvent = sqliteTable(
 	'audit_event',
 	{
 		id: text('id').primaryKey(),
-		action: text('action', { enum: ['role', 'ban', 'unban', 'access'] }).notNull(),
+		action: text('action', { enum: ['role', 'ban', 'unban', 'access', 'passport'] }).notNull(),
 		actorId: text('actor_id').references(() => user.id, { onDelete: 'set null' }),
 		actorUsername: text('actor_username').notNull(),
 		targetId: text('target_id').references(() => user.id, { onDelete: 'set null' }),
@@ -75,31 +75,38 @@ export const directoryAccess = sqliteTable('directory_access', {
 	decidedAt: integer('decided_at', { mode: 'timestamp_ms' })
 });
 
-export const passport = sqliteTable('passport', {
-	id: integer('id').primaryKey(),
-	discordId: text('discord_id').notNull(),
-	secretHash: text('secret_hash').notNull(),
-	activated: integer('activated', { mode: 'boolean' }).default(false).notNull(),
-	importedAt: integer('imported_at', { mode: 'timestamp_ms' })
-		.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
-		.notNull()
-});
+export const passport = sqliteTable(
+	'passport',
+	{
+		id: integer('id').primaryKey(),
+		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
+		discordId: text('discord_id'),
+		secretHash: text('secret_hash').notNull(),
+		activated: integer('activated', { mode: 'boolean' }).default(false).notNull(),
+		importedAt: integer('imported_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull()
+	},
+	(table) => [
+		index('passport_userId_idx').on(table.userId),
+		index('passport_discordId_idx').on(table.discordId)
+	]
+);
 
 export const passportLogin = sqliteTable(
 	'passport_login',
 	{
 		id: text('id').primaryKey(),
-		passportId: integer('passport_id')
-			.notNull()
-			.references(() => passport.id, { onDelete: 'cascade' }),
+		passportId: integer('passport_id').references(() => passport.id, { onDelete: 'cascade' }),
 		code: text('code').notNull(),
+		ipHash: text('ip_hash'),
 		status: text('status', { enum: ['pending', 'approved', 'used'] })
 			.default('pending')
 			.notNull(),
 		userId: text('user_id').references(() => user.id, { onDelete: 'cascade' }),
 		expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull()
 	},
-	(table) => [index('passportLogin_passportId_idx').on(table.passportId)]
+	(table) => [index('passportLogin_code_idx').on(table.code)]
 );
 
 export const passportTap = sqliteTable('passport_tap', {

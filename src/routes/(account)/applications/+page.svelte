@@ -50,6 +50,7 @@
 						{app.name}
 						<span class="text-sm text-gray-500">
 							{app.confidential ? 'confidential' : 'public'}
+							{#if app.device}device{/if}
 							{when(app.createdAt)}
 						</span>
 					</span>
@@ -138,6 +139,12 @@
 			class="mt-1 block w-full border border-gray-400 px-2 py-1 font-mono text-sm"
 			>{form?.redirectUris ?? ''}</textarea
 		>
+	</label>
+
+	<label class="mt-3 block">
+		<input type="checkbox" name="device" checked={!!form?.device} />
+		Device sign-in (CLIs and devices without a browser enter a code at
+		<span class="font-mono text-sm">/device</span>)
 	</label>
 
 	<fieldset class="mt-3">

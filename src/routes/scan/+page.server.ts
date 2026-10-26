@@ -7,6 +7,7 @@ import {
 	PassportError,
 	TAP_COOKIE,
 	approveLogin,
+	claimPassport,
 	recordTap,
 	signInHere,
 	tapState
@@ -17,7 +18,7 @@ const cookie = {
 	httpOnly: true,
 	sameSite: 'lax',
 	secure: !dev,
-	maxAge: 10 * 60
+	maxAge: 30 * 60
 } as const;
 
 export const load: PageServerLoad = async (event) => {
@@ -41,11 +42,28 @@ export const load: PageServerLoad = async (event) => {
 			owner: tap.owner && { username: tap.owner.username, name: tap.owner.name },
 			returning: tap.returning
 		},
+		me: event.locals.user ? { username: event.locals.user.username } : null,
 		error: null
 	};
 };
 
 export const actions: Actions = {
+	claim: async (event) => {
+		const me = event.locals.user;
+		if (!me) redirect(303, '/scan/claim');
+		try {
+			const id = await claimPassport(event.cookies.get(TAP_COOKIE), {
+				id: me.id,
+				username: me.username!
+			});
+			event.cookies.delete(TAP_COOKIE, { path: '/scan' });
+			return { claimed: id };
+		} catch (error) {
+			if (error instanceof PassportError) return fail(400, { message: error.message });
+			throw error;
+		}
+	},
+
 	approve: async (event) => {
 		const code = (await event.request.formData()).get('code')?.toString() ?? '';
 		try {

@@ -24,39 +24,40 @@ const cookie = {
 	secure: !dev,
 	maxAge: 5 * 60
 } as const;
-const back = (next: string) => `/passport?next=${encodeURIComponent(next)}`;
-
-export const load: PageServerLoad = async (event) => {
-	const next = safeNext(event.url.searchParams.get('next'));
-	if (event.locals.user) redirect(302, next);
-
-	const login = await loginState(event.cookies.get(LOGIN_COOKIE));
-	return {
-		next,
-		code: login?.status === 'pending' || login?.status === 'approved' ? login.code : null
-	};
-};
 
 function clear(cookies: Cookies) {
 	cookies.delete(LOGIN_COOKIE, { path: '/' });
 }
 
-export const actions: Actions = {
-	start: async (event) => {
-		const formData = await event.request.formData();
-		const next = safeNext(formData.get('next')?.toString());
-		const number = formData.get('number')?.toString() ?? '';
+export const load: PageServerLoad = async (event) => {
+	const next = safeNext(event.url.searchParams.get('next'));
+	if (event.locals.user) redirect(302, next);
 
+	let login = await loginState(event.cookies.get(LOGIN_COOKIE));
+	if (!login || login.status === 'used') {
 		try {
-			const login = await startLogin(number);
-			event.cookies.set(LOGIN_COOKIE, login.id, cookie);
+			const started = await startLogin(event.getClientAddress());
+			event.cookies.set(LOGIN_COOKIE, started.id, cookie);
+			login = { code: started.code, status: 'pending', username: null, name: null };
 		} catch (error) {
-			if (error instanceof PassportError) return fail(400, { number, message: error.message });
+			if (error instanceof PassportError)
+				return { next, code: null, approvedAs: null, error: error.message };
 			throw error;
 		}
-		redirect(303, back(next));
-	},
+	}
 
+	return {
+		next,
+		code: login.code,
+		approvedAs:
+			login.status === 'approved' && login.username
+				? { username: login.username, name: login.name }
+				: null,
+		error: null
+	};
+};
+
+export const actions: Actions = {
 	complete: async (event) => {
 		const next = safeNext((await event.request.formData()).get('next')?.toString());
 		const userId = await claimApprovedLogin(event.cookies.get(LOGIN_COOKIE));
@@ -76,6 +77,6 @@ export const actions: Actions = {
 		const next = safeNext((await event.request.formData()).get('next')?.toString());
 		await cancelLogin(event.cookies.get(LOGIN_COOKIE));
 		clear(event.cookies);
-		redirect(303, back(next));
+		redirect(303, `/passport?next=${encodeURIComponent(next)}`);
 	}
 };

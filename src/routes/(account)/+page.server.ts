@@ -3,9 +3,7 @@ import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
-import { and, eq } from 'drizzle-orm';
-import { db } from '$lib/server/db';
-import { passport } from '$lib/server/db/schema';
+import { passportsOf } from '$lib/server/passport';
 
 const PROVIDERS = [
 	{ id: 'discord', label: 'Discord' },
@@ -25,19 +23,13 @@ const LINK_ERRORS: Record<string, string> = {
 };
 
 export const load: PageServerLoad = async (event) => {
-	requireUser(event);
+	const user = requireUser(event);
 
 	const linked = event.url.searchParams.get('linked');
 	const errorCode = event.url.searchParams.get('error');
 	const accounts = await auth.api.listUserAccounts({ headers: event.request.headers });
-	const discord = accounts.find((a) => a.providerId === 'discord');
 
-	const passports = discord
-		? await db
-				.select({ id: passport.id })
-				.from(passport)
-				.where(and(eq(passport.discordId, discord.accountId), eq(passport.activated, true)))
-		: [];
+	const passports = (await passportsOf(user.id)).filter((p) => p.activated);
 	const ids = passports.map((p) => p.id);
 	const passportNotice =
 		linked !== 'discord' || ids.length === 0
@@ -48,7 +40,7 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		notice: linked ? `${linked} connected.${passportNotice}` : null,
-		welcome: event.url.searchParams.has('welcome') && !discord,
+		passports: ids,
 		error: errorCode ? (LINK_ERRORS[errorCode] ?? `Linking failed (${errorCode}).`) : null,
 		connections: PROVIDERS.map((provider) => {
 			const account = accounts.find((a) => a.providerId === provider.id);
