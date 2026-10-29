@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
 import { normalizeUsername, usernameProblem } from '$lib/username';
+import { primaryEmailFor } from '$lib/server/emails';
 
 function safeNext(raw: string | null | undefined): string {
 	if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/';
@@ -73,11 +74,12 @@ export const actions: Actions = {
 		const identifier = formData.get('identifier')?.toString().trim() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
 		const byEmail = identifier.includes('@');
+		const email = byEmail ? await primaryEmailFor(identifier) : '';
 
 		try {
 			if (byEmail) {
 				await auth.api.signInEmail({
-					body: { email: identifier, password },
+					body: { email, password },
 					headers: event.request.headers
 				});
 			} else {
@@ -88,7 +90,7 @@ export const actions: Actions = {
 			}
 		} catch (error) {
 			if (error instanceof APIError && error.body?.code === 'EMAIL_NOT_VERIFIED') {
-				toVerify(byEmail ? identifier : await emailForUsername(identifier), next);
+				toVerify(byEmail ? email : await emailForUsername(identifier), next);
 			}
 			return fail(400, { identifier, message: message(error, 'Sign in failed.') });
 		}

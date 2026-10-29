@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { oauthClient, user } from './auth.schema';
 
 export * from './auth.schema';
@@ -126,3 +126,27 @@ export const legacyMember = sqliteTable('legacy_member', {
 	claimedBy: text('claimed_by').references(() => user.id, { onDelete: 'set null' }),
 	claimedAt: integer('claimed_at', { mode: 'timestamp_ms' })
 });
+
+export const userEmail = sqliteTable(
+	'user_email',
+	{
+		id: text('id').primaryKey(),
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		email: text('email').notNull(),
+		verifiedAt: integer('verified_at', { mode: 'timestamp_ms' }),
+		codeHash: text('code_hash'),
+		codeSentAt: integer('code_sent_at', { mode: 'timestamp_ms' }),
+		codeAttempts: integer('code_attempts').default(0).notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull()
+	},
+	(table) => [
+		uniqueIndex('userEmail_userId_email_idx').on(table.userId, table.email),
+		uniqueIndex('userEmail_verified_email_idx')
+			.on(table.email)
+			.where(sql`verified_at is not null`)
+	]
+);

@@ -11,7 +11,9 @@ import { createAccessControl } from 'better-auth/plugins/access';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
 import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
+import { and, eq, isNotNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
+import { userEmail } from '$lib/server/db/schema';
 import { uuidv7 } from '$lib/server/uuid';
 import { DIRECTORY_RESOURCE, DIRECTORY_SCOPES, SCOPES, isDirectoryScope } from '$lib/server/scopes';
 import { emailConfigured, sendEmail } from '$lib/server/email';
@@ -26,7 +28,8 @@ import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
 
-const devFixedOtp = dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
+export const devFixedOtp =
+	dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
 if (devFixedOtp) {
 	console.warn(`[auth] DEV_FIXED_OTP is set: every verification code is "${devFixedOtp}"`);
 }
@@ -132,7 +135,21 @@ export const auth = betterAuth({
 	databaseHooks: {
 		user: {
 			create: {
-				before: async (data) => ({ data: { ...data, role: null } })
+				async before(data) {
+					const [taken] = await db
+						.select({ id: userEmail.id })
+						.from(userEmail)
+						.where(
+							and(eq(userEmail.email, data.email.toLowerCase()), isNotNull(userEmail.verifiedAt))
+						)
+						.limit(1);
+					if (taken) {
+						throw new APIError('UNPROCESSABLE_ENTITY', {
+							message: 'That email already belongs to a Purdue Hackers ID.'
+						});
+					}
+					return { data: { ...data, role: null } };
+				}
 			},
 			update: {
 				after: (updated) => recordProfileUpdate(updated)

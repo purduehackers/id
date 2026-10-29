@@ -1,9 +1,18 @@
-import { fail, redirect } from '@sveltejs/kit';
+import { fail, redirect, type RequestEvent } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
 import { passportsOf } from '$lib/server/passport';
+import {
+	EmailError,
+	addEmail,
+	emailsOf,
+	makePrimary,
+	removeEmail,
+	resendCode,
+	verifyEmail
+} from '$lib/server/emails';
 
 const PROVIDERS = [
 	{ id: 'discord', label: 'Discord' },
@@ -29,6 +38,7 @@ export const load: PageServerLoad = async (event) => {
 	const errorCode = event.url.searchParams.get('error');
 	const accounts = await auth.api.listUserAccounts({ headers: event.request.headers });
 
+	const emails = await emailsOf(user.id);
 	const passports = (await passportsOf(user.id)).filter((p) => p.activated);
 	const ids = passports.map((p) => p.id);
 	const passportNotice =
@@ -41,6 +51,7 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		notice: linked ? `${linked} connected.${passportNotice}` : null,
 		passports: ids,
+		emails,
 		error: errorCode ? (LINK_ERRORS[errorCode] ?? `Linking failed (${errorCode}).`) : null,
 		connections: PROVIDERS.map((provider) => {
 			const account = accounts.find((a) => a.providerId === provider.id);
@@ -56,6 +67,22 @@ export const load: PageServerLoad = async (event) => {
 
 function messageFrom(error: unknown, fallback: string) {
 	return error instanceof APIError ? error.message || fallback : fallback;
+}
+
+async function emailAction(
+	event: RequestEvent,
+	run: (user: NonNullable<App.Locals['user']>, id: string, formData: FormData) => Promise<string>
+) {
+	const user = requireUser(event);
+	const formData = await event.request.formData();
+	const id = formData.get('id')?.toString();
+	if (!id) return fail(400, { message: 'Nothing to change.' });
+	try {
+		return { notice: await run(user, id, formData) };
+	} catch (error) {
+		if (error instanceof EmailError) return fail(400, { message: error.message });
+		throw error;
+	}
 }
 
 export const actions: Actions = {
@@ -109,6 +136,37 @@ export const actions: Actions = {
 
 		return { message: 'Disconnected.' };
 	},
+
+	addEmail: async (event) => {
+		const user = requireUser(event);
+		const formData = await event.request.formData();
+		const email = formData.get('email')?.toString() ?? '';
+		try {
+			const added = await addEmail(user, email);
+			return { notice: `Sent a code to ${added}. It is good for ten minutes.` };
+		} catch (error) {
+			if (error instanceof EmailError) return fail(400, { email, message: error.message });
+			throw error;
+		}
+	},
+
+	verifyEmail: (event) =>
+		emailAction(event, async (user, id, formData) => {
+			const email = await verifyEmail(user.id, id, formData.get('otp')?.toString() ?? '');
+			return `${email} verified.`;
+		}),
+
+	resendEmail: (event) =>
+		emailAction(event, async (user, id) => `Sent a new code to ${await resendCode(user.id, id)}.`),
+
+	removeEmail: (event) =>
+		emailAction(event, async (user, id) => `Removed ${await removeEmail(user.id, id)}.`),
+
+	makePrimary: (event) =>
+		emailAction(
+			event,
+			async (user, id) => `${await makePrimary(user, id)} is now your primary email.`
+		),
 
 	signOut: async (event) => {
 		await auth.api.signOut({ headers: event.request.headers });
