@@ -15,10 +15,6 @@
 {/if}
 
 <h2 class="mt-8 text-lg">Email addresses</h2>
-<p class="mt-2 text-gray-600">
-	You can sign in with any verified address and apps you authorize only see your primary one.
-</p>
-
 <ul class="mt-2">
 	<li class="flex items-baseline justify-between gap-4 border-b border-gray-200 py-3">
 		<span>
