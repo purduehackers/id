@@ -68,7 +68,8 @@
 		onpointermove={move}
 		onpointerleave={() => (tilt = { x: 0, y: 0 })}
 		class={[
-			'relative flex min-h-60 w-full max-w-[560px] flex-col justify-between gap-6 overflow-hidden p-5 transition-transform duration-300 ease-out select-none sm:aspect-[1.586] sm:min-h-0 sm:p-7',
+			// The aspect ratio is a minimum: without overflow clipping the card grows to fit long names.
+			'relative flex min-h-60 w-full max-w-[560px] flex-col justify-between gap-6 p-5 transition-transform duration-300 ease-out select-none sm:aspect-[1.586] sm:min-h-auto sm:p-7',
 			theme
 		]}
 		style="transform: rotateX({tilt.x}deg) rotateY({tilt.y}deg)"
@@ -86,7 +87,14 @@
 				<Identicon seed={username} class="size-12 sm:size-16" />
 			</div>
 			<div class="flex min-w-0 flex-col gap-1.5 sm:gap-2">
-				<span class="ph-headline text-4xl break-words sm:text-6xl">{name}</span>
+				<span
+					class={[
+						'ph-headline text-4xl break-words',
+						name.length > 16 ? 'sm:text-5xl' : 'sm:text-6xl'
+					]}
+				>
+					{name}
+				</span>
 				<span
 					class="flex flex-wrap gap-x-3 font-mono text-[12px] font-semibold uppercase sm:text-[13px]"
 				>
