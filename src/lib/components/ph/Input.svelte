@@ -1,4 +1,3 @@
-<!-- Underlined field: no box, the line thickens on focus. -->
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
 

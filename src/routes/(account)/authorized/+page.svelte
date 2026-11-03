@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
 	import PageTitle from '$lib/components/PageTitle.svelte';
-	import Stamp from '$lib/components/Stamp.svelte';
+	import GrantCard from '$lib/components/GrantCard.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 
@@ -12,11 +12,11 @@
 
 <svelte:head><title>Authorized apps - Purdue Hackers ID</title></svelte:head>
 
-<PageTitle title="Stamps">
+<PageTitle title="Authorized apps">
 	{#if data.apps.length === 0}
-		Every app you let into your account leaves a stamp here. None yet.
+		Apps you let into your account show here.
 	{:else}
-		Every app you let into your account leaves a stamp. Revoke one to sign out of it everywhere.
+		Apps that can see your account.
 	{/if}
 </PageTitle>
 
@@ -26,12 +26,12 @@
 
 {#if data.apps.length === 0}
 	<div class="grid h-56 max-w-md place-items-center dither-field">
-		<span class="bg-background px-3 py-1.5 ph-subheadline text-[12px]">Empty page</span>
+		<span class="bg-background px-3 py-1.5 ph-subheadline text-[12px]">No apps yet</span>
 	</div>
 {:else}
 	<ul class="grid gap-x-6 gap-y-8 py-2 sm:grid-cols-2">
 		{#each data.apps as app, i (app.id)}
-			<Stamp
+			<GrantCard
 				name={app.name}
 				seed={app.name}
 				date={when(app.grantedAt)}
@@ -42,7 +42,7 @@
 					<input type="hidden" name="id" value={app.id} />
 					<Button type="submit" variant="plain" size="sm" icon="times">Revoke</Button>
 				</form>
-			</Stamp>
+			</GrantCard>
 		{/each}
 	</ul>
 {/if}

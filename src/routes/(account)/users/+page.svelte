@@ -62,11 +62,11 @@
 {:else}
 	<ul class="flex flex-col gap-4">
 		{#each data.users as person, i (person.id)}
-			{@const tile = swatch(person.username)}
+			{@const tile = swatch(person.id)}
 			<li class="flex enter flex-col gap-5 bg-card p-5 sm:p-6" style="--i: {Math.min(i, 8)}">
 				<div class="flex items-start gap-4">
 					<span class={['grid size-12 shrink-0 place-items-center', tile.bg, tile.fg]}>
-						<Identicon seed={person.username} class="size-7" />
+						<Identicon seed={person.id} class="size-7" />
 					</span>
 					<div class="flex min-w-0 flex-1 flex-col gap-0.5">
 						<span class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[17px]">

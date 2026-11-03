@@ -5,6 +5,7 @@ import { db } from '$lib/server/db';
 import { account, user } from '$lib/server/db/schema';
 import { authorizeDirectoryRequest } from '$lib/server/directory';
 import { grantedRoles } from '$lib/roles';
+import { pictureFor } from '$lib/server/avatar';
 
 export const GET: RequestHandler = async ({ request, url }) => {
 	const authorized = await authorizeDirectoryRequest(request);
@@ -41,6 +42,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			id: user.id,
 			username: user.username,
 			name: user.name,
+			image: user.image,
 			role: user.role,
 			banned: user.banned,
 			discordId: discord.discordId
@@ -62,6 +64,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			sub: row.id,
 			preferred_username: row.username,
 			name: row.name,
+			picture: pictureFor(row),
 			roles: grantedRoles(row.role),
 			banned: row.banned,
 			...(withDiscord && { discord_id: row.discordId ?? null })

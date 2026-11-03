@@ -8,6 +8,8 @@
 	import Glider from '$lib/components/ph/Glider.svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
 	import type { IconName } from '$lib/components/ph/icons';
+	import Identicon from '$lib/components/Identicon.svelte';
+	import { identiconSvg, swatch } from '$lib/components/pixel';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -23,9 +25,16 @@
 			: [])
 	]);
 
+	const favicon = $derived(
+		`data:image/svg+xml,${encodeURIComponent(identiconSvg(data.user.id, 64))}`
+	);
+	const tile = $derived(swatch(data.user.id));
+
 	const current = (href: string) =>
 		href === resolve('/') ? page.url.pathname === href : page.url.pathname.startsWith(href);
 </script>
+
+<svelte:head><link rel="icon" type="image/svg+xml" href={favicon} /></svelte:head>
 
 <div class="min-h-dvh lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
 	<aside
@@ -39,7 +48,10 @@
 				<Glider class="size-5" />
 				<span class="ph-headline text-xl whitespace-nowrap">Purdue Hackers ID</span>
 			</a>
-			<form method="post" action="/?/signOut" class="lg:hidden">
+			<span class={['ml-auto grid size-8 shrink-0 place-items-center lg:hidden', tile.bg, tile.fg]}>
+				<Identicon seed={data.user.id} class="size-5" />
+			</span>
+			<form method="post" action="/?/signOut" class="-ml-2 lg:hidden">
 				<Button type="submit" variant="ghost" size="sm" icon="logout" aria-label="Sign out" />
 			</form>
 		</div>
@@ -69,9 +81,14 @@
 		</nav>
 
 		<div class="mt-auto hidden flex-col gap-4 px-2 lg:flex">
-			<div class="flex flex-col gap-0.5">
-				<span class="truncate font-medium">{data.user.name}</span>
-				<span class="truncate font-mono text-[13px]">@{data.user.username}</span>
+			<div class="flex items-center gap-3">
+				<span class={['grid size-11 shrink-0 place-items-center', tile.bg, tile.fg]}>
+					<Identicon seed={data.user.id} class="size-6" />
+				</span>
+				<div class="flex min-w-0 flex-col gap-0.5">
+					<span class="truncate font-medium">{data.user.name}</span>
+					<span class="truncate font-mono text-[13px]">@{data.user.username}</span>
+				</div>
 			</div>
 			<form method="post" action="/?/signOut">
 				<Button type="submit" variant="ghost" size="sm" icon="logout" class="-ml-3">

@@ -11,6 +11,11 @@
 	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	$effect(() => {
+		if (form && ('approved' in form || 'claimed' in form))
+			window.dispatchEvent(new Event('ph:celebrate'));
+	});
 </script>
 
 <svelte:head><title>Passport - Purdue Hackers ID</title></svelte:head>

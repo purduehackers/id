@@ -1,10 +1,15 @@
-<!-- One-time credential reveal: a solid yellow block that cannot be missed, with copy buttons. -->
 <script lang="ts">
 	import Icon from './Icon.svelte';
+	import Identicon from '../Identicon.svelte';
 
-	type Props = { title: string; note?: string; values: { label: string; value: string }[] };
+	type Props = {
+		title: string;
+		note?: string;
+		seed?: string;
+		values: { label: string; value: string }[];
+	};
 
-	let { title, note, values }: Props = $props();
+	let { title, note, seed, values }: Props = $props();
 	let copied = $state<string | null>(null);
 
 	async function copy(label: string, value: string) {
@@ -15,9 +20,16 @@
 </script>
 
 <section class="flex enter flex-col gap-4 bg-ph-yellow p-5 text-ph-black sm:p-7">
-	<div class="flex flex-col gap-1.5">
-		<h2 class="ph-headline text-3xl">{title}</h2>
-		{#if note}<p>{note}</p>{/if}
+	<div class="flex items-start justify-between gap-4">
+		<div class="flex flex-col gap-1.5">
+			<h2 class="ph-headline text-3xl">{title}</h2>
+			{#if note}<p>{note}</p>{/if}
+		</div>
+		{#if seed}
+			<span class="print grid size-16 shrink-0 place-items-center bg-ph-black text-ph-yellow">
+				<Identicon {seed} accent="var(--ph-pink)" class="size-10" />
+			</span>
+		{/if}
 	</div>
 	{#each values as { label, value } (label)}
 		<div class="flex flex-col gap-1.5">
@@ -38,3 +50,24 @@
 		</div>
 	{/each}
 </section>
+
+<style>
+	.print {
+		animation: print 750ms 250ms steps(5, end) both;
+	}
+
+	@keyframes print {
+		from {
+			clip-path: inset(0 0 100% 0);
+		}
+		to {
+			clip-path: inset(0 0 0 0);
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.print {
+			animation: none;
+		}
+	}
+</style>

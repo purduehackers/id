@@ -5,6 +5,7 @@ export const load: LayoutServerLoad = (event) => {
 	const user = requireUser(event);
 	return {
 		user: {
+			id: user.id,
 			name: user.name,
 			username: user.username,
 			role: user.role,

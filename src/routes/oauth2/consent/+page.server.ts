@@ -41,6 +41,7 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		query,
+		clientId,
 		clientName,
 		scopes
 	};
@@ -69,6 +70,7 @@ async function respond(event: Parameters<Actions[string]>[0], accept: boolean) {
 		});
 	}
 
+	if (accept) return { granted: body.url };
 	redirect(302, body.url);
 }
 

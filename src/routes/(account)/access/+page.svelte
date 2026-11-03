@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
 	import Identicon from '$lib/components/Identicon.svelte';
+	import { swatch } from '$lib/components/pixel';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
@@ -23,8 +24,8 @@
 <svelte:head><title>App access - Purdue Hackers ID</title></svelte:head>
 
 <PageTitle title="App access">
-	Apps that asked to see every member. Granting lets them list members and receive webhooks about
-	everyone, not just people who signed into them.
+	Apps that asked to see every member, granting lets them list members and receive webhooks about
+	everyone.
 </PageTitle>
 
 {#if form && 'message' in form}
@@ -41,7 +42,13 @@
 			{@const pending = !app.decidedAt || app.requestedAt > app.decidedAt}
 			<li class="flex enter flex-col gap-5 bg-card p-5 sm:p-6" style="--i: {i}">
 				<div class="flex items-start gap-4">
-					<span class="grid size-11 shrink-0 place-items-center bg-muted">
+					<span
+						class={[
+							'grid size-11 shrink-0 place-items-center',
+							swatch(app.clientId).bg,
+							swatch(app.clientId).fg
+						]}
+					>
 						<Identicon seed={app.clientId} class="size-6" />
 					</span>
 					<div class="flex min-w-0 flex-1 flex-col gap-0.5">

@@ -21,12 +21,15 @@
 <h1 class="sr-only">Your account</h1>
 
 <IdCard
+	id={data.user.id}
 	name={data.user.name}
 	username={data.user.username ?? ''}
 	email={data.user.email}
 	role={data.user.role}
 	since={data.user.createdAt}
-	number={data.passports[0]}
+	passports={data.passports}
+	linked={data.connections.filter((c) => c.accountId).map((c) => c.label)}
+	addresses={1 + data.emails.filter((e) => e.verifiedAt).length}
 />
 
 {#if form?.message ?? data.error}

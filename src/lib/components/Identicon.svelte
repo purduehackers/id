@@ -1,8 +1,15 @@
 <script lang="ts">
-	import { identicon } from './pixel';
+	import { identicon, swatch } from './pixel';
 
-	let { seed, class: className }: { seed: string; class?: string } = $props();
+	type Props = {
+		seed: string;
+		accent?: string;
+		class?: string;
+	};
+
+	let { seed, accent, class: className }: Props = $props();
 	const cells = $derived(identicon(seed));
+	const tint = $derived(accent ?? swatch(seed).accent);
 </script>
 
 <svg
@@ -12,8 +19,10 @@
 	class={['block shrink-0', className]}
 >
 	{#each cells as row, y (y)}
-		{#each row as on, x (x)}
-			{#if on}<rect {x} {y} width="1" height="1" fill="currentColor" />{/if}
+		{#each row as cell, x (x)}
+			{#if cell}
+				<rect {x} {y} width="1" height="1" fill={cell === 2 ? tint : 'currentColor'} />
+			{/if}
 		{/each}
 	{/each}
 </svg>

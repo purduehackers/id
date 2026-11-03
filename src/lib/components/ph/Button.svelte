@@ -30,7 +30,7 @@
 		solid: 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground',
 		outline: 'border border-foreground text-foreground hover:bg-foreground hover:text-background',
 		ghost: 'text-foreground hover:bg-foreground/[0.08]',
-		// Inherits the surrounding colour, for buttons on coloured blocks.
+		// Uses the parent text color.
 		plain: 'hover:bg-current/[0.12]'
 	};
 	const sizes = {

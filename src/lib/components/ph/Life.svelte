@@ -1,9 +1,3 @@
-<!--
-	Conway's Game of Life, seeded with the glider from the logo. Every glider shares one
-	phase and heading, so the flock drifts forever without colliding. New gliders join
-	the flock in step: on click, and whenever a `ph:glider` event fires on window
-	(the auth forms fire one per keystroke). Static under reduced motion.
--->
 <script lang="ts">
 	import { onMount } from 'svelte';
 
@@ -18,11 +12,11 @@
 		[2, 2],
 		[0, 2]
 	];
-	// Lattice pitch. Seeds jitter up to 3 cells inside it and still keep a 3-cell gap.
+	// Gliders must stay 3 or more cells apart, or they collide.
 	const SPACING = 9;
 	const TICK = 140;
 
-	/** The glider's four phases and its drift per period, found by simulating it once. */
+	/** Glider phases and drift per 4 generations. */
 	function phases() {
 		const n = 12;
 		let g = new Uint8Array(n * n);
@@ -67,15 +61,18 @@
 		let last = 0;
 		let dpr = 1;
 		let color = '#000';
-		// Smaller cells on narrow screens keep enough lattice slots for a lively field.
 		let size = cell;
 		let visibleCols = 0;
 		let visibleRows = 0;
+		let mode: 'life' | 'converge' | 'hold' = 'life';
+		let flight: { from: [number, number]; to: [number, number]; delay: number; fade: boolean }[] =
+			[];
+		let flightStart = 0;
 
 		const wrap = (v: number, m: number) => ((v % m) + m) % m;
 		const at = (x: number, y: number) => wrap(y, rows) * cols + wrap(x, cols);
 
-		/** Where a glider seeded at (x, y) on generation 0 sits now. */
+		/** Current position of a glider placed at (x, y) on generation 0. */
 		const now = (x: number, y: number) => {
 			const p = Math.floor(gen / 4);
 			return { x: x + p * drift[0], y: y + p * drift[1], shape: shapes[gen % 4] };
@@ -93,13 +90,12 @@
 			return true;
 		}
 
-		/** Join the flock: pick a free lattice slot so nothing ever collides. */
+		/** Use a free lattice slot only, to prevent collisions. */
 		function spawn(prefer?: { x: number; y: number }) {
 			const slots: [number, number][] = [];
 			for (let y = 0; y < rows; y += SPACING)
 				for (let x = 0; x < cols; x += SPACING) if (empty(x, y)) slots.push([x, y]);
 			if (!slots.length) return;
-			// Random spawns land where you can see them; the lattice runs past the edges.
 			const visible = slots.filter(([x, y]) => {
 				const pos = now(x, y);
 				const vx = wrap(pos.x, cols);
@@ -109,7 +105,6 @@
 			const pool = visible.length ? visible : slots;
 			let pick = pool[Math.floor(Math.random() * pool.length)];
 			if (prefer) {
-				// Slot nearest the pointer, in today's coordinates.
 				const p = Math.floor(gen / 4);
 				const d = ([x, y]: [number, number]) => {
 					const dx = wrap(x + p * drift[0] - prefer.x + cols / 2, cols) - cols / 2;
@@ -122,6 +117,90 @@
 			draw();
 		}
 
+		function checkCells(): [number, number][] {
+			const span = Math.max(8, Math.floor(Math.min(visibleCols * 0.5, visibleRows * 0.62)));
+			const ox = Math.floor(visibleCols * 0.62 - span / 2);
+			const oy = Math.floor(visibleRows * 0.4 - span / 2);
+			const legs = [
+				[0.04, 0.56, 0.36, 0.88],
+				[0.36, 0.88, 0.96, 0.14]
+			];
+			const thick = 0.17;
+			const out: [number, number][] = [];
+			for (let y = 0; y < span; y++)
+				for (let x = 0; x < span; x++) {
+					const px = (x + 0.5) / span;
+					const py = (y + 0.5) / span;
+					const near = legs.some(([ax, ay, bx, by]) => {
+						const dx = bx - ax;
+						const dy = by - ay;
+						const t = Math.max(
+							0,
+							Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy))
+						);
+						return Math.hypot(px - (ax + t * dx), py - (ay + t * dy)) < thick / 2;
+					});
+					if (near) out.push([ox + x, oy + y]);
+				}
+			return out;
+		}
+
+		function holdCheck() {
+			grid.fill(0);
+			for (const [x, y] of checkCells()) grid[at(x, y)] = 1;
+			mode = 'hold';
+			draw();
+		}
+
+		function celebrate() {
+			if (!cols) {
+				pendingCelebrate = true;
+				return;
+			}
+			if (mode !== 'life') return;
+			if (reduce) return holdCheck();
+			const targets = checkCells().sort(() => Math.random() - 0.5);
+			const sources: [number, number][] = [];
+			for (let y = 0; y < visibleRows; y++)
+				for (let x = 0; x < visibleCols; x++) if (grid[y * cols + x]) sources.push([x, y]);
+			sources.sort(() => Math.random() - 0.5);
+			while (sources.length < targets.length) {
+				const side = Math.random() < 0.5;
+				sources.push(
+					side
+						? [visibleCols + 2, Math.floor(Math.random() * visibleRows)]
+						: [Math.floor(Math.random() * visibleCols), -3]
+				);
+			}
+			flight = sources.map((from, i) => ({
+				from,
+				to: targets[i] ?? from,
+				delay: Math.random() * 260,
+				fade: i >= targets.length
+			}));
+			flightStart = performance.now();
+			mode = 'converge';
+		}
+		let pendingCelebrate = false;
+
+		function drawFlight(t: number) {
+			const DURATION = 760;
+			ctx.clearRect(0, 0, canvas.width, canvas.height);
+			ctx.fillStyle = color;
+			const px = size * dpr;
+			let done = true;
+			for (const f of flight) {
+				const raw = Math.min(1, Math.max(0, (t - flightStart - f.delay) / DURATION));
+				if (raw < 1) done = false;
+				const e = raw < 0.5 ? 4 * raw ** 3 : 1 - (-2 * raw + 2) ** 3 / 2;
+				if (f.fade && raw > 0.6) continue;
+				const x = Math.round(f.from[0] + (f.to[0] - f.from[0]) * e);
+				const y = Math.round(f.from[1] + (f.to[1] - f.from[1]) * e);
+				ctx.fillRect(Math.round(x * px), Math.round(y * px), Math.ceil(px), Math.ceil(px));
+			}
+			if (done) holdCheck();
+		}
+
 		function seed() {
 			const { width, height } = canvas.getBoundingClientRect();
 			if (!width || !height) return;
@@ -129,7 +208,7 @@
 			canvas.width = Math.round(width * dpr);
 			canvas.height = Math.round(height * dpr);
 			color = getComputedStyle(canvas).color;
-			// Whole lattice tiles across the wrap seam, so neighbours there stay spaced too.
+			// Must be a multiple of SPACING, or gliders collide at the wrap edge.
 			size = width < 640 ? Math.round(cell * 0.6) : cell;
 			visibleCols = Math.floor(width / size);
 			visibleRows = Math.floor(height / size);
@@ -146,7 +225,12 @@
 			for (let y = 0; y < rows; y += SPACING)
 				for (let x = 0; x < cols; x += SPACING)
 					if (rand() < 0.4) place(x + Math.floor(rand() * 4), y + Math.floor(rand() * 4));
+			if (mode !== 'life') return holdCheck();
 			draw();
+			if (pendingCelebrate) {
+				pendingCelebrate = false;
+				celebrate();
+			}
 		}
 
 		function step() {
@@ -184,7 +268,8 @@
 		}
 
 		function frame(t: number) {
-			if (t - last >= TICK) {
+			if (mode === 'converge') drawFlight(t);
+			else if (mode === 'life' && t - last >= TICK) {
 				step();
 				draw();
 				last = t;
@@ -193,18 +278,20 @@
 		}
 
 		function onPointer(event: PointerEvent) {
+			if (mode !== 'life') return;
 			const r = canvas.getBoundingClientRect();
 			spawn({
 				x: Math.floor((event.clientX - r.left) / size),
 				y: Math.floor((event.clientY - r.top) / size)
 			});
 		}
-		const onGlider = () => spawn();
+		const onGlider = () => mode === 'life' && spawn();
 
 		const observer = new ResizeObserver(seed);
 		observer.observe(canvas);
 		canvas.addEventListener('pointerdown', onPointer);
 		window.addEventListener('ph:glider', onGlider);
+		window.addEventListener('ph:celebrate', celebrate);
 		if (!reduce) raf = requestAnimationFrame(frame);
 
 		return () => {
@@ -212,6 +299,7 @@
 			observer.disconnect();
 			canvas.removeEventListener('pointerdown', onPointer);
 			window.removeEventListener('ph:glider', onGlider);
+			window.removeEventListener('ph:celebrate', celebrate);
 		};
 	});
 </script>

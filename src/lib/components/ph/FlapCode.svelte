@@ -1,4 +1,3 @@
-<!-- A code that lands like a split-flap board: each cell spins through digits, then settles. -->
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
 

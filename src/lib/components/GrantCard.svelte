@@ -1,4 +1,3 @@
-<!-- An authorized app as a stamp in your passport: coloured, slightly crooked, straightens on hover. -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { SWATCHES, hash } from './pixel';
@@ -15,7 +14,6 @@
 
 	let { name, seed, date, scopes, children, index = 0 }: Props = $props();
 
-	// Cycle by position so neighbouring stamps never share a colour.
 	const color = $derived(SWATCHES[index % SWATCHES.length]);
 	const angle = $derived(((hash(seed) % 70) - 35) / 10);
 </script>

@@ -80,8 +80,9 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 
 {#if form && 'secret' in form}
 	<Secret
+		seed={data.app.clientId}
 		title="Signing secret"
-		note="Copy it now. It will not be shown again."
+		note="Copy it now as it will not be shown again."
 		values={[{ label: 'webhook secret', value: form.secret as string }]}
 	/>
 {/if}

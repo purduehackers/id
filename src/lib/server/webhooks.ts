@@ -21,6 +21,7 @@ import { readList } from '$lib/server/db/json';
 import { isDirectoryScope } from '$lib/server/scopes';
 import { uuidv7 } from '$lib/server/uuid';
 import { grantedRoles } from '$lib/roles';
+import { pictureFor } from '$lib/server/avatar';
 
 export const WEBHOOK_EVENTS = {
 	'user.roles.changed': { description: "A user's roles changed.", needs: ['roles'] },
@@ -248,7 +249,7 @@ type Profile = {
 const PROFILE_CLAIMS = [
 	{ claim: 'name', scope: 'profile', read: (u: Profile) => u.name },
 	{ claim: 'preferred_username', scope: 'profile', read: (u: Profile) => u.username },
-	{ claim: 'picture', scope: 'profile', read: (u: Profile) => u.image ?? null },
+	{ claim: 'picture', scope: 'profile', read: (u: Profile) => pictureFor(u) },
 	{ claim: 'email', scope: 'email', read: (u: Profile) => u.email },
 	{ claim: 'email_verified', scope: 'email', read: (u: Profile) => u.emailVerified }
 ] as const;

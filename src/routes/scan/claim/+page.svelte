@@ -8,6 +8,10 @@
 	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
+
+	$effect(() => {
+		if (form && 'claimed' in form) window.dispatchEvent(new Event('ph:celebrate'));
+	});
 </script>
 
 <svelte:head><title>Add your passport - Purdue Hackers ID</title></svelte:head>

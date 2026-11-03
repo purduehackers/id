@@ -16,12 +16,17 @@
 		if (!data.code || data.approvedAs) return;
 		const timer = setInterval(async () => {
 			const { status } = await fetch(resolve('/passport/status')).then((r) => r.json());
+			window.dispatchEvent(new Event('ph:glider'));
 			if (status !== 'pending') {
 				clearInterval(timer);
 				await invalidateAll();
 			}
 		}, 2000);
 		return () => clearInterval(timer);
+	});
+
+	$effect(() => {
+		if (data.approvedAs) window.dispatchEvent(new Event('ph:celebrate'));
 	});
 </script>
 

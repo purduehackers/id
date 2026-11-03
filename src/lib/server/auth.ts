@@ -23,7 +23,7 @@ import {
 	USERNAME_PATTERN,
 	normalizeUsername
 } from '$lib/username';
-import { accessTokenClaims, identityClaims } from '$lib/server/claims';
+import { accessTokenClaims, identityClaims, userInfoClaims } from '$lib/server/claims';
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
@@ -232,7 +232,7 @@ export const auth = betterAuth({
 			clientRegistrationRequirePKCE: true,
 			clientRegistrationDefaultScopes: ['openid', 'profile', 'email', 'user:read'],
 			clientRegistrationAllowedScopes: ['openid', 'profile', 'email', 'roles', 'user:read', 'user'],
-			customUserInfoClaims: identityClaims,
+			customUserInfoClaims: userInfoClaims,
 			customIdTokenClaims: identityClaims,
 			customAccessTokenClaims: accessTokenClaims,
 			resources: [

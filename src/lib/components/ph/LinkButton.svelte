@@ -1,4 +1,3 @@
-<!-- A button that looks like Link, for form submits such as "send another code". -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';

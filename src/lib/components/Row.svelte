@@ -1,4 +1,3 @@
-<!-- List row: icon tile, a title line, mono meta, actions on the right. Spacing, not lines. -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import Icon from './ph/Icon.svelte';

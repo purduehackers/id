@@ -1,4 +1,5 @@
 import { grantedRoles } from '$lib/roles';
+import { pictureFor } from '$lib/server/avatar';
 
 type ClaimUser = Record<string, unknown>;
 type ClaimInfo = { user: ClaimUser; scopes: string[] };
@@ -7,6 +8,18 @@ export function identityClaims({ user, scopes }: ClaimInfo) {
 	return {
 		...(scopes.includes('profile') && { preferred_username: user.username }),
 		...(scopes.includes('roles') && { roles: grantedRoles(user.role as string) })
+	};
+}
+
+/** Adds `picture`. Use for UserInfo only, not for the ID token. */
+export function userInfoClaims(info: ClaimInfo) {
+	const { user, scopes } = info;
+	return {
+		...identityClaims(info),
+		...(scopes.includes('profile') &&
+			typeof user.id === 'string' && {
+				picture: pictureFor({ id: user.id, image: user.image as string | null })
+			})
 	};
 }
 
@@ -24,7 +37,7 @@ function standardClaims(user: PreviewUser, scopes: string[]) {
 	return {
 		...(scopes.includes('profile') && {
 			name: user.name,
-			picture: user.image ?? undefined,
+			picture: pictureFor(user),
 			given_name: given,
 			family_name: family
 		}),

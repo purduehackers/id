@@ -1,4 +1,3 @@
-<!-- Sign-in, verification and consent pages: form on one side, a live Life field on the other. -->
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import { resolve } from '$app/paths';
@@ -33,7 +32,6 @@
 			<span class="font-mono text-[13px] font-semibold tracking-wide uppercase">ID</span>
 		</a>
 
-		<!-- Every keystroke launches a glider into the field. -->
 		<main
 			oninput={() => window.dispatchEvent(new Event('ph:glider'))}
 			class="flex w-full max-w-[440px] flex-1 flex-col justify-center gap-8 py-10 lg:py-16"

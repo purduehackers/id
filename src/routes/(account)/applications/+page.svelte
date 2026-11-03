@@ -32,7 +32,7 @@
 
 <PageTitle title="Your apps">
 	{#if data.applications.length === 0}
-		Build something that signs people in with their Purdue Hackers ID. Register it below.
+		Build something that signs people in with their Purdue Hackers ID and register it below.
 	{:else}
 		Things you built that sign people in with Purdue Hackers ID.
 	{/if}
@@ -46,8 +46,9 @@
 
 {#if issued}
 	<Secret
+		seed={issued.clientId}
 		title={form?.created ? `${form.created.name} is live` : 'New secret issued'}
-		note={issued.clientSecret ? 'Copy the secret now. It will not be shown again.' : undefined}
+		note={issued.clientSecret ? 'Copy the secret now as it will not be shown again.' : undefined}
 		values={[
 			{ label: 'client_id', value: issued.clientId },
 			...(issued.clientSecret ? [{ label: 'client_secret', value: issued.clientSecret }] : [])
