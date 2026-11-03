@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
-	import Section from '$lib/components/Section.svelte';
+	import Identicon from '$lib/components/Identicon.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
 	import Checkbox from '$lib/components/ph/Checkbox.svelte';
@@ -21,56 +22,60 @@
 
 <svelte:head><title>App access - Purdue Hackers ID</title></svelte:head>
 
+<PageTitle title="App access">
+	Apps that asked to see every member. Granting lets them list members and receive webhooks about
+	everyone, not just people who signed into them.
+</PageTitle>
+
 {#if form && 'message' in form}
 	<Notice>{form.message}</Notice>
 {:else if form && 'notice' in form}
 	<Notice tone="success">{form.notice}</Notice>
 {/if}
 
-<Section title="App access">
-	{#snippet description()}
-		Apps that asked to see every member. Granting lets them list members and receive webhooks about
-		everyone (not just people who signed into them).
-	{/snippet}
-
-	{#if data.apps.length === 0}
-		<p>No app has asked for directory access.</p>
-	{:else}
-		<ul class="border-t border-border">
-			{#each data.apps as app (app.clientId)}
-				{@const pending = !app.decidedAt || app.requestedAt > app.decidedAt}
-				<li class="flex flex-col gap-3 border-b border-border py-4">
-					<div class="flex flex-wrap items-center justify-between gap-3">
-						<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
-							<span class="text-lg font-medium">{app.name ?? app.clientId}</span>
-							<span class="font-mono text-[13px]">by @{app.ownerUsername ?? 'unknown'}</span>
+{#if data.apps.length === 0}
+	<p>No app has asked for directory access.</p>
+{:else}
+	<ul class="flex flex-col gap-4">
+		{#each data.apps as app, i (app.clientId)}
+			{@const pending = !app.decidedAt || app.requestedAt > app.decidedAt}
+			<li class="flex enter flex-col gap-5 bg-card p-5 sm:p-6" style="--i: {i}">
+				<div class="flex items-start gap-4">
+					<span class="grid size-11 shrink-0 place-items-center bg-muted">
+						<Identicon seed={app.clientId} class="size-6" />
+					</span>
+					<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+						<span class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[17px]">
+							{app.name ?? app.clientId}
 							{#if pending}<Badge color="yellow">Waiting</Badge>{/if}
 						</span>
-						<span class="font-mono text-[13px]">asked {when(app.requestedAt)}</span>
+						<span class="font-mono text-[13px]">
+							@{app.ownerUsername ?? 'unknown'} · asked {when(app.requestedAt)}
+						</span>
+						<span class="font-mono text-[12px] break-all">{app.clientId}</span>
 					</div>
-					<p class="font-mono text-[13px] break-all">{app.clientId}</p>
+				</div>
 
-					<form
-						method="post"
-						action="?/decide"
-						class="flex flex-col gap-2.5"
-						onsubmit={(event) => confirmGrant(event, app.name ?? app.clientId)}
-					>
-						<input type="hidden" name="clientId" value={app.clientId} />
-						{#each app.scopes as { scope, description, granted } (scope)}
-							<Checkbox
-								name="scope"
-								value={scope}
-								checked={granted || (pending && !app.grantedScopes.length)}
-							>
-								<span class="font-mono font-semibold">{scope}</span>
-								{description}
-							</Checkbox>
-						{/each}
-						<Button type="submit" variant="outline" size="sm" class="mt-1">Save</Button>
-					</form>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-</Section>
+				<form
+					method="post"
+					action="?/decide"
+					class="flex flex-col gap-3"
+					onsubmit={(event) => confirmGrant(event, app.name ?? app.clientId)}
+				>
+					<input type="hidden" name="clientId" value={app.clientId} />
+					{#each app.scopes as { scope, description, granted } (scope)}
+						<Checkbox
+							name="scope"
+							value={scope}
+							checked={granted || (pending && !app.grantedScopes.length)}
+						>
+							<span class="font-mono font-semibold">{scope}</span>
+							{description}
+						</Checkbox>
+					{/each}
+					<Button type="submit" size="sm" class="mt-1">Save decision</Button>
+				</form>
+			</li>
+		{/each}
+	</ul>
+{/if}

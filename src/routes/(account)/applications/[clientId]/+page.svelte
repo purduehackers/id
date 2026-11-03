@@ -5,7 +5,6 @@
 	import BackLink from '$lib/components/ph/BackLink.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
-	import Callout from '$lib/components/ph/Callout.svelte';
 	import Checkbox from '$lib/components/ph/Checkbox.svelte';
 	import Code from '$lib/components/ph/Code.svelte';
 	import Field from '$lib/components/ph/Field.svelte';
@@ -13,6 +12,9 @@
 	import Input from '$lib/components/ph/Input.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
+	import Secret from '$lib/components/ph/Secret.svelte';
+	import Identicon from '$lib/components/Identicon.svelte';
+	import { swatch } from '$lib/components/pixel';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -25,7 +27,7 @@
 	const at = (value: Date | string | null) => (value ? new Date(value).toLocaleString() : '');
 	const pretty = (payload: string) => JSON.stringify(JSON.parse(payload), null, 2);
 
-	type Tone = 'lime' | 'orange' | 'outline' | 'yellow';
+	type Tone = 'lime' | 'orange' | 'muted' | 'yellow';
 	function status(d: PageData['deliveries'][number]): {
 		label: string;
 		detail?: string;
@@ -33,13 +35,15 @@
 	} {
 		if (d.deliveredAt) return { label: 'Delivered', tone: 'lime' };
 		if (d.failedAt) return { label: 'Gave up', detail: d.lastError ?? undefined, tone: 'orange' };
-		if (d.attempts === 0) return { label: 'Sending', tone: 'outline' };
+		if (d.attempts === 0) return { label: 'Sending', tone: 'muted' };
 		return {
 			label: 'Retrying',
 			detail: `${d.lastError}, retries after ${at(d.nextAttemptAt)}`,
 			tone: 'yellow'
 		};
 	}
+
+	const tile = $derived(swatch(data.app.clientId));
 
 	function confirmRemove(event: SubmitEvent) {
 		if (!confirm('Remove this webhook?')) event.preventDefault();
@@ -55,10 +59,17 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 
 <svelte:head><title>{data.app.name} - Purdue Hackers ID</title></svelte:head>
 
-<div class="flex flex-col gap-3">
+<div class="flex enter flex-col gap-5">
 	<BackLink href={resolve('/applications')}>Your apps</BackLink>
-	<h2 class="ph-headline text-4xl sm:text-5xl">{data.app.name}</h2>
-	<p class="font-mono text-[13px] break-all">{data.app.clientId}</p>
+	<div class="flex items-center gap-5">
+		<span class={['grid size-16 shrink-0 place-items-center sm:size-20', tile.bg, tile.fg]}>
+			<Identicon seed={data.app.clientId} class="size-9 sm:size-11" />
+		</span>
+		<div class="flex min-w-0 flex-col gap-1.5">
+			<h1 class="ph-headline text-5xl break-words sm:text-6xl">{data.app.name}</h1>
+			<p class="font-mono text-[13px] break-all">{data.app.clientId}</p>
+		</div>
+	</div>
 </div>
 
 {#if form && 'message' in form}
@@ -68,18 +79,15 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 {/if}
 
 {#if form && 'secret' in form}
-	<Callout icon="lock" title="Signing secret">
-		<p>Copy it now, it will not be shown again.</p>
-		<p
-			class="mt-2 border border-border bg-card px-2 py-1 font-mono text-[13px] break-all select-all"
-		>
-			{form.secret}
-		</p>
-	</Callout>
+	<Secret
+		title="Signing secret"
+		note="Copy it now. It will not be shown again."
+		values={[{ label: 'webhook secret', value: form.secret as string }]}
+	/>
 {/if}
 
 <Section title="Webhook">
-	<form method="post" action="?/save" class="flex flex-col gap-5">
+	<form method="post" action="?/save" class="flex flex-col gap-7">
 		<Field label="URL" for="webhook-url">
 			<Input
 				id="webhook-url"
@@ -88,12 +96,13 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 				required
 				placeholder="https://myapp.com/webhooks/purduehackers"
 				value={form && 'url' in form ? form.url : (data.webhook?.url ?? '')}
-				class="font-mono text-[13px]"
+				size="md"
+				class="font-mono"
 			/>
 		</Field>
 
-		<fieldset class="flex flex-col gap-2.5">
-			<legend class="mb-2.5 ph-subheadline text-[12px]">Events</legend>
+		<fieldset class="flex flex-col gap-3">
+			<legend class="mb-3 ph-subheadline text-[12px]">Events</legend>
 			{#each data.events as { type, description } (type)}
 				<Checkbox name="event" value={type} checked={subscribed(type)}>
 					<span class="font-mono font-semibold">{type}</span>
@@ -106,12 +115,12 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 	</form>
 
 	{#if data.webhook}
-		<div class="flex flex-wrap gap-2">
+		<div class="-ml-3 flex flex-wrap gap-1">
 			<form method="post" action="?/test">
-				<Button type="submit" variant="outline" size="sm" icon="bolt">Send test event</Button>
+				<Button type="submit" variant="ghost" size="sm" icon="bolt">Send test event</Button>
 			</form>
 			<form method="post" action="?/rotate">
-				<Button type="submit" variant="outline" size="sm" icon="refresh">New secret</Button>
+				<Button type="submit" variant="ghost" size="sm" icon="refresh">New secret</Button>
 			</form>
 			<form method="post" action="?/remove" onsubmit={confirmRemove}>
 				<Button type="submit" variant="ghost" size="sm" icon="trash">Remove</Button>
@@ -123,15 +132,15 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 {#if data.webhook}
 	<Section title="Recent deliveries">
 		{#if data.deliveries.length === 0}
-			<p>Nothing sent yet.</p>
+			<p>Nothing sent yet. Send a test event to see one land here.</p>
 		{:else}
-			<ul class="border-t border-border">
+			<ul class="flex flex-col">
 				{#each data.deliveries as delivery (delivery.id)}
 					{@const state = status(delivery)}
-					<li class="border-b border-border">
+					<li>
 						<details class="group">
 							<summary
-								class="flex cursor-pointer list-none flex-col gap-1 py-3 hover:bg-foreground/[0.04] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden"
+								class="-mx-3 flex cursor-pointer list-none flex-col gap-1 px-3 py-3 hover:bg-foreground/[0.05] sm:flex-row sm:items-center sm:justify-between [&::-webkit-details-marker]:hidden"
 							>
 								<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
 									<Icon
@@ -183,14 +192,14 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 			</p>
 		{/if}
 
-		<form method="post" action="?/requestAccess" class="flex flex-col gap-2.5">
+		<form method="post" action="?/requestAccess" class="flex flex-col gap-3">
 			{#each data.directory.scopes as { scope, description } (scope)}
 				<Checkbox name="scope" value={scope} checked={data.directory.requested.includes(scope)}>
 					<span class="font-mono font-semibold">{scope}</span>
 					{description}
 				</Checkbox>
 			{/each}
-			<Button type="submit" variant="outline" class="mt-2">
+			<Button type="submit" class="mt-2">
 				{data.directory.requested.length ? 'Change request' : 'Ask for access'}
 			</Button>
 		</form>

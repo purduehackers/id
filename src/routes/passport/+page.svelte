@@ -4,14 +4,13 @@
 	import type { ActionData, PageData } from './$types';
 	import AuthShell from '$lib/components/AuthShell.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
+	import FlapCode from '$lib/components/ph/FlapCode.svelte';
 	import DitherButton from '$lib/components/ph/DitherButton.svelte';
 	import Link from '$lib/components/ph/Link.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
-
-	const pretty = (code: string) => `${code.slice(0, 3)} ${code.slice(3)}`;
 
 	$effect(() => {
 		if (!data.code || data.approvedAs) return;
@@ -51,12 +50,9 @@
 			Not you? <LinkButton>Start over</LinkButton>
 		</form>
 	{:else if data.code}
-		<p
-			class="enter border border-foreground grid-bg py-8 text-center font-mono text-5xl font-semibold tracking-[0.2em] sm:text-6xl"
-			style="--i: 1"
-		>
-			{pretty(data.code)}
-		</p>
+		<div class="enter" style="--i: 1">
+			{#key data.code}<FlapCode code={data.code} />{/key}
+		</div>
 		<p class="enter" style="--i: 2">This page updates by itself once you approve it.</p>
 		<form method="post" action="?/cancel" class="enter" style="--i: 3">
 			<input type="hidden" name="next" value={data.next} />

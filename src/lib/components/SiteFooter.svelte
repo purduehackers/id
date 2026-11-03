@@ -1,14 +1,18 @@
 <script lang="ts">
-	import Footer from './ph/Footer.svelte';
 	import Link from './ph/Link.svelte';
+
+	let { class: className }: { class?: string } = $props();
 </script>
 
-<Footer
-	links={[
-		{ label: 'Purdue Hackers', href: 'https://purduehackers.com' },
-		{ label: 'Source', href: 'https://github.com/purduehackers/id' }
+<footer
+	class={[
+		'flex flex-wrap items-center gap-x-5 gap-y-2 font-mono text-[12px] tracking-wide uppercase',
+		className
 	]}
 >
-	Pixel icons from the
-	<Link href="https://pixeliconlibrary.com">HackerNoon Pixel Icon Library</Link>, CC BY 4.0.
-</Footer>
+	<Link href="https://purduehackers.com">Purdue Hackers</Link>
+	<Link href="https://github.com/purduehackers/id">Source</Link>
+	<span>
+		Icons: <Link href="https://pixeliconlibrary.com">HackerNoon Pixel Icon Library</Link>, CC BY 4.0
+	</span>
+</footer>

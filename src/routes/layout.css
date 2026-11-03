@@ -3,9 +3,21 @@
 @plugin '@tailwindcss/typography';
 
 @layer base {
+	.dark {
+		color-scheme: dark;
+	}
+
+	body {
+		font-size: 15px;
+	}
+
 	button:not(:disabled),
 	[role='button']:not(:disabled),
 	summary {
 		cursor: pointer;
+	}
+
+	summary::-webkit-details-marker {
+		display: none;
 	}
 }

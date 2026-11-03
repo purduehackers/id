@@ -1,13 +1,23 @@
+<!-- Underlined field: no box, the line thickens on focus. -->
 <script lang="ts">
 	import type { HTMLInputAttributes } from 'svelte/elements';
 
-	let { class: className, value = $bindable(), ...rest }: HTMLInputAttributes = $props();
+	type Props = Omit<HTMLInputAttributes, 'size'> & { size?: 'sm' | 'md' | 'code' };
+
+	let { class: className, size = 'md', value = $bindable(), ...rest }: Props = $props();
+
+	const sizes = {
+		sm: 'h-9 text-[15px]',
+		md: 'h-12 text-lg',
+		code: 'h-16 font-mono text-3xl tracking-[0.35em]'
+	};
 </script>
 
 <input
 	bind:value
 	class={[
-		'h-10 w-full min-w-0 border border-input bg-card px-3 font-sans text-[15px] text-card-foreground transition-colors duration-150 ease-quint outline-none placeholder:text-card-foreground/55 focus-visible:border-foreground disabled:cursor-not-allowed disabled:opacity-40 aria-invalid:border-ph-orange',
+		'w-full min-w-0 border-0 border-b border-input bg-transparent px-0 text-foreground transition-[border-color,box-shadow] duration-150 ease-quint outline-none placeholder:text-foreground/35 hover:border-foreground/60 focus:border-foreground focus:shadow-[0_1px_0_0_var(--foreground)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 aria-invalid:border-ph-orange',
+		sizes[size],
 		className
 	]}
 	{...rest}

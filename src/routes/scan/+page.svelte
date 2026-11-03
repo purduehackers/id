@@ -78,7 +78,7 @@
 					pattern="[0-9]*"
 					maxlength={7}
 					required
-					class="h-16 font-mono text-4xl tracking-[0.3em]"
+					size="code"
 				/>
 			</Field>
 			<DitherButton type="submit" class="mt-2">Approve sign-in</DitherButton>

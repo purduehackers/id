@@ -27,10 +27,10 @@
 			>. It is asking to:
 		</PageTitle>
 
-		<ul class="flex enter flex-col border-t border-border" style="--i: 1">
+		<ul class="flex enter flex-col gap-1" style="--i: 1">
 			{#each data.request.scopes as { scope, description } (scope)}
-				<li class="flex items-start gap-3 border-b border-border py-3 text-[15px]">
-					<Icon name="check" class="mt-0.5 text-ph-purple" />
+				<li class="flex items-start gap-3 py-1.5 text-[17px]">
+					<Icon name="check" class="mt-1 text-primary" />
 					{description}
 				</li>
 			{/each}
@@ -62,7 +62,8 @@
 					autocapitalize="characters"
 					spellcheck="false"
 					value={data.userCode ?? ''}
-					class="h-14 font-mono text-2xl tracking-[0.3em] uppercase"
+					size="code"
+					class="uppercase"
 				/>
 			</Field>
 			<DitherButton type="submit" class="mt-2">Continue</DitherButton>

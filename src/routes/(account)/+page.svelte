@@ -1,5 +1,7 @@
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
+	import IdCard from '$lib/components/IdCard.svelte';
+	import Row from '$lib/components/Row.svelte';
 	import Section from '$lib/components/Section.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
@@ -16,6 +18,17 @@
 
 <svelte:head><title>Account - Purdue Hackers ID</title></svelte:head>
 
+<h1 class="sr-only">Your account</h1>
+
+<IdCard
+	name={data.user.name}
+	username={data.user.username ?? ''}
+	email={data.user.email}
+	role={data.user.role}
+	since={data.user.createdAt}
+	number={data.passports[0]}
+/>
+
 {#if form?.message ?? data.error}
 	<Notice>{form?.message ?? data.error}</Notice>
 {:else if notice}
@@ -23,73 +36,77 @@
 {/if}
 
 <Section title="Email addresses">
-	<ul class="border-t border-border">
-		<li class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-border py-3">
-			<Icon name="envelope" />
-			<span class="font-medium break-all">{data.user.email}</span>
-			<Badge>Primary</Badge>
-		</li>
+	<ul class="flex flex-col">
+		<Row icon="envelope">
+			{#snippet title()}
+				{data.user.email}
+				<Badge>Primary</Badge>
+				{#if !data.user.emailVerified}<Badge color="orange">Not verified</Badge>{/if}
+			{/snippet}
+			{#snippet meta()}Apps you authorize see this one{/snippet}
+		</Row>
 		{#each data.emails as email (email.id)}
-			<li class="flex flex-col gap-3 border-b border-border py-3">
-				<div class="flex flex-wrap items-center justify-between gap-3">
-					<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
-						<Icon name="envelope" />
-						<span class="font-medium break-all">{email.email}</span>
-						{#if email.verifiedAt}
-							<span class="font-mono text-[13px]">added {when(email.verifiedAt)}</span>
-						{:else}
-							<Badge color="orange">Not verified</Badge>
-						{/if}
-					</span>
-
-					<span class="flex gap-2">
-						{#if email.verifiedAt}
-							<form method="post" action="?/makePrimary">
-								<input type="hidden" name="id" value={email.id} />
-								<Button type="submit" variant="outline" size="sm">Make primary</Button>
-							</form>
-						{/if}
-						<form method="post" action="?/removeEmail">
+			<Row icon="envelope">
+				{#snippet title()}
+					{email.email}
+					{#if !email.verifiedAt}<Badge color="orange">Not verified</Badge>{/if}
+				{/snippet}
+				{#snippet meta()}
+					{email.verifiedAt ? `Added ${when(email.verifiedAt)}` : 'Check your inbox for a code'}
+				{/snippet}
+				{#snippet actions()}
+					{#if email.verifiedAt}
+						<form method="post" action="?/makePrimary">
 							<input type="hidden" name="id" value={email.id} />
-							<Button type="submit" variant="ghost" size="sm" icon="trash">Remove</Button>
+							<Button type="submit" variant="ghost" size="sm" icon="star">Make primary</Button>
 						</form>
-					</span>
-				</div>
-
+					{/if}
+					<form method="post" action="?/removeEmail">
+						<input type="hidden" name="id" value={email.id} />
+						<Button
+							type="submit"
+							variant="ghost"
+							size="sm"
+							icon="trash"
+							aria-label="Remove {email.email}"
+						/>
+					</form>
+				{/snippet}
 				{#if !email.verifiedAt}
-					<div class="flex flex-wrap items-center gap-x-4 gap-y-2">
-						<form method="post" action="?/verifyEmail" class="flex gap-2">
+					<div class="flex flex-wrap items-end gap-x-5 gap-y-2">
+						<form method="post" action="?/verifyEmail" class="flex items-end gap-3">
 							<input type="hidden" name="id" value={email.id} />
 							<Input
 								name="otp"
+								size="sm"
 								inputmode="numeric"
 								autocomplete="one-time-code"
 								pattern="[0-9 ]*"
 								maxlength={7}
 								required
-								placeholder="Code"
+								placeholder="000000"
 								aria-label="Code for {email.email}"
-								class="w-32 font-mono tracking-[0.2em]"
+								class="w-32 font-mono tracking-[0.3em]"
 							/>
-							<Button type="submit">Verify</Button>
+							<Button type="submit" size="sm">Verify</Button>
 						</form>
-						<form method="post" action="?/resendEmail">
+						<form method="post" action="?/resendEmail" class="pb-1.5">
 							<input type="hidden" name="id" value={email.id} />
 							<LinkButton>Send a new code</LinkButton>
 						</form>
 					</div>
 				{/if}
-			</li>
+			</Row>
 		{/each}
 	</ul>
 
-	<form method="post" action="?/addEmail" class="flex gap-2">
+	<form method="post" action="?/addEmail" class="flex items-end gap-3 pl-15">
 		<Input
 			name="email"
 			type="email"
 			required
 			autocomplete="email"
-			placeholder="another@example.com"
+			placeholder="Add another address"
 			aria-label="Another email address"
 			value={form && 'email' in form ? (form.email ?? '') : ''}
 			class="flex-1"
@@ -101,48 +118,46 @@
 {#if data.passports.length}
 	<Section title="Passports">
 		{#snippet description()}
-			Tapping {data.passports.length === 1 ? 'it' : 'one'} signs you in.
+			Tap {data.passports.length === 1 ? 'it' : 'one'} with your phone to sign in anywhere.
 		{/snippet}
-		<div class="flex flex-wrap gap-2">
-			{#each data.passports as id (id)}
-				<span
-					class="flex items-center gap-2 border border-foreground px-3 py-2 font-mono text-[15px] font-semibold"
+		<ul class="flex flex-wrap gap-3">
+			{#each data.passports as id, i (id)}
+				<li
+					class="flex h-24 w-40 enter flex-col justify-between bg-foreground p-3 text-background"
+					style="--i: {i}"
 				>
-					<Icon name="credit-card" />#{id}
-				</span>
+					<Icon name="credit-card" class="size-5" />
+					<span class="ph-headline text-4xl">#{id}</span>
+				</li>
 			{/each}
-		</div>
+		</ul>
 	</Section>
 {/if}
 
 <Section title="Connected accounts">
-	<ul class="border-t border-border">
+	<ul class="flex flex-col">
 		{#each data.connections as connection (connection.id)}
-			<li class="flex flex-wrap items-center justify-between gap-3 border-b border-border py-3">
-				<span class="flex flex-wrap items-center gap-x-3 gap-y-1">
-					{#if connection.id === 'discord' || connection.id === 'github'}
-						<Icon name={connection.id} />
-					{/if}
-					<span class="font-medium">{connection.label}</span>
+			<Row
+				icon={connection.id === 'discord' || connection.id === 'github' ? connection.id : 'link'}
+			>
+				{#snippet title()}{connection.label}{/snippet}
+				{#snippet meta()}
+					{connection.accountId ? `Connected ${when(connection.connectedAt)}` : 'Not connected'}
+				{/snippet}
+				{#snippet actions()}
 					{#if connection.accountId}
-						<span class="font-mono text-[13px]">connected {when(connection.connectedAt)}</span>
+						<form method="post" action="?/unlink">
+							<input type="hidden" name="accountId" value={connection.accountId} />
+							<Button type="submit" variant="ghost" size="sm">Disconnect</Button>
+						</form>
 					{:else}
-						<span class="font-mono text-[13px]">not connected</span>
+						<form method="post" action="?/link">
+							<input type="hidden" name="provider" value={connection.id} />
+							<Button type="submit" size="sm" iconEnd="arrow-right">Connect</Button>
+						</form>
 					{/if}
-				</span>
-
-				{#if connection.accountId}
-					<form method="post" action="?/unlink">
-						<input type="hidden" name="accountId" value={connection.accountId} />
-						<Button type="submit" variant="outline" size="sm">Disconnect</Button>
-					</form>
-				{:else}
-					<form method="post" action="?/link">
-						<input type="hidden" name="provider" value={connection.id} />
-						<Button type="submit" size="sm" icon="link">Connect</Button>
-					</form>
-				{/if}
-			</li>
+				{/snippet}
+			</Row>
 		{/each}
 	</ul>
 </Section>

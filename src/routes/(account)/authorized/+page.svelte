@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { ActionData, PageData } from './$types';
-	import Section from '$lib/components/Section.svelte';
-	import Badge from '$lib/components/ph/Badge.svelte';
+	import PageTitle from '$lib/components/PageTitle.svelte';
+	import Stamp from '$lib/components/Stamp.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 
@@ -12,40 +12,37 @@
 
 <svelte:head><title>Authorized apps - Purdue Hackers ID</title></svelte:head>
 
+<PageTitle title="Stamps">
+	{#if data.apps.length === 0}
+		Every app you let into your account leaves a stamp here. None yet.
+	{:else}
+		Every app you let into your account leaves a stamp. Revoke one to sign out of it everywhere.
+	{/if}
+</PageTitle>
+
 {#if form?.message}
 	<Notice tone={form.message === 'Access revoked.' ? 'success' : 'error'}>{form.message}</Notice>
 {/if}
 
-<Section title="Authorized apps">
-	{#snippet description()}
-		{#if data.apps.length === 0}
-			You have not given any app access to your account.
-		{:else}
-			Apps that can see your account. Revoking signs you out of them.
-		{/if}
-	{/snippet}
-
-	{#if data.apps.length}
-		<ul class="border-t border-border">
-			{#each data.apps as app (app.id)}
-				<li class="flex flex-col gap-2 border-b border-border py-4">
-					<div class="flex flex-wrap items-center justify-between gap-3">
-						<span class="flex flex-wrap items-baseline gap-x-3">
-							<span class="text-lg font-medium">{app.name}</span>
-							<span class="font-mono text-[13px]">since {when(app.grantedAt)}</span>
-						</span>
-						<form method="post" action="?/revoke">
-							<input type="hidden" name="id" value={app.id} />
-							<Button type="submit" variant="outline" size="sm">Revoke</Button>
-						</form>
-					</div>
-					<div class="flex flex-wrap gap-1.5">
-						{#each app.scopes as scope (scope)}
-							<Badge color="outline">{scope}</Badge>
-						{/each}
-					</div>
-				</li>
-			{/each}
-		</ul>
-	{/if}
-</Section>
+{#if data.apps.length === 0}
+	<div class="grid h-56 max-w-md place-items-center dither-field">
+		<span class="bg-background px-3 py-1.5 ph-subheadline text-[12px]">Empty page</span>
+	</div>
+{:else}
+	<ul class="grid gap-x-6 gap-y-8 py-2 sm:grid-cols-2">
+		{#each data.apps as app, i (app.id)}
+			<Stamp
+				name={app.name}
+				seed={app.name}
+				date={when(app.grantedAt)}
+				scopes={app.scopes}
+				index={i}
+			>
+				<form method="post" action="?/revoke">
+					<input type="hidden" name="id" value={app.id} />
+					<Button type="submit" variant="plain" size="sm" icon="times">Revoke</Button>
+				</form>
+			</Stamp>
+		{/each}
+	</ul>
+{/if}

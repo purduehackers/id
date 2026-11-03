@@ -3,7 +3,16 @@
 
 	type Props = {
 		color?:
-			'default' | 'yellow' | 'purple' | 'pink' | 'blue' | 'lime' | 'teal' | 'orange' | 'outline';
+			| 'default'
+			| 'yellow'
+			| 'purple'
+			| 'pink'
+			| 'blue'
+			| 'lime'
+			| 'teal'
+			| 'orange'
+			| 'outline'
+			| 'muted';
 		class?: string;
 		children?: Snippet;
 	};
@@ -19,7 +28,8 @@
 		lime: 'bg-ph-lime text-ph-black',
 		teal: 'bg-ph-teal text-ph-black',
 		orange: 'bg-ph-orange text-ph-black',
-		outline: 'border border-foreground text-foreground'
+		outline: 'border border-foreground text-foreground',
+		muted: 'bg-foreground/10 text-foreground'
 	};
 </script>
 

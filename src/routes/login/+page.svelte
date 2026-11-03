@@ -12,7 +12,6 @@
 	import Link from '$lib/components/ph/Link.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
-	import Separator from '$lib/components/ph/Separator.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -118,7 +117,7 @@
 	{#if !registering}
 		<form method="post" action="?/social" class="flex enter flex-col gap-3" style="--i: 2">
 			<input type="hidden" name="next" value={data.next} />
-			<Separator label="Or continue with" />
+			<p class="ph-subheadline text-[12px]">Or continue with</p>
 			<div class="flex flex-wrap gap-2">
 				<Button
 					variant="outline"

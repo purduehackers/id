@@ -46,7 +46,7 @@
 				pattern="[0-9 ]*"
 				maxlength={7}
 				required
-				class="h-14 font-mono text-2xl tracking-[0.3em]"
+				size="code"
 			/>
 		</Field>
 

@@ -7,7 +7,7 @@
 	type Props = Omit<HTMLAnchorAttributes & HTMLButtonAttributes, 'type'> & {
 		href?: string;
 		type?: 'button' | 'submit' | 'reset';
-		variant?: 'solid' | 'outline' | 'ghost';
+		variant?: 'solid' | 'outline' | 'ghost' | 'plain';
 		size?: 'sm' | 'md' | 'lg';
 		icon?: IconName;
 		iconEnd?: IconName;
@@ -29,7 +29,9 @@
 	const variants = {
 		solid: 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground',
 		outline: 'border border-foreground text-foreground hover:bg-foreground hover:text-background',
-		ghost: 'text-foreground hover:bg-foreground/[0.08]'
+		ghost: 'text-foreground hover:bg-foreground/[0.08]',
+		// Inherits the surrounding colour, for buttons on coloured blocks.
+		plain: 'hover:bg-current/[0.12]'
 	};
 	const sizes = {
 		sm: 'h-8 gap-1.5 px-3 text-[13px]',
