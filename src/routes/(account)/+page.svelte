@@ -7,6 +7,7 @@
 	import Section from '$lib/components/Section.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
+	import Field from '$lib/components/ph/Field.svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
 	import Input from '$lib/components/ph/Input.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
@@ -16,6 +17,8 @@
 
 	const when = (value: string | Date | null) => (value ? new Date(value).toLocaleDateString() : '');
 	const notice = $derived((form && 'notice' in form && form.notice) || data.notice);
+	const profileValue = (field: 'name' | 'phone' | 'graduationYear', fallback: string) =>
+		form && 'profile' in form && form.profile ? form.profile[field] : fallback;
 
 	let passkeysSupported = $state<boolean | null>(null);
 	let addingPasskey = $state(false);
@@ -63,9 +66,12 @@
 	username={data.user.username ?? ''}
 	email={data.user.email}
 	role={data.user.role}
+	graduationYear={data.user.graduationYear}
 	since={data.user.createdAt}
 	passports={data.passports}
-	linked={data.connections.filter((c) => c.accountId).map((c) => c.label)}
+	linked={data.connections
+		.filter((c) => c.accountId)
+		.map((c) => (c.id === 'github' && data.github ? `GitHub (@${data.github})` : c.label))}
 	addresses={1 + data.emails.filter((e) => e.verifiedAt).length}
 />
 
@@ -74,6 +80,60 @@
 {:else if notice}
 	<Notice tone="success">{notice}</Notice>
 {/if}
+
+<Section title="Profile">
+	{#snippet description()}
+		Keep your details up to date. Apps you authorize and the Purdue Hackers directory only see what
+		they have permission for.
+	{/snippet}
+
+	<form method="post" action="?/updateProfile" class="flex flex-col gap-7">
+		<Field label="Full name" for="profile-name">
+			<Input
+				id="profile-name"
+				name="name"
+				required
+				maxlength={100}
+				autocomplete="name"
+				value={profileValue('name', data.user.name)}
+			/>
+		</Field>
+
+		<div class="grid gap-7 sm:grid-cols-2">
+			<Field label="Phone number" for="profile-phone" hint="Optional.">
+				<Input
+					id="profile-phone"
+					name="phone"
+					type="tel"
+					maxlength={32}
+					autocomplete="tel"
+					placeholder="+1 (765) 555-0123"
+					value={profileValue('phone', data.user.phone ?? '')}
+				/>
+			</Field>
+
+			<Field label="Graduation year" for="profile-graduation-year" hint="Optional.">
+				<Input
+					id="profile-graduation-year"
+					name="graduationYear"
+					inputmode="numeric"
+					pattern="[0-9]{4}"
+					maxlength={4}
+					placeholder="2026"
+					value={profileValue(
+						'graduationYear',
+						data.user.graduationYear ? String(data.user.graduationYear) : ''
+					)}
+					class="font-mono"
+				/>
+			</Field>
+		</div>
+
+		<div>
+			<Button type="submit">Save profile</Button>
+		</div>
+	</form>
+</Section>
 
 <Section title="Email addresses">
 	<ul class="flex flex-col">
@@ -266,9 +326,18 @@
 			<Row
 				icon={connection.id === 'discord' || connection.id === 'github' ? connection.id : 'link'}
 			>
-				{#snippet title()}{connection.label}{/snippet}
+				{#snippet title()}
+					{connection.label}
+					{#if connection.id === 'github' && data.github}
+						<span class="font-mono text-[14px]">@{data.github}</span>
+					{/if}
+				{/snippet}
 				{#snippet meta()}
-					{connection.accountId ? `Connected ${when(connection.connectedAt)}` : 'Not connected'}
+					{connection.accountId
+						? `Connected ${when(connection.connectedAt)}`
+						: connection.id === 'github'
+							? 'Connect to show your GitHub on your profile'
+							: 'Not connected'}
 				{/snippet}
 				{#snippet actions()}
 					{#if connection.accountId}

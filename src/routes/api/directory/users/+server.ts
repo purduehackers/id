@@ -1,16 +1,17 @@
 import { json } from '@sveltejs/kit';
-import { and, asc, eq, gt } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { account, user } from '$lib/server/db/schema';
 import { authorizeDirectoryRequest } from '$lib/server/directory';
-import { grantedRoles } from '$lib/roles';
+import { ROLES, grantedRoles, isRole, rolesGranting, type Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
 export const GET: RequestHandler = async ({ request, url }) => {
 	const authorized = await authorizeDirectoryRequest(request);
 	if (authorized instanceof Response) return authorized;
 	const { scopes } = authorized;
+	const withContact = scopes.has('directory:contact');
 	const withDiscord = scopes.has('directory:discord');
 
 	const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 100, 1), 500);
@@ -31,6 +32,22 @@ export const GET: RequestHandler = async ({ request, url }) => {
 		);
 	}
 
+	const rawRoles = url.searchParams
+		.getAll('role')
+		.flatMap((value) => value.split(','))
+		.map((value) => value.trim())
+		.filter(Boolean);
+	if (rawRoles.some((r) => !isRole(r))) {
+		return json(
+			{
+				error: 'invalid_request',
+				error_description: `Unknown role. Expected one of: ${ROLES.join(', ')}.`
+			},
+			{ status: 400 }
+		);
+	}
+	const matchingRoles = rawRoles.length ? rolesGranting(rawRoles as Role[]) : null;
+
 	const discord = db
 		.select({ userId: account.userId, discordId: account.accountId })
 		.from(account)
@@ -42,6 +59,11 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			id: user.id,
 			username: user.username,
 			name: user.name,
+			email: user.email,
+			emailVerified: user.emailVerified,
+			phone: user.phone,
+			graduationYear: user.graduationYear,
+			github: user.github,
 			image: user.image,
 			role: user.role,
 			banned: user.banned,
@@ -52,7 +74,8 @@ export const GET: RequestHandler = async ({ request, url }) => {
 		.where(
 			and(
 				cursor ? gt(user.id, cursor) : undefined,
-				discordId ? eq(discord.discordId, discordId) : undefined
+				discordId ? eq(discord.discordId, discordId) : undefined,
+				matchingRoles ? inArray(user.role, matchingRoles) : undefined
 			)
 		)
 		.orderBy(asc(user.id))
@@ -66,7 +89,14 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			name: row.name,
 			picture: pictureFor(row),
 			roles: grantedRoles(row.role),
+			github: row.github ?? null,
+			graduation_year: row.graduationYear ?? null,
 			banned: row.banned,
+			...(withContact && {
+				email: row.email,
+				email_verified: row.emailVerified,
+				phone_number: row.phone ?? null
+			}),
 			...(withDiscord && { discord_id: row.discordId ?? null })
 		})),
 		next_cursor: rows.length > limit ? page.at(-1)!.id : null

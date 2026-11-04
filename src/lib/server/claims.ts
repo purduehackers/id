@@ -6,7 +6,12 @@ type ClaimInfo = { user: ClaimUser; scopes: string[] };
 
 export function identityClaims({ user, scopes }: ClaimInfo) {
 	return {
-		...(scopes.includes('profile') && { preferred_username: user.username }),
+		...(scopes.includes('profile') && {
+			preferred_username: user.username,
+			...(user.github ? { github: user.github } : {}),
+			...(user.graduationYear ? { graduation_year: user.graduationYear } : {})
+		}),
+		...(scopes.includes('phone') && user.phone ? { phone_number: user.phone } : {}),
 		...(scopes.includes('roles') && { roles: grantedRoles(user.role as string) })
 	};
 }

@@ -32,8 +32,9 @@ export async function grantedScopes(clientId: string): Promise<DirectoryScope[]>
 }
 
 export async function requestAccess(ownerId: string, clientId: string, scopes: string[]) {
-	const requested = scopes.filter(isDirectoryScope);
+	const requested = [...new Set(scopes.filter(isDirectoryScope))];
 	if (requested.length === 0) throw new DirectoryError('Pick at least one kind of access.');
+	if (!requested.includes('directory:roles')) requested.unshift('directory:roles');
 
 	const [client] = await db
 		.select({ authMethod: oauthClient.tokenEndpointAuthMethod })

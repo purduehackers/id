@@ -28,6 +28,7 @@ import { accessTokenClaims, identityClaims, userInfoClaims } from '$lib/server/c
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
+import { clearGithubAccount, syncGithubAccount } from '$lib/server/profile';
 import { describeUserAgent } from '$lib/server/user-agent';
 import {
 	alertConsent,
@@ -101,7 +102,10 @@ export const auth = betterAuth({
 
 	user: {
 		additionalFields: {
-			securityEmails: { type: 'boolean', defaultValue: true, input: false }
+			securityEmails: { type: 'boolean', defaultValue: true, input: false },
+			phone: { type: 'string', required: false, input: false },
+			graduationYear: { type: 'number', required: false, input: false },
+			github: { type: 'string', required: false, input: false }
 		}
 	},
 
@@ -201,6 +205,15 @@ export const auth = betterAuth({
 					if (account.providerId === 'discord') {
 						await recoverByDiscord(account.userId, account.accountId);
 						await recordDiscordLink(account.userId, account.accountId, true);
+					} else if (account.providerId === 'github') {
+						await syncGithubAccount(account.userId, account.accountId, account.accessToken);
+					}
+				}
+			},
+			update: {
+				async after(account) {
+					if (account.providerId === 'github') {
+						await syncGithubAccount(account.userId, account.accountId, account.accessToken);
 					}
 				}
 			},
@@ -208,6 +221,8 @@ export const auth = betterAuth({
 				async after(account) {
 					if (account.providerId === 'discord') {
 						await recordDiscordLink(account.userId, account.accountId, false);
+					} else if (account.providerId === 'github') {
+						await clearGithubAccount(account.userId);
 					}
 				}
 			}
@@ -284,7 +299,15 @@ export const auth = betterAuth({
 			allowUnauthenticatedClientRegistration: false,
 			clientRegistrationRequirePKCE: true,
 			clientRegistrationDefaultScopes: ['openid', 'profile', 'email', 'user:read'],
-			clientRegistrationAllowedScopes: ['openid', 'profile', 'email', 'roles', 'user:read', 'user'],
+			clientRegistrationAllowedScopes: [
+				'openid',
+				'profile',
+				'email',
+				'phone',
+				'roles',
+				'user:read',
+				'user'
+			],
 			customUserInfoClaims: userInfoClaims,
 			customIdTokenClaims: identityClaims,
 			customAccessTokenClaims: accessTokenClaims,

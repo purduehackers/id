@@ -209,8 +209,9 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 			<p>Get a token as the app itself (it lasts five minutes), then call the API with it:</p>
 			<Code code={curl} />
 			<p>
-				Page with <span class="font-mono">cursor=next_cursor</span> until it is null. Look someone
-				up with <span class="font-mono">discord_id=…</span>.
+				Page with <span class="font-mono">cursor=next_cursor</span> until it is null. Filter by role
+				with <span class="font-mono">role=organizer,alumni</span> or look someone up with
+				<span class="font-mono">discord_id=…</span>.
 			</p>
 		{/if}
 	</Section>
