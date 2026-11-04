@@ -1,10 +1,12 @@
-import { desc, eq, or, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, not, or, sql, type SQL } from 'drizzle-orm';
 import type { AnySQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { db } from '$lib/server/db';
 import {
+	account,
 	auditEvent,
 	oauthAccessToken,
 	oauthRefreshToken,
+	passkey,
 	session,
 	user
 } from '$lib/server/db/schema';
@@ -17,25 +19,83 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 export class AdminError extends Error {}
 
-export async function listUsers(query: string) {
+export const USER_FILTERS = ['unverified', 'banned'] as const;
+export type UserFilter = (typeof USER_FILTERS)[number];
+
+export const isUserFilter = (value: unknown): value is UserFilter =>
+	USER_FILTERS.includes(value as UserFilter);
+
+const FILTERS: Record<UserFilter, () => SQL> = {
+	unverified: () => not(user.emailVerified),
+	banned: () => eq(user.banned, true)
+};
+
+function searchFor(query: string) {
 	const q = query.trim().toLowerCase();
 	const match = (column: AnySQLiteColumn) => sql`instr(lower(${column}), ${q}) > 0`;
+	return q ? or(match(user.username), match(user.email), match(user.name)) : undefined;
+}
 
-	return db
+export async function listUsers(query: string, filter: UserFilter | null) {
+	const people = await db
 		.select({
 			id: user.id,
 			name: user.name,
 			username: user.username,
 			email: user.email,
+			emailVerified: user.emailVerified,
 			role: user.role,
 			banned: user.banned,
 			banReason: user.banReason,
 			createdAt: user.createdAt
 		})
 		.from(user)
-		.where(q ? or(match(user.username), match(user.email), match(user.name)) : undefined)
+		.where(and(searchFor(query), filter ? FILTERS[filter]() : undefined))
 		.orderBy(desc(user.createdAt))
 		.limit(50);
+
+	const ids = people.map((person) => person.id);
+	const [accounts, passkeys] = ids.length
+		? await Promise.all([
+				db
+					.select({ userId: account.userId, providerId: account.providerId })
+					.from(account)
+					.where(inArray(account.userId, ids)),
+				db
+					.select({ userId: passkey.userId, count: count() })
+					.from(passkey)
+					.where(inArray(passkey.userId, ids))
+					.groupBy(passkey.userId)
+			])
+		: [[], []];
+	const passkeysOf = new Map(passkeys.map((row) => [row.userId, row.count]));
+
+	return people.map((person) => {
+		const providers = accounts
+			.filter((row) => row.userId === person.id)
+			.map((row) => row.providerId);
+		return {
+			...person,
+			hasPassword: providers.includes('credential'),
+			connections: providers.filter((provider) => provider !== 'credential'),
+			passkeys: passkeysOf.get(person.id) ?? 0
+		};
+	});
+}
+
+export async function countUsers(query: string) {
+	const search = searchFor(query);
+	const [everyone, ...filtered] = await Promise.all([
+		db.$count(user, search),
+		...USER_FILTERS.map((filter) => db.$count(user, and(search, FILTERS[filter]())))
+	]);
+	return {
+		everyone,
+		...(Object.fromEntries(USER_FILTERS.map((filter, i) => [filter, filtered[i]])) as Record<
+			UserFilter,
+			number
+		>)
+	};
 }
 
 export async function recentEvents() {
