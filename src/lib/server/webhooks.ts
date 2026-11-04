@@ -20,7 +20,6 @@ import {
 import { readList } from '$lib/server/db/json';
 import { isDirectoryScope } from '$lib/server/scopes';
 import { uuidv7 } from '$lib/server/uuid';
-import { splitNameParts } from '$lib/profile';
 import { grantedRoles } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
@@ -255,16 +254,8 @@ type Profile = {
 
 const PROFILE_CLAIMS = [
 	{ claim: 'name', scope: 'profile', read: (u: Profile) => u.name },
-	{
-		claim: 'given_name',
-		scope: 'profile',
-		read: (u: Profile) => splitNameParts(u).firstName || null
-	},
-	{
-		claim: 'family_name',
-		scope: 'profile',
-		read: (u: Profile) => splitNameParts(u).lastName || null
-	},
+	{ claim: 'given_name', scope: 'profile', read: (u: Profile) => u.givenName ?? null },
+	{ claim: 'family_name', scope: 'profile', read: (u: Profile) => u.familyName ?? null },
 	{ claim: 'preferred_username', scope: 'profile', read: (u: Profile) => u.username },
 	{ claim: 'picture', scope: 'profile', read: (u: Profile) => pictureFor(u) },
 	{ claim: 'github', scope: 'profile', read: (u: Profile) => u.github ?? null },

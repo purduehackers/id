@@ -18,7 +18,6 @@
 		PART_NAME_MAX_LENGTH,
 		formatNationalPhone,
 		parsePhoneInput,
-		splitNameParts,
 		splitPhone
 	} from '$lib/profile';
 
@@ -31,7 +30,6 @@
 		fallback: string
 	) => (form && 'profile' in form && form.profile ? form.profile[field] : fallback);
 
-	const nameParts = $derived(splitNameParts(data.user));
 	const initialPhone = $derived(splitPhone(data.user.phone));
 
 	let phoneCountry = $derived(profileValue('phoneCountry', initialPhone.countryCode));
@@ -127,7 +125,7 @@
 					required
 					maxlength={PART_NAME_MAX_LENGTH}
 					autocomplete="given-name"
-					value={profileValue('firstName', nameParts.firstName)}
+					value={profileValue('firstName', data.user.givenName ?? '')}
 				/>
 			</Field>
 
@@ -138,7 +136,7 @@
 					required
 					maxlength={PART_NAME_MAX_LENGTH}
 					autocomplete="family-name"
-					value={profileValue('lastName', nameParts.lastName)}
+					value={profileValue('lastName', data.user.familyName ?? '')}
 				/>
 			</Field>
 		</div>
@@ -161,7 +159,6 @@
 						id="profile-phone"
 						name="phone"
 						type="tel"
-						maxlength={24}
 						autocomplete="tel-national"
 						placeholder={COUNTRY_CODES.find((c) => c.code === phoneCountry)?.placeholder ??
 							'(765) 555-0123'}

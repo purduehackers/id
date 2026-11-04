@@ -15,6 +15,13 @@
       "when": 1793830808674,
       "tag": "0001_cute_joshua_kane",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1793835576708,
+      "tag": "0002_derive_user_name",
+      "breakpoints": true
     }
   ]
 }

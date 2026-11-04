@@ -17,15 +17,23 @@ const ID_BASE = process.env.ID_BASE ?? 'http://localhost:5173';
 const CLIENT_ID = process.env.CLIENT_ID ?? 'directory-service';
 const CLIENT_SECRET = process.env.CLIENT_SECRET ?? 'directory-secret';
 const SCOPE = process.env.SCOPE ?? 'directory:roles directory:contact';
+const RESOURCE = 'https://id.purduehackers.com/api/directory';
 
 type DirectoryUser = {
-	id: string;
+	sub: string;
+	preferred_username: string;
 	name: string;
-	email?: string | null;
-	phone_number?: string | null;
-	github?: string | null;
-	graduation_year?: number | null;
+	given_name: string | null;
+	family_name: string | null;
+	picture: string;
 	roles: string[];
+	github: string | null;
+	graduation_year: number | null;
+	banned: boolean;
+	email?: string;
+	email_verified?: boolean;
+	phone_number?: string | null;
+	discord_id?: string | null;
 };
 
 async function getAccessToken(): Promise<string> {
@@ -33,14 +41,14 @@ async function getAccessToken(): Promise<string> {
 
 	const body = new URLSearchParams({
 		grant_type: 'client_credentials',
-		client_id: CLIENT_ID,
-		client_secret: CLIENT_SECRET,
-		scope: SCOPE
+		scope: SCOPE,
+		resource: RESOURCE
 	});
 
 	const res = await fetch(`${ID_BASE}/api/auth/oauth2/token`, {
 		method: 'POST',
 		headers: {
+			Authorization: `Basic ${btoa(`${CLIENT_ID}:${CLIENT_SECRET}`)}`,
 			'Content-Type': 'application/x-www-form-urlencoded'
 		},
 		body: body.toString()

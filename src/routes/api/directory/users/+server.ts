@@ -4,7 +4,6 @@ import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { account, user } from '$lib/server/db/schema';
 import { authorizeDirectoryRequest } from '$lib/server/directory';
-import { splitNameParts } from '$lib/profile';
 import { ROLES, grantedRoles, isRole, rolesGranting, type Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
@@ -86,27 +85,24 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
 	const page = rows.slice(0, limit);
 	return json({
-		users: page.map((row) => {
-			const { firstName, lastName } = splitNameParts(row);
-			return {
-				sub: row.id,
-				preferred_username: row.username,
-				name: row.name,
-				given_name: firstName || null,
-				family_name: lastName || null,
-				picture: pictureFor(row),
-				roles: grantedRoles(row.role),
-				github: row.github ?? null,
-				graduation_year: row.graduationYear ?? null,
-				banned: row.banned,
-				...(withContact && {
-					email: row.email,
-					email_verified: row.emailVerified,
-					phone_number: row.phone ?? null
-				}),
-				...(withDiscord && { discord_id: row.discordId ?? null })
-			};
-		}),
+		users: page.map((row) => ({
+			sub: row.id,
+			preferred_username: row.username,
+			name: row.name,
+			given_name: row.givenName,
+			family_name: row.familyName,
+			picture: pictureFor(row),
+			roles: grantedRoles(row.role),
+			github: row.github,
+			graduation_year: row.graduationYear,
+			banned: row.banned,
+			...(withContact && {
+				email: row.email,
+				email_verified: row.emailVerified,
+				phone_number: row.phone
+			}),
+			...(withDiscord && { discord_id: row.discordId ?? null })
+		})),
 		next_cursor: rows.length > limit ? page.at(-1)!.id : null
 	});
 };

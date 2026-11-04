@@ -1,3 +1,4 @@
+import { waitUntil } from '@vercel/functions';
 import { and, eq } from 'drizzle-orm';
 import {
 	ProfileError,
@@ -7,7 +8,7 @@ import {
 } from '$lib/profile';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
-import { account } from '$lib/server/db/schema';
+import { account, user } from '$lib/server/db/schema';
 
 export { ProfileError, validateProfile, type ProfileInput, type ValidatedProfile };
 
@@ -19,7 +20,12 @@ export async function updateProfile(
 ): Promise<ValidatedProfile> {
 	const validated = validateProfile(input);
 	const ctx = await auth.$context;
-	await ctx.internalAdapter.updateUser(userId, validated);
+	await ctx.internalAdapter.updateUser(userId, {
+		givenName: validated.givenName,
+		familyName: validated.familyName,
+		phone: validated.phone,
+		graduationYear: validated.graduationYear
+	});
 	return validated;
 }
 
@@ -63,9 +69,27 @@ export async function syncGithubAccount(
 ): Promise<string | null> {
 	const github = await fetchGithubUsername(accountId, accessToken);
 	if (!github) return null;
+	const [current] = await db
+		.select({ github: user.github })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	if (current?.github === github) return github;
 	const ctx = await auth.$context;
 	await ctx.internalAdapter.updateUser(userId, { github });
 	return github;
+}
+
+export function syncGithubAccountInBackground(
+	userId: string,
+	accountId: string,
+	accessToken?: string | null
+) {
+	waitUntil(
+		syncGithubAccount(userId, accountId, accessToken).catch((error) =>
+			console.error('[profile] GitHub sync failed', error)
+		)
+	);
 }
 
 export async function ensureGithubSynced(

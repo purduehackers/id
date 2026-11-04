@@ -7,6 +7,8 @@ export const load: LayoutServerLoad = (event) => {
 		user: {
 			id: user.id,
 			name: user.name,
+			givenName: user.givenName ?? null,
+			familyName: user.familyName ?? null,
 			username: user.username,
 			role: user.role,
 			email: user.email,

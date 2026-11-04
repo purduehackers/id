@@ -4,6 +4,9 @@ export const PART_NAME_MAX_LENGTH = 60;
 export const GRADUATION_YEAR_MIN = 1950;
 export const GRADUATION_YEAR_MAX = 2050;
 
+const E164_MAX_DIGITS = 15;
+const KEEPS_TRUNK_ZERO = '+39';
+
 export const COUNTRY_CODES = [
 	{ code: '+1', label: '+1 (US/CA)', placeholder: '(765) 555-0123' },
 	{ code: '+44', label: '+44 (UK)', placeholder: '7700 900077' },
@@ -71,14 +74,13 @@ export function formatNationalPhone(raw: string, countryCode: string): string {
 		if (digits.length === 11 && digits.startsWith('1')) {
 			digits = digits.slice(1);
 		}
-		digits = digits.slice(0, 10);
+		if (digits.length > 10) return digits;
 		if (digits.length <= 3) return digits;
 		if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
-		return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+		return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 	}
 
-	const maxNational = Math.max(15 - (countryCode.length - 1), 7);
-	digits = digits.slice(0, maxNational);
+	if (digits.length > E164_MAX_DIGITS - (countryCode.length - 1)) return digits;
 	if (digits.length <= 3) return digits;
 	if (digits.length <= 6) return `${digits.slice(0, 3)} ${digits.slice(3)}`;
 	if (digits.length <= 10) {
@@ -91,19 +93,18 @@ export function parsePhoneInput(
 	raw: string,
 	currentCountryCode: string
 ): { countryCode: string; national: string } {
+	const countryCode = isCountryCode(currentCountryCode) ? currentCountryCode : '+1';
 	const trimmed = raw.trimStart();
 	if (trimmed.startsWith('+')) {
 		const compact = '+' + trimmed.slice(1).replace(/\D/g, '');
 		const matched = CODES_BY_LENGTH.find((c) => compact.startsWith(c.code));
-		if (matched) {
-			const rest = compact.slice(matched.code.length);
-			return {
-				countryCode: matched.code,
-				national: formatNationalPhone(rest, matched.code)
-			};
-		}
+		if (!matched) return { countryCode, national: compact };
+		const rest = compact.slice(matched.code.length);
+		return {
+			countryCode: matched.code,
+			national: formatNationalPhone(rest, matched.code)
+		};
 	}
-	const countryCode = isCountryCode(currentCountryCode) ? currentCountryCode : '+1';
 	return {
 		countryCode,
 		national: formatNationalPhone(raw, countryCode)
@@ -118,18 +119,37 @@ export function splitPhone(stored: string | null | undefined): {
 	return parsePhoneInput(stored, '+1');
 }
 
-export function splitNameParts(user: {
-	name: string;
-	givenName?: string | null;
-	familyName?: string | null;
-}): { firstName: string; lastName: string } {
-	if (user.givenName || user.familyName) {
-		return {
-			firstName: user.givenName ?? '',
-			lastName: user.familyName ?? ''
-		};
+export function formatPhone(stored: string): string {
+	const { countryCode, national } = splitPhone(stored);
+	return national.startsWith('+') ? national : `${countryCode} ${national}`;
+}
+
+export function validatePhone(raw: string, requestedCode: string): string | null {
+	const rawPhone = raw.trim();
+	if (!rawPhone) return null;
+
+	const code = requestedCode.trim() || '+1';
+	if (!isCountryCode(code)) throw new ProfileError('Pick a valid country code.');
+
+	const { countryCode, national } = parsePhoneInput(rawPhone, code);
+	if (national.startsWith('+')) {
+		throw new ProfileError('We do not support that country code yet.');
 	}
-	const parts = user.name.trim().split(/\s+/).filter(Boolean);
+
+	const digits = national.replace(/\D/g, '');
+	const subscriber = countryCode === KEEPS_TRUNK_ZERO ? digits : digits.replace(/^0+/, '');
+	if (
+		(countryCode === '+1' && subscriber.length !== 10) ||
+		subscriber.length < 6 ||
+		countryCode.length - 1 + subscriber.length > E164_MAX_DIGITS
+	) {
+		throw new ProfileError('That does not look like a complete phone number.');
+	}
+	return `${countryCode}${subscriber}`;
+}
+
+export function splitNameParts(name: string): { firstName: string; lastName: string } {
+	const parts = name.trim().split(/\s+/).filter(Boolean);
 	if (parts.length <= 1) {
 		return { firstName: parts[0] ?? '', lastName: '' };
 	}
@@ -137,6 +157,10 @@ export function splitNameParts(user: {
 		firstName: parts.slice(0, -1).join(' '),
 		lastName: parts.at(-1)!
 	};
+}
+
+export function normalizeNamePart(part: string): string {
+	return part.trim().replace(/\s+/g, ' ');
 }
 
 export type ProfileInput = {
@@ -155,9 +179,24 @@ export type ValidatedProfile = {
 	graduationYear: number | null;
 };
 
+export function validateGraduationYear(raw: string): number | null {
+	const rawYear = raw.trim();
+	if (!rawYear) return null;
+	if (!/^\d{4}$/.test(rawYear)) {
+		throw new ProfileError('Enter a four-digit graduation year.');
+	}
+	const year = Number(rawYear);
+	if (year < GRADUATION_YEAR_MIN || year > GRADUATION_YEAR_MAX) {
+		throw new ProfileError(
+			`Enter a graduation year between ${GRADUATION_YEAR_MIN} and ${GRADUATION_YEAR_MAX}.`
+		);
+	}
+	return year;
+}
+
 export function validateProfile(input: ProfileInput): ValidatedProfile {
-	const givenName = input.firstName.trim().replace(/\s+/g, ' ');
-	const familyName = input.lastName.trim().replace(/\s+/g, ' ');
+	const givenName = normalizeNamePart(input.firstName);
+	const familyName = normalizeNamePart(input.lastName);
 	if (!givenName) throw new ProfileError('Tell us your first name.');
 	if (!familyName) throw new ProfileError('Tell us your last name.');
 	if (givenName.length > PART_NAME_MAX_LENGTH) {
@@ -168,40 +207,9 @@ export function validateProfile(input: ProfileInput): ValidatedProfile {
 	}
 	const name = `${givenName} ${familyName}`;
 
-	const rawPhone = input.phone.trim();
-	let phone: string | null = null;
-	if (rawPhone) {
-		const requestedCode = input.phoneCountry.trim() || '+1';
-		if (!isCountryCode(requestedCode)) {
-			throw new ProfileError('Pick a valid country code.');
-		}
-		const { countryCode, national } = parsePhoneInput(rawPhone, requestedCode);
-		const nationalDigits = national.replace(/\D/g, '');
-		const totalDigits = countryCode.slice(1).length + nationalDigits.length;
-		if (
-			(countryCode === '+1' && nationalDigits.length !== 10) ||
-			nationalDigits.length < 6 ||
-			totalDigits > 15
-		) {
-			throw new ProfileError('That does not look like a complete phone number.');
-		}
-		phone = `${countryCode} ${national}`;
-	}
+	const phone = validatePhone(input.phone, input.phoneCountry);
 
-	const rawYear = input.graduationYear.trim();
-	let graduationYear: number | null = null;
-	if (rawYear) {
-		if (!/^\d{4}$/.test(rawYear)) {
-			throw new ProfileError('Enter a four-digit graduation year.');
-		}
-		const year = Number(rawYear);
-		if (year < GRADUATION_YEAR_MIN || year > GRADUATION_YEAR_MAX) {
-			throw new ProfileError(
-				`Enter a graduation year between ${GRADUATION_YEAR_MIN} and ${GRADUATION_YEAR_MAX}.`
-			);
-		}
-		graduationYear = year;
-	}
+	const graduationYear = validateGraduationYear(input.graduationYear);
 
 	return { name, givenName, familyName, phone, graduationYear };
 }

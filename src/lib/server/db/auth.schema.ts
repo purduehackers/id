@@ -3,7 +3,11 @@ import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqli
 
 export const user = sqliteTable('user', {
 	id: text('id').primaryKey(),
-	name: text('name').notNull(),
+	name: text('name')
+		.generatedAlwaysAs(sql`trim(coalesce(given_name, '') || ' ' || coalesce(family_name, ''))`, {
+			mode: 'virtual'
+		})
+		.notNull(),
 	email: text('email').notNull().unique(),
 	emailVerified: integer('email_verified', { mode: 'boolean' }).default(false).notNull(),
 	image: text('image'),

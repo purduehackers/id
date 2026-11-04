@@ -60,7 +60,7 @@ There's another example in `examples/demo-client` that doesn't rely on external 
 
 - **Profile Scopes**:
   - `profile`: returns `name`, `given_name`, `family_name`, `picture`, `github`, and `graduation_year`.
-  - `phone`: returns `phone_number`.
+  - `phone`: returns `phone_number` in E.164 format, like `+17655550123`.
 - **Directory API**:
   - Query team members via `GET /api/directory/users?role=organizer,alumni`.
   - Requires OAuth 2.0 `client_credentials` with scopes `directory:roles` and optionally `directory:contact` (for email and phone number).

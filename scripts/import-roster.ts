@@ -1,7 +1,14 @@
 import { createClient } from '@libsql/client';
 import { readFileSync, existsSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { splitNameParts, splitPhone, validateProfile } from '../src/lib/profile.ts';
+import {
+	PART_NAME_MAX_LENGTH,
+	ProfileError,
+	normalizeNamePart,
+	splitNameParts,
+	validateGraduationYear,
+	validatePhone
+} from '../src/lib/profile.ts';
 
 // Simple CSV line parser supporting quoted cells with commas
 function parseCsv(text: string): Array<Record<string, string>> {
@@ -32,7 +39,7 @@ function parseCsv(text: string): Array<Record<string, string>> {
 		return cells;
 	};
 
-	const headers = splitRow(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z0-9_]/g, '_'));
+	const headers = splitRow(lines[0]);
 
 	const records: Array<Record<string, string>> = [];
 	for (let i = 1; i < lines.length; i++) {
@@ -72,39 +79,88 @@ function loadEnv(): Record<string, string> {
 
 type RosterEntry = {
 	email: string;
-	name?: string;
+	fullName?: string;
+	firstName?: string;
+	lastName?: string;
 	phone?: string;
 	graduationYear?: string;
 	github?: string;
 };
 
-function normalizeEntry(row: Record<string, string>): RosterEntry | null {
-	// Discover field names flexibly across common Notion column header variations
-	const emailKey = Object.keys(row).find((k) => k.includes('email'));
-	const nameKey = Object.keys(row).find((k) => k.includes('name'));
-	const phoneKey = Object.keys(row).find((k) => k.includes('phone'));
-	const gradKey = Object.keys(row).find(
-		(k) => k.includes('grad') || k.includes('year') || k.includes('class')
-	);
-	const githubKey = Object.keys(row).find((k) => k.includes('github'));
+const FULL_NAME_COLUMNS = ['name', 'full_name', 'fullname', 'member_name', 'display_name'];
+const FIRST_NAME_COLUMNS = ['first_name', 'firstname', 'given_name', 'givenname', 'first'];
+const LAST_NAME_COLUMNS = ['last_name', 'lastname', 'family_name', 'familyname', 'surname', 'last'];
 
-	const email = (emailKey ? row[emailKey] : '').trim().toLowerCase();
+function normalizeEntry(raw: Record<string, unknown>): RosterEntry | null {
+	const row: Record<string, string> = {};
+	for (const [key, value] of Object.entries(raw)) {
+		row[key.toLowerCase().replace(/[^a-z0-9_]/g, '_')] = String(value ?? '').trim();
+	}
+	const keys = Object.keys(row);
+	const cell = (key: string | undefined) => (key && row[key]) || undefined;
+	const exact = (columns: string[]) => cell(columns.find((column) => row[column]));
+	const containing = (...parts: string[]) =>
+		cell(keys.find((key) => row[key] && parts.some((part) => key.includes(part))));
+
+	const email = containing('email')?.toLowerCase();
 	if (!email || !email.includes('@')) return null;
 
-	let github = githubKey ? row[githubKey].trim() : '';
 	// Strip URL prefixes like https://github.com/
-	github = github
-		.replace(/^https?:\/\/(www\.)?github\.com\//i, '')
+	const github = containing('github')
+		?.replace(/^https?:\/\/(www\.)?github\.com\//i, '')
 		.replace(/^@/, '')
 		.trim();
 
 	return {
 		email,
-		name: nameKey ? row[nameKey].trim() : undefined,
-		phone: phoneKey ? row[phoneKey].trim() : undefined,
-		graduationYear: gradKey ? row[gradKey].trim() : undefined,
+		fullName: exact(FULL_NAME_COLUMNS),
+		firstName: exact(FIRST_NAME_COLUMNS),
+		lastName: exact(LAST_NAME_COLUMNS),
+		phone: containing('phone'),
+		graduationYear: containing('grad', 'year', 'class'),
 		github: github || undefined
 	};
+}
+
+type StoredUser = {
+	id: string;
+	name: string;
+	given_name: string | null;
+	family_name: string | null;
+	phone: string | null;
+	graduation_year: number | null;
+	github: string | null;
+};
+
+function nameChanges(entry: RosterEntry, user: StoredUser) {
+	const changes: { given_name?: string; family_name?: string | null } = {};
+	if (entry.firstName || entry.lastName) {
+		if (entry.firstName) changes.given_name = normalizeNamePart(entry.firstName);
+		if (entry.lastName) changes.family_name = normalizeNamePart(entry.lastName);
+	} else if (entry.fullName && normalizeNamePart(entry.fullName) !== user.name) {
+		const { firstName, lastName } = splitNameParts(entry.fullName);
+		changes.given_name = firstName;
+		changes.family_name = lastName || null;
+	}
+	for (const part of [changes.given_name, changes.family_name]) {
+		if (part && part.length > PART_NAME_MAX_LENGTH) {
+			throw new ProfileError(`Keep each name under ${PART_NAME_MAX_LENGTH} characters.`);
+		}
+	}
+	return changes;
+}
+
+function rosterChanges(entry: RosterEntry, user: StoredUser) {
+	const changes: Record<string, string | number | null> = { ...nameChanges(entry, user) };
+	if (entry.phone) changes.phone = validatePhone(entry.phone, '+1');
+	if (entry.graduationYear) {
+		changes.graduation_year = validateGraduationYear(entry.graduationYear);
+	}
+	if (entry.github) changes.github = entry.github;
+	for (const [column, value] of Object.entries(changes)) {
+		if (user[column as keyof StoredUser] === value) delete changes[column];
+	}
+	return changes;
 }
 
 async function main() {
@@ -145,7 +201,7 @@ Options:
 	}
 
 	const rawContent = readFileSync(filePath, 'utf-8');
-	let rawRows: Array<Record<string, string>>;
+	let rawRows: Array<Record<string, unknown>>;
 	if (filePath.endsWith('.json')) {
 		const parsed = JSON.parse(rawContent);
 		rawRows = Array.isArray(parsed) ? parsed : [parsed];
@@ -167,13 +223,15 @@ Options:
 	const client = createClient({ url: dbUrl, authToken: dbAuthToken });
 
 	let updatedCount = 0;
+	let unchangedCount = 0;
 	let notFoundCount = 0;
 	let errorCount = 0;
+	const singleNames: string[] = [];
 
 	for (const entry of entries) {
 		// Look up existing user by email
 		const res = await client.execute({
-			sql: 'SELECT id, name, phone, graduation_year as graduationYear, github FROM user WHERE lower(email) = lower(?) LIMIT 1',
+			sql: 'SELECT id, name, given_name, family_name, phone, graduation_year, github FROM user WHERE lower(email) = lower(?) LIMIT 1',
 			args: [entry.email]
 		});
 
@@ -183,61 +241,31 @@ Options:
 			continue;
 		}
 
-		const user = res.rows[0] as unknown as {
-			id: string;
-			name: string;
-			phone: string | null;
-			graduationYear: number | null;
-			github: string | null;
-		};
-
-		const nextName = entry.name || user.name;
-		const { firstName, lastName } = splitNameParts({ name: nextName });
-		const nextPhone = entry.phone !== undefined ? entry.phone : (user.phone ?? '');
-		const parsedPhone = splitPhone(nextPhone);
-		const nextGrad =
-			entry.graduationYear !== undefined
-				? entry.graduationYear
-				: user.graduationYear
-					? String(user.graduationYear)
-					: '';
+		const user = res.rows[0] as unknown as StoredUser;
 
 		try {
-			const validated = validateProfile({
-				firstName: firstName || 'Member',
-				lastName: lastName || 'User',
-				phoneCountry: parsedPhone.countryCode,
-				phone: parsedPhone.national,
-				graduationYear: nextGrad
-			});
+			const changes = rosterChanges(entry, user);
+			const columns = Object.keys(changes);
+			if (columns.length === 0) {
+				unchangedCount++;
+				continue;
+			}
+			if (changes.family_name === null) singleNames.push(entry.email);
 
-			const nextGithub = entry.github ?? user.github;
-
+			const summary = columns.map((column) => `${column}=${changes[column]}`).join(', ');
 			if (values.dryRun) {
-				console.log(
-					`[PLAN] Update ${entry.email}: name="${validated.name}", givenName="${validated.givenName}", familyName="${validated.familyName}", phone=${validated.phone}, gradYear=${validated.graduationYear}, github=${nextGithub}`
-				);
+				console.log(`[PLAN] Update ${entry.email}: ${summary}`);
 			} else {
 				await client.execute({
-					sql: 'UPDATE user SET name = ?, given_name = ?, family_name = ?, phone = ?, graduation_year = ?, github = ? WHERE id = ?',
-					args: [
-						validated.name,
-						validated.givenName,
-						validated.familyName,
-						validated.phone,
-						validated.graduationYear,
-						nextGithub,
-						user.id
-					]
+					sql: `UPDATE user SET ${columns.map((column) => `${column} = ?`).join(', ')} WHERE id = ?`,
+					args: [...columns.map((column) => changes[column]), user.id]
 				});
-				console.log(`[OK] Updated ${entry.email} (${validated.name})`);
+				console.log(`[OK] Updated ${entry.email}: ${summary}`);
 			}
 			updatedCount++;
 		} catch (err) {
-			console.error(
-				`[ERROR] Failed validating ${entry.email}:`,
-				err instanceof Error ? err.message : err
-			);
+			if (!(err instanceof ProfileError)) throw err;
+			console.error(`[ERROR] Failed validating ${entry.email}: ${err.message}`);
 			errorCount++;
 		}
 	}
@@ -245,9 +273,13 @@ Options:
 	console.log('\n--- Summary ---');
 	console.log(`Total roster rows:  ${entries.length}`);
 	console.log(`Updated in 'id':    ${updatedCount}`);
+	console.log(`Already up to date: ${unchangedCount}`);
 	console.log(`Not found in 'id':  ${notFoundCount}`);
 	if (errorCount > 0) {
 		console.log(`Validation errors:  ${errorCount}`);
+	}
+	if (singleNames.length > 0) {
+		console.log(`No surname given:   ${singleNames.join(', ')}`);
 	}
 }
 

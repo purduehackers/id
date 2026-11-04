@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
 import { normalizeUsername, usernameProblem } from '$lib/username';
-import { PART_NAME_MAX_LENGTH, splitNameParts } from '$lib/profile';
+import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
 import { primaryEmailFor } from '$lib/server/emails';
 
 function safeNext(raw: string | null | undefined): string {
@@ -43,7 +43,7 @@ export const load: PageServerLoad = (event) => {
 
 	const code = event.url.searchParams.get('error');
 	const rawName = event.url.searchParams.get('name')?.slice(0, 100) ?? '';
-	const { firstName, lastName } = splitNameParts({ name: rawName });
+	const { firstName, lastName } = splitNameParts(rawName);
 	return {
 		next,
 		signup: event.url.searchParams.has('signup'),
@@ -107,8 +107,8 @@ export const actions: Actions = {
 		const next = safeNext(formData.get('next')?.toString());
 		const email = formData.get('email')?.toString() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
-		const firstName = formData.get('firstName')?.toString().trim().replace(/\s+/g, ' ') ?? '';
-		const lastName = formData.get('lastName')?.toString().trim().replace(/\s+/g, ' ') ?? '';
+		const firstName = normalizeNamePart(formData.get('firstName')?.toString() ?? '');
+		const lastName = normalizeNamePart(formData.get('lastName')?.toString() ?? '');
 		const username = normalizeUsername(formData.get('username')?.toString() ?? '');
 
 		if (!firstName) {
@@ -144,7 +144,7 @@ export const actions: Actions = {
 
 		try {
 			await auth.api.signUpEmail({
-				body: { email, password, name, username },
+				body: { email, password, name, username, givenName: firstName, familyName: lastName },
 				headers: event.request.headers
 			});
 		} catch (error) {

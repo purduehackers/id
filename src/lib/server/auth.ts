@@ -28,8 +28,12 @@ import { accessTokenClaims, identityClaims, userInfoClaims } from '$lib/server/c
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
-import { splitNameParts } from '$lib/profile';
-import { clearGithubAccount, syncGithubAccount } from '$lib/server/profile';
+import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
+import {
+	clearGithubAccount,
+	syncGithubAccount,
+	syncGithubAccountInBackground
+} from '$lib/server/profile';
 import { describeUserAgent } from '$lib/server/user-agent';
 import {
 	alertConsent,
@@ -104,8 +108,8 @@ export const auth = betterAuth({
 	user: {
 		additionalFields: {
 			securityEmails: { type: 'boolean', defaultValue: true, input: false },
-			givenName: { type: 'string', required: false, input: false },
-			familyName: { type: 'string', required: false, input: false },
+			givenName: { type: 'string', required: false, input: true },
+			familyName: { type: 'string', required: false, input: true },
 			phone: { type: 'string', required: false, input: false },
 			graduationYear: { type: 'number', required: false, input: false },
 			github: { type: 'string', required: false, input: false }
@@ -127,7 +131,7 @@ export const auth = betterAuth({
 		}
 	},
 
-	disabledPaths: ADMIN_PLUGIN_PATHS,
+	disabledPaths: ['/update-user', ...ADMIN_PLUGIN_PATHS],
 
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
@@ -195,14 +199,20 @@ export const auth = betterAuth({
 							message: 'That email already belongs to a Purdue Hackers ID.'
 						});
 					}
-					const { firstName, lastName } = splitNameParts(data);
+					const parts = data as { givenName?: string | null; familyName?: string | null };
+					const guess = parts.givenName == null ? splitNameParts(data.name) : null;
+					const givenName = normalizeNamePart(parts.givenName ?? guess?.firstName ?? '');
+					const familyName = normalizeNamePart(parts.familyName ?? guess?.lastName ?? '');
+					if (!givenName) {
+						throw new APIError('BAD_REQUEST', { message: 'Tell us your first name.' });
+					}
+					if (givenName.length > PART_NAME_MAX_LENGTH || familyName.length > PART_NAME_MAX_LENGTH) {
+						throw new APIError('BAD_REQUEST', {
+							message: `Keep each name under ${PART_NAME_MAX_LENGTH} characters.`
+						});
+					}
 					return {
-						data: {
-							...data,
-							givenName: (data as { givenName?: string | null }).givenName ?? (firstName || null),
-							familyName: (data as { familyName?: string | null }).familyName ?? (lastName || null),
-							role: null
-						}
+						data: { ...data, givenName, familyName: familyName || null, role: null }
 					};
 				}
 			},
@@ -222,9 +232,9 @@ export const auth = betterAuth({
 				}
 			},
 			update: {
-				async after(account) {
+				after: async (account) => {
 					if (account.providerId === 'github') {
-						await syncGithubAccount(account.userId, account.accountId, account.accessToken);
+						syncGithubAccountInBackground(account.userId, account.accountId, account.accessToken);
 					}
 				}
 			},
