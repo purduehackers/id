@@ -65,10 +65,10 @@
 					<span class={['grid size-12 shrink-0 place-items-center', tile.bg, tile.fg]}>
 						<Identicon seed={app.clientId} class="size-7" />
 					</span>
-					<div class="flex min-w-0 flex-1 flex-col gap-1">
+					<div class="flex min-w-0 flex-1 basis-48 flex-col gap-1">
 						<a
 							href={manage(app.clientId)}
-							class="w-fit ph-headline text-3xl no-underline transition-colors hover:text-primary"
+							class="w-fit max-w-full ph-headline text-3xl break-words no-underline transition-colors hover:text-primary"
 							>{app.name}</a
 						>
 						<span class="flex flex-wrap items-center gap-1.5">

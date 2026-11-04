@@ -29,6 +29,7 @@
 	const label = $derived(isRole(role) ? ROLE_LABELS[role] : 'Member');
 	const serial = $derived(String(passports[0] ?? hash(id) % 10000).padStart(4, '0'));
 	const issued = $derived(new Date(since));
+	const longestWord = $derived(Math.max(...name.split(/\s+/).map((word) => word.length)));
 
 	const mrzName = $derived(
 		name
@@ -78,7 +79,7 @@
 			onclick={() => (flipped = !flipped)}
 			aria-pressed={flipped}
 			aria-label="Purdue Hackers ID for {name}, @{username}, {label}. Flip the card"
-			class="grid w-full cursor-pointer text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none"
+			class="grid w-full cursor-pointer grid-cols-1 text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none"
 			style="transform: rotateY({flipped ? 180 : 0}deg)"
 		>
 			<!-- Front -->
@@ -101,7 +102,8 @@
 					<div class="flex min-w-0 flex-col gap-1.5 sm:gap-2">
 						<span
 							class={[
-								'ph-headline text-4xl break-words',
+								'ph-headline break-words',
+								longestWord > 10 ? 'text-2xl' : 'text-4xl',
 								name.length > 16 ? 'sm:text-5xl' : 'sm:text-6xl'
 							]}
 						>

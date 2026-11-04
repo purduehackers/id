@@ -29,7 +29,7 @@
 		<span class="bg-background px-3 py-1.5 ph-subheadline text-[12px]">No apps yet</span>
 	</div>
 {:else}
-	<ul class="grid gap-x-6 gap-y-8 py-2 sm:grid-cols-2">
+	<ul class="grid grid-cols-1 gap-x-6 gap-y-8 py-2 sm:grid-cols-2">
 		{#each data.apps as app, i (app.id)}
 			<GrantCard
 				name={app.name}

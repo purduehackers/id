@@ -43,10 +43,10 @@
 		<div class="flex items-center justify-between gap-4 px-2">
 			<a
 				href={resolve('/')}
-				class="flex items-center gap-2.5 no-underline transition-colors hover:text-primary"
+				class="flex min-w-0 items-center gap-2.5 no-underline transition-colors hover:text-primary"
 			>
-				<Glider class="size-5" />
-				<span class="ph-headline text-xl whitespace-nowrap">Purdue Hackers ID</span>
+				<Glider class="size-5 shrink-0" />
+				<span class="ph-headline text-xl">Purdue Hackers ID</span>
 			</a>
 			<span class={['ml-auto grid size-8 shrink-0 place-items-center lg:hidden', tile.bg, tile.fg]}>
 				<Identicon seed={data.user.id} class="size-5" />
@@ -56,8 +56,8 @@
 			</form>
 		</div>
 
-		<nav aria-label="Account" class="-mx-4 overflow-x-auto px-4 lg:mx-0 lg:px-0">
-			<ul class="flex gap-1 lg:flex-col">
+		<nav aria-label="Account">
+			<ul class="flex flex-wrap gap-1 lg:flex-col">
 				{#each links as link (link.href)}
 					{@const active = current(link.href)}
 					<li>
@@ -72,7 +72,7 @@
 									: 'hover:bg-foreground/[0.08] hover:text-foreground'
 							]}
 						>
-							<Icon name={link.icon} />
+							<Icon name={link.icon} class="max-sm:hidden" />
 							{link.label}
 						</a>
 					</li>

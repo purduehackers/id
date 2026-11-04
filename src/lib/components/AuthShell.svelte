@@ -8,37 +8,38 @@
 	let { children }: { children: Snippet } = $props();
 </script>
 
-<div class="flex min-h-dvh flex-col lg:grid lg:grid-cols-2">
-	<aside
-		class="relative h-52 shrink-0 overflow-hidden bg-ph-yellow text-ph-black sm:h-60 lg:sticky lg:top-0 lg:order-2 lg:h-dvh"
-	>
-		<Life class="absolute inset-0 size-full cursor-crosshair text-ph-black" />
+<div class="flex min-h-dvh flex-col overflow-x-clip lg:grid lg:grid-cols-2">
+	<div class="flex flex-1 flex-col px-6 py-6 sm:px-10 lg:min-h-dvh lg:px-16 lg:py-8 xl:px-24">
 		<a
 			href={resolve('/')}
-			class="absolute bottom-0 left-0 flex flex-col gap-3 bg-ph-yellow py-4 pr-6 pl-6 no-underline sm:pl-10 lg:pr-10 lg:pb-10 lg:pl-12"
-		>
-			<span class="ph-headline text-3xl sm:text-5xl lg:text-7xl xl:text-8xl">
-				Purdue<br class="hidden lg:block" /> Hackers ID
-			</span>
-		</a>
-	</aside>
-
-	<div class="flex flex-1 flex-col px-6 py-8 sm:px-10 lg:min-h-dvh lg:px-16 xl:px-24">
-		<a
-			href={resolve('/')}
-			class="hidden items-center gap-2.5 self-start no-underline transition-colors hover:text-primary lg:flex"
+			class="flex items-center gap-2.5 self-start no-underline transition-colors hover:text-primary"
 		>
 			<Glider class="size-5" />
-			<span class="font-mono text-[13px] font-semibold tracking-wide uppercase">ID</span>
+			<span class="ph-headline text-xl lg:hidden">Purdue Hackers ID</span>
+			<span class="hidden font-mono text-[13px] font-semibold tracking-wide uppercase lg:inline">
+				ID
+			</span>
 		</a>
 
 		<main
 			oninput={() => window.dispatchEvent(new Event('ph:glider'))}
-			class="flex w-full max-w-[440px] flex-1 flex-col justify-center gap-8 py-10 lg:py-16"
+			class="flex w-full max-w-[440px] flex-1 flex-col gap-8 py-8 lg:justify-center lg:py-16"
 		>
 			{@render children()}
 		</main>
 
 		<SiteFooter />
 	</div>
+
+	<aside
+		class="relative h-40 shrink-0 overflow-hidden bg-ph-yellow text-ph-black sm:h-52 lg:sticky lg:top-0 lg:h-dvh"
+	>
+		<Life class="absolute inset-0 size-full cursor-crosshair text-ph-black" />
+		<a
+			href={resolve('/')}
+			class="absolute bottom-0 left-0 hidden flex-col gap-3 bg-ph-yellow pt-4 pr-10 pb-10 pl-12 no-underline lg:flex"
+		>
+			<span class="ph-headline text-7xl xl:text-8xl">Purdue<br /> Hackers ID</span>
+		</a>
+	</aside>
 </div>
