@@ -5,7 +5,6 @@
 	import Identicon from '$lib/components/Identicon.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Section from '$lib/components/Section.svelte';
-	import StrengthBar from '$lib/components/StrengthBar.svelte';
 	import { hash, swatch } from '$lib/components/pixel';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
@@ -223,29 +222,12 @@
 							{/each}
 						</div>
 
-						<div class="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-							<StrengthBar strength={person.strength} />
-							<span class="font-mono text-[12px]">Joined {when(person.createdAt)}</span>
-						</div>
+						<span class="font-mono text-[12px]">Joined {when(person.createdAt)}</span>
 					</div>
 				</div>
 
 				{#if open}
 					<div id="manage-{person.id}" class="flex enter flex-col gap-6 bg-card p-5" style="--i: 0">
-						<div class="flex flex-col gap-2">
-							<h3 class="ph-subheadline text-[12px]">What's in the bar</h3>
-							<ul class="flex flex-col gap-1 text-[14px]">
-								{#each person.strength.checks as check (check.label)}
-									<li class={['flex items-center gap-2', !check.earned && 'opacity-55']}>
-										<Icon name={check.earned ? 'check' : 'times'} class="size-3.5 shrink-0" />
-										{check.label}
-										<span class="font-mono text-[12px]">+{check.points}</span>
-										<span class="sr-only">{check.earned ? 'earned' : 'missing'}</span>
-									</li>
-								{/each}
-							</ul>
-						</div>
-
 						<div class="flex flex-col gap-2">
 							<h3 class="ph-subheadline text-[12px]">Passports</h3>
 							<div class="flex flex-wrap items-center gap-2">

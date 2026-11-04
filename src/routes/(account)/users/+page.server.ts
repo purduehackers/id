@@ -11,7 +11,6 @@ import {
 	setRole,
 	unban
 } from '$lib/server/admin';
-import { authStrength } from '$lib/auth-strength';
 import { ROLES, ROLE_LABELS } from '$lib/roles';
 import { PassportError, assignPassport, passportsOf } from '$lib/server/passport';
 
@@ -41,11 +40,7 @@ export const load: PageServerLoad = async (event) => {
 				}));
 				return {
 					...person,
-					passports,
-					strength: authStrength({
-						...person,
-						activatedPassports: passports.filter((passport) => passport.activated).length
-					})
+					passports
 				};
 			})
 		),
