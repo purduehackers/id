@@ -4,6 +4,7 @@ if (!process.env.TURSO_DATABASE_URL) throw new Error('TURSO_DATABASE_URL is not 
 
 export default defineConfig({
 	schema: './src/lib/server/db/schema.ts',
+	out: './drizzle',
 	dialect: 'turso',
 	dbCredentials: {
 		url: process.env.TURSO_DATABASE_URL,
