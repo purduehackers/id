@@ -1,5 +1,5 @@
 {
-	"name": "id-revamp",
+	"name": "squid",
 	"private": true,
 	"version": "0.0.1",
 	"type": "module",
@@ -21,8 +21,8 @@
 		"auth:schema": "auth generate --config src/lib/server/auth.ts --output src/lib/server/db/auth.schema.ts --yes && deno run -A scripts/fix-auth-schema.ts && prettier --write src/lib/server/db/auth.schema.ts"
 	},
 	"devDependencies": {
-		"@better-auth/oauth-provider": "^1.7.4",
-		"@better-auth/passkey": "1.7.4",
+		"@better-auth/oauth-provider": "1.7.16",
+		"@better-auth/passkey": "1.7.16",
 		"@eslint/js": "^10.0.1",
 		"@libsql/client": "^0.15.15",
 		"@sveltejs/adapter-vercel": "^6.3.3",
@@ -32,8 +32,8 @@
 		"@tailwindcss/vite": "^4.3.0",
 		"@types/node": "^24",
 		"@vercel/functions": "^3.9.11",
-		"auth": "^1.6.23",
-		"better-auth": "^1.6.23",
+		"auth": "1.7.16",
+		"better-auth": "1.7.16",
 		"drizzle-kit": "^0.31.10",
 		"drizzle-orm": "^0.45.2",
 		"eslint": "^10.4.1",
