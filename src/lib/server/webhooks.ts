@@ -20,6 +20,7 @@ import {
 import { readList } from '$lib/server/db/json';
 import { isDirectoryScope } from '$lib/server/scopes';
 import { uuidv7 } from '$lib/server/uuid';
+import { splitNameParts } from '$lib/profile';
 import { grantedRoles } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
@@ -241,6 +242,8 @@ export const banChanged: Build = (_scopes, ref) => ({ user: ref });
 type Profile = {
 	id: string;
 	name: string;
+	givenName?: string | null;
+	familyName?: string | null;
 	username?: string | null;
 	image?: string | null;
 	email: string;
@@ -252,6 +255,16 @@ type Profile = {
 
 const PROFILE_CLAIMS = [
 	{ claim: 'name', scope: 'profile', read: (u: Profile) => u.name },
+	{
+		claim: 'given_name',
+		scope: 'profile',
+		read: (u: Profile) => splitNameParts(u).firstName || null
+	},
+	{
+		claim: 'family_name',
+		scope: 'profile',
+		read: (u: Profile) => splitNameParts(u).lastName || null
+	},
 	{ claim: 'preferred_username', scope: 'profile', read: (u: Profile) => u.username },
 	{ claim: 'picture', scope: 'profile', read: (u: Profile) => pictureFor(u) },
 	{ claim: 'github', scope: 'profile', read: (u: Profile) => u.github ?? null },

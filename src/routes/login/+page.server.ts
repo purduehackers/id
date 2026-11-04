@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
 import { normalizeUsername, usernameProblem } from '$lib/username';
+import { PART_NAME_MAX_LENGTH, splitNameParts } from '$lib/profile';
 import { primaryEmailFor } from '$lib/server/emails';
 
 function safeNext(raw: string | null | undefined): string {
@@ -41,10 +42,13 @@ export const load: PageServerLoad = (event) => {
 	if (event.locals.user) redirect(302, next);
 
 	const code = event.url.searchParams.get('error');
+	const rawName = event.url.searchParams.get('name')?.slice(0, 100) ?? '';
+	const { firstName, lastName } = splitNameParts({ name: rawName });
 	return {
 		next,
 		signup: event.url.searchParams.has('signup'),
-		name: event.url.searchParams.get('name')?.slice(0, 100) ?? '',
+		firstName,
+		lastName,
 		providers: PROVIDERS,
 		error: code ? (SIGN_IN_ERRORS[code] ?? `Sign in failed (${code}).`) : null
 	};
@@ -103,12 +107,40 @@ export const actions: Actions = {
 		const next = safeNext(formData.get('next')?.toString());
 		const email = formData.get('email')?.toString() ?? '';
 		const password = formData.get('password')?.toString() ?? '';
-		const name = formData.get('name')?.toString().trim() ?? '';
+		const firstName = formData.get('firstName')?.toString().trim().replace(/\s+/g, ' ') ?? '';
+		const lastName = formData.get('lastName')?.toString().trim().replace(/\s+/g, ' ') ?? '';
 		const username = normalizeUsername(formData.get('username')?.toString() ?? '');
 
-		if (!name) return fail(400, { email, name, username, message: 'Tell us your name.' });
+		if (!firstName) {
+			return fail(400, {
+				email,
+				firstName,
+				lastName,
+				username,
+				message: 'Tell us your first name.'
+			});
+		}
+		if (!lastName) {
+			return fail(400, {
+				email,
+				firstName,
+				lastName,
+				username,
+				message: 'Tell us your last name.'
+			});
+		}
+		if (firstName.length > PART_NAME_MAX_LENGTH || lastName.length > PART_NAME_MAX_LENGTH) {
+			return fail(400, {
+				email,
+				firstName,
+				lastName,
+				username,
+				message: `Keep each name under ${PART_NAME_MAX_LENGTH} characters.`
+			});
+		}
+		const name = `${firstName} ${lastName}`;
 		const problem = usernameProblem(username);
-		if (problem) return fail(400, { email, name, username, message: problem });
+		if (problem) return fail(400, { email, firstName, lastName, username, message: problem });
 
 		try {
 			await auth.api.signUpEmail({
@@ -118,7 +150,8 @@ export const actions: Actions = {
 		} catch (error) {
 			return fail(400, {
 				email,
-				name,
+				firstName,
+				lastName,
 				username,
 				message: message(error, 'Could not create the account.')
 			});

@@ -1,3 +1,4 @@
+import { splitNameParts } from '$lib/profile';
 import { grantedRoles } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
@@ -5,9 +6,16 @@ type ClaimUser = Record<string, unknown>;
 type ClaimInfo = { user: ClaimUser; scopes: string[] };
 
 export function identityClaims({ user, scopes }: ClaimInfo) {
+	const { firstName, lastName } = splitNameParts({
+		name: String(user.name ?? ''),
+		givenName: user.givenName as string | null | undefined,
+		familyName: user.familyName as string | null | undefined
+	});
 	return {
 		...(scopes.includes('profile') && {
 			preferred_username: user.username,
+			...(firstName ? { given_name: firstName } : {}),
+			...(lastName ? { family_name: lastName } : {}),
 			...(user.github ? { github: user.github } : {}),
 			...(user.graduationYear ? { graduation_year: user.graduationYear } : {})
 		}),
@@ -32,19 +40,14 @@ export function accessTokenClaims({ user, scopes }: { user?: ClaimUser | null; s
 	return user && scopes.includes('roles') ? { roles: grantedRoles(user.role as string) } : {};
 }
 
-function splitName(name: string) {
-	const parts = name.split(' ').filter(Boolean);
-	return parts.length <= 1 ? {} : { given: parts.slice(0, -1).join(' '), family: parts.at(-1) };
-}
-
 function standardClaims(user: PreviewUser, scopes: string[]) {
-	const { given, family } = splitName(user.name);
+	const { firstName, lastName } = splitNameParts(user);
 	return {
 		...(scopes.includes('profile') && {
 			name: user.name,
 			picture: pictureFor(user),
-			given_name: given,
-			family_name: family
+			given_name: firstName || undefined,
+			family_name: lastName || undefined
 		}),
 		...(scopes.includes('email') && {
 			email: user.email,
@@ -56,6 +59,8 @@ function standardClaims(user: PreviewUser, scopes: string[]) {
 type PreviewUser = ClaimUser & {
 	id: string;
 	name: string;
+	givenName?: string | null;
+	familyName?: string | null;
 	email: string;
 	emailVerified: boolean;
 	image?: string | null;

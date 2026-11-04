@@ -110,17 +110,25 @@ export const actions: Actions = {
 	updateProfile: async (event) => {
 		const user = requireUser(event);
 		const formData = await event.request.formData();
-		const name = formData.get('name')?.toString() ?? '';
+		const firstName = formData.get('firstName')?.toString() ?? '';
+		const lastName = formData.get('lastName')?.toString() ?? '';
+		const phoneCountry = formData.get('phoneCountry')?.toString() ?? '+1';
 		const phone = formData.get('phone')?.toString() ?? '';
 		const graduationYear = formData.get('graduationYear')?.toString() ?? '';
 		try {
-			const updated = await updateProfile(user.id, { name, phone, graduationYear });
+			const updated = await updateProfile(user.id, {
+				firstName,
+				lastName,
+				phoneCountry,
+				phone,
+				graduationYear
+			});
 			event.locals.user = { ...user, ...updated };
 			return { notice: 'Profile saved.' };
 		} catch (error) {
 			if (error instanceof ProfileError) {
 				return fail(400, {
-					profile: { name, phone, graduationYear },
+					profile: { firstName, lastName, phoneCountry, phone, graduationYear },
 					message: error.message
 				});
 			}

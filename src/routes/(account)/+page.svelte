@@ -12,13 +12,44 @@
 	import Input from '$lib/components/ph/Input.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
+	import Select from '$lib/components/ph/Select.svelte';
+	import {
+		COUNTRY_CODES,
+		PART_NAME_MAX_LENGTH,
+		formatNationalPhone,
+		parsePhoneInput,
+		splitNameParts,
+		splitPhone
+	} from '$lib/profile';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const when = (value: string | Date | null) => (value ? new Date(value).toLocaleDateString() : '');
 	const notice = $derived((form && 'notice' in form && form.notice) || data.notice);
-	const profileValue = (field: 'name' | 'phone' | 'graduationYear', fallback: string) =>
-		form && 'profile' in form && form.profile ? form.profile[field] : fallback;
+	const profileValue = (
+		field: 'firstName' | 'lastName' | 'phoneCountry' | 'phone' | 'graduationYear',
+		fallback: string
+	) => (form && 'profile' in form && form.profile ? form.profile[field] : fallback);
+
+	const nameParts = $derived(splitNameParts(data.user));
+	const initialPhone = $derived(splitPhone(data.user.phone));
+
+	let phoneCountry = $derived(profileValue('phoneCountry', initialPhone.countryCode));
+	let phoneNational = $derived(profileValue('phone', initialPhone.national));
+
+	function onPhoneCountryChange(event: Event) {
+		const next = (event.currentTarget as HTMLSelectElement).value;
+		phoneCountry = next;
+		phoneNational = formatNationalPhone(phoneNational, next);
+	}
+
+	function onPhoneInput(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const parsed = parsePhoneInput(input.value, phoneCountry);
+		phoneCountry = parsed.countryCode;
+		phoneNational = parsed.national;
+		input.value = parsed.national;
+	}
 
 	let passkeysSupported = $state<boolean | null>(null);
 	let addingPasskey = $state(false);
@@ -88,28 +119,57 @@
 	{/snippet}
 
 	<form method="post" action="?/updateProfile" class="flex flex-col gap-7">
-		<Field label="Full name" for="profile-name">
-			<Input
-				id="profile-name"
-				name="name"
-				required
-				maxlength={100}
-				autocomplete="name"
-				value={profileValue('name', data.user.name)}
-			/>
-		</Field>
+		<div class="grid gap-7 sm:grid-cols-2">
+			<Field label="First name" for="profile-first-name">
+				<Input
+					id="profile-first-name"
+					name="firstName"
+					required
+					maxlength={PART_NAME_MAX_LENGTH}
+					autocomplete="given-name"
+					value={profileValue('firstName', nameParts.firstName)}
+				/>
+			</Field>
+
+			<Field label="Last name" for="profile-last-name">
+				<Input
+					id="profile-last-name"
+					name="lastName"
+					required
+					maxlength={PART_NAME_MAX_LENGTH}
+					autocomplete="family-name"
+					value={profileValue('lastName', nameParts.lastName)}
+				/>
+			</Field>
+		</div>
 
 		<div class="grid gap-7 sm:grid-cols-2">
 			<Field label="Phone number" for="profile-phone" hint="Optional.">
-				<Input
-					id="profile-phone"
-					name="phone"
-					type="tel"
-					maxlength={32}
-					autocomplete="tel"
-					placeholder="+1 (765) 555-0123"
-					value={profileValue('phone', data.user.phone ?? '')}
-				/>
+				<div class="flex items-end gap-3">
+					<Select
+						name="phoneCountry"
+						value={phoneCountry}
+						onchange={onPhoneCountryChange}
+						aria-label="Country code"
+						class="w-28 shrink-0 font-mono"
+					>
+						{#each COUNTRY_CODES as entry (entry.code)}
+							<option value={entry.code}>{entry.label}</option>
+						{/each}
+					</Select>
+					<Input
+						id="profile-phone"
+						name="phone"
+						type="tel"
+						maxlength={24}
+						autocomplete="tel-national"
+						placeholder={COUNTRY_CODES.find((c) => c.code === phoneCountry)?.placeholder ??
+							'(765) 555-0123'}
+						value={phoneNational}
+						oninput={onPhoneInput}
+						class="flex-1 font-mono"
+					/>
+				</div>
 			</Field>
 
 			<Field label="Graduation year" for="profile-graduation-year" hint="Optional.">
@@ -117,7 +177,7 @@
 					id="profile-graduation-year"
 					name="graduationYear"
 					inputmode="numeric"
-					pattern="[0-9]{4}"
+					pattern="[0-9][0-9][0-9][0-9]"
 					maxlength={4}
 					placeholder="2026"
 					value={profileValue(

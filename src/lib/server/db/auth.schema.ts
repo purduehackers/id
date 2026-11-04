@@ -20,6 +20,8 @@ export const user = sqliteTable('user', {
 	banReason: text('ban_reason'),
 	banExpires: integer('ban_expires', { mode: 'timestamp_ms' }),
 	securityEmails: integer('security_emails', { mode: 'boolean' }).default(true).notNull(),
+	givenName: text('given_name'),
+	familyName: text('family_name'),
 	phone: text('phone'),
 	graduationYear: integer('graduation_year'),
 	github: text('github')

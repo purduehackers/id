@@ -74,9 +74,29 @@
 		<input type="hidden" name="next" value={data.next} />
 
 		{#if registering}
-			<Field label="Name" for="name">
-				<Input id="name" name="name" required autocomplete="name" value={form?.name ?? data.name} />
-			</Field>
+			<div class="grid gap-4 sm:grid-cols-2">
+				<Field label="First name" for="firstName">
+					<Input
+						id="firstName"
+						name="firstName"
+						required
+						maxlength={60}
+						autocomplete="given-name"
+						value={form?.firstName ?? data.firstName}
+					/>
+				</Field>
+
+				<Field label="Last name" for="lastName">
+					<Input
+						id="lastName"
+						name="lastName"
+						required
+						maxlength={60}
+						autocomplete="family-name"
+						value={form?.lastName ?? data.lastName}
+					/>
+				</Field>
+			</div>
 
 			<Field label="Username" for="username" hint="Lowercase letters and numbers.">
 				<Input

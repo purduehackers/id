@@ -28,6 +28,7 @@ import { accessTokenClaims, identityClaims, userInfoClaims } from '$lib/server/c
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
+import { splitNameParts } from '$lib/profile';
 import { clearGithubAccount, syncGithubAccount } from '$lib/server/profile';
 import { describeUserAgent } from '$lib/server/user-agent';
 import {
@@ -103,6 +104,8 @@ export const auth = betterAuth({
 	user: {
 		additionalFields: {
 			securityEmails: { type: 'boolean', defaultValue: true, input: false },
+			givenName: { type: 'string', required: false, input: false },
+			familyName: { type: 'string', required: false, input: false },
 			phone: { type: 'string', required: false, input: false },
 			graduationYear: { type: 'number', required: false, input: false },
 			github: { type: 'string', required: false, input: false }
@@ -192,7 +195,15 @@ export const auth = betterAuth({
 							message: 'That email already belongs to a Purdue Hackers ID.'
 						});
 					}
-					return { data: { ...data, role: null } };
+					const { firstName, lastName } = splitNameParts(data);
+					return {
+						data: {
+							...data,
+							givenName: (data as { givenName?: string | null }).givenName ?? (firstName || null),
+							familyName: (data as { familyName?: string | null }).familyName ?? (lastName || null),
+							role: null
+						}
+					};
 				}
 			},
 			update: {
