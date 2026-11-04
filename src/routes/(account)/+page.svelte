@@ -151,7 +151,7 @@
 						value={phoneCountry}
 						onchange={onPhoneCountryChange}
 						aria-label="Country code"
-						class="w-28 shrink-0 font-mono"
+						class="w-36 shrink-0 font-mono"
 					>
 						{#each COUNTRY_CODES as entry (entry.code)}
 							<option value={entry.code}>{entry.label}</option>
