@@ -1,6 +1,6 @@
 import { env } from '$env/dynamic/private';
 import { betterAuth } from 'better-auth/minimal';
-import { APIError, createAuthMiddleware } from 'better-auth/api';
+import { APIError, createAuthMiddleware, getSessionFromCtx } from 'better-auth/api';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { sveltekitCookies } from 'better-auth/svelte-kit';
 import { jwt } from 'better-auth/plugins/jwt';
@@ -29,6 +29,12 @@ import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
 import { describeUserAgent } from '$lib/server/user-agent';
+import {
+	alertConsent,
+	alertDeviceApproval,
+	alertNewPlace,
+	rememberConsents
+} from '$lib/server/security-emails';
 
 export const devFixedOtp =
 	dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
@@ -93,6 +99,12 @@ export const auth = betterAuth({
 		}
 	},
 
+	user: {
+		additionalFields: {
+			securityEmails: { type: 'boolean', defaultValue: true, input: false }
+		}
+	},
+
 	account: {
 		accountLinking: {
 			enabled: true,
@@ -112,6 +124,12 @@ export const auth = betterAuth({
 
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
+			if (ctx.path === '/oauth2/consent') {
+				const userId = (await getSessionFromCtx(ctx))?.user.id;
+				if (userId && ctx.body?.accept === true) await rememberConsents(userId);
+				return;
+			}
+
 			const unique = (scope: unknown) =>
 				typeof scope === 'string'
 					? [...new Set(scope.split(/\s+/).filter(Boolean))].join(' ')
@@ -135,10 +153,26 @@ export const auth = betterAuth({
 					error_description: 'Directory scopes are granted by admins.'
 				});
 			}
+		}),
+		after: createAuthMiddleware(async (ctx) => {
+			if (ctx.path !== '/oauth2/consent' && ctx.path !== '/device/approve') return;
+			const userId = (await getSessionFromCtx(ctx))?.user.id;
+			if (!userId) return;
+
+			if (ctx.path === '/oauth2/consent') {
+				if (ctx.body?.accept === true) alertConsent(userId);
+			} else if (!(ctx.context.returned instanceof Error)) {
+				alertDeviceApproval(userId, String(ctx.body?.userCode));
+			}
 		})
 	},
 
 	databaseHooks: {
+		session: {
+			create: {
+				after: async (session) => alertNewPlace(session.userId)
+			}
+		},
 		user: {
 			create: {
 				async before(data) {

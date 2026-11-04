@@ -1,8 +1,29 @@
 import { sql } from 'drizzle-orm';
-import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import {
+	sqliteTable,
+	text,
+	integer,
+	index,
+	primaryKey,
+	uniqueIndex
+} from 'drizzle-orm/sqlite-core';
 import { oauthClient, user } from './auth.schema';
 
 export * from './auth.schema';
+
+export const loginPlace = sqliteTable(
+	'login_place',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		place: text('place').notNull(),
+		createdAt: integer('created_at', { mode: 'timestamp_ms' })
+			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+			.notNull()
+	},
+	(table) => [primaryKey({ columns: [table.userId, table.place] })]
+);
 
 export const auditEvent = sqliteTable(
 	'audit_event',

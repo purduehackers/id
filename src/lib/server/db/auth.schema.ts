@@ -18,7 +18,8 @@ export const user = sqliteTable('user', {
 	role: text('role'),
 	banned: integer('banned', { mode: 'boolean' }).default(false).notNull(),
 	banReason: text('ban_reason'),
-	banExpires: integer('ban_expires', { mode: 'timestamp_ms' })
+	banExpires: integer('ban_expires', { mode: 'timestamp_ms' }),
+	securityEmails: integer('security_emails', { mode: 'boolean' }).default(true).notNull()
 });
 
 export const session = sqliteTable(

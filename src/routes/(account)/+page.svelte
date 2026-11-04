@@ -230,6 +230,17 @@
 	{/if}
 </Section>
 
+<Section title="Security emails">
+	{#snippet description()}
+		We email you when your account signs in from a new place or an app gets new access to it.
+	{/snippet}
+
+	<form method="post" action="?/setSecurityEmails">
+		<input type="hidden" name="enabled" value={data.securityEmails ? 'false' : 'true'} />
+		<Button type="submit">{data.securityEmails ? 'Turn off' : 'Turn on'}</Button>
+	</form>
+</Section>
+
 {#if data.passports.length}
 	<Section title="Passports">
 		{#snippet description()}

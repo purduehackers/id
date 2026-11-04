@@ -1,6 +1,9 @@
 import { fail, redirect, type RequestEvent } from '@sveltejs/kit';
+import { eq } from 'drizzle-orm';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
+import { db } from '$lib/server/db';
+import { user as userTable } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
 import { passportsOf } from '$lib/server/passport';
@@ -23,7 +26,7 @@ type Provider = (typeof PROVIDERS)[number]['id'];
 
 const PASSKEY_NAME_MAX_LENGTH = 64;
 
-const EXPIRED = 'That linking attempt expired or was interrupted. Please try again.';
+const EXPIRED = 'That linking attempt expired or was interrupted, please try again.';
 const LINK_ERRORS: Record<string, string> = {
 	state_mismatch: EXPIRED,
 	state_not_found: EXPIRED,
@@ -61,6 +64,7 @@ export const load: PageServerLoad = async (event) => {
 			backedUp: passkey.backedUp
 		})),
 		emails,
+		securityEmails: user.securityEmails,
 		error: errorCode ? (LINK_ERRORS[errorCode] ?? `Linking failed (${errorCode}).`) : null,
 		connections: PROVIDERS.map((provider) => {
 			const account = accounts.find((a) => a.providerId === provider.id);
@@ -210,6 +214,14 @@ export const actions: Actions = {
 		}
 
 		return { notice: 'Passkey removed.' };
+	},
+
+	setSecurityEmails: async (event) => {
+		const user = requireUser(event);
+		const enabled = (await event.request.formData()).get('enabled') === 'true';
+		await db.update(userTable).set({ securityEmails: enabled }).where(eq(userTable.id, user.id));
+		event.locals.user = { ...user, securityEmails: enabled };
+		return { notice: enabled ? 'Security emails are on.' : 'Security emails are off.' };
 	},
 
 	signOut: async (event) => {

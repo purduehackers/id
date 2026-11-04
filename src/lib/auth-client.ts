@@ -26,5 +26,5 @@ export function passkeyProblem(error: {
 	if (error.code && CANCELLED.has(error.code)) return null;
 	if (error.code && MESSAGES[error.code]) return MESSAGES[error.code];
 	if (error.status === 403 && error.message) return error.message;
-	return 'That passkey did not work. Please try again.';
+	return 'That passkey did not work, please try again.';
 }
