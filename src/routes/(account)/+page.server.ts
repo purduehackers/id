@@ -21,6 +21,8 @@ const PROVIDERS = [
 
 type Provider = (typeof PROVIDERS)[number]['id'];
 
+const PASSKEY_NAME_MAX_LENGTH = 64;
+
 const EXPIRED = 'That linking attempt expired or was interrupted. Please try again.';
 const LINK_ERRORS: Record<string, string> = {
 	state_mismatch: EXPIRED,
@@ -37,6 +39,7 @@ export const load: PageServerLoad = async (event) => {
 	const linked = event.url.searchParams.get('linked');
 	const errorCode = event.url.searchParams.get('error');
 	const accounts = await auth.api.listUserAccounts({ headers: event.request.headers });
+	const passkeys = await auth.api.listPasskeys({ headers: event.request.headers });
 
 	const emails = await emailsOf(user.id);
 	const passports = (await passportsOf(user.id)).filter((p) => p.activated);
@@ -51,6 +54,12 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		notice: linked ? `${linked} connected.${passportNotice}` : null,
 		passports: ids,
+		passkeys: passkeys.map((passkey) => ({
+			id: passkey.id,
+			name: passkey.name,
+			createdAt: passkey.createdAt,
+			backedUp: passkey.backedUp
+		})),
 		emails,
 		error: errorCode ? (LINK_ERRORS[errorCode] ?? `Linking failed (${errorCode}).`) : null,
 		connections: PROVIDERS.map((provider) => {
@@ -167,6 +176,41 @@ export const actions: Actions = {
 			event,
 			async (user, id) => `${await makePrimary(user, id)} is now your primary email.`
 		),
+
+	renamePasskey: async (event) => {
+		requireUser(event);
+		const formData = await event.request.formData();
+		const id = formData.get('id')?.toString();
+		const name = formData.get('name')?.toString().trim();
+		if (!id || !name) return fail(400, { message: 'Give the passkey a name.' });
+		if (name.length > PASSKEY_NAME_MAX_LENGTH) {
+			return fail(400, {
+				message: `Keep the name under ${PASSKEY_NAME_MAX_LENGTH} characters.`
+			});
+		}
+
+		try {
+			await auth.api.updatePasskey({ body: { id, name }, headers: event.request.headers });
+		} catch (error) {
+			return fail(400, { message: messageFrom(error, 'Could not rename that passkey.') });
+		}
+
+		return { notice: 'Passkey renamed.' };
+	},
+
+	removePasskey: async (event) => {
+		requireUser(event);
+		const id = (await event.request.formData()).get('id')?.toString();
+		if (!id) return fail(400, { message: 'Nothing to remove.' });
+
+		try {
+			await auth.api.deletePasskey({ body: { id }, headers: event.request.headers });
+		} catch (error) {
+			return fail(400, { message: messageFrom(error, 'Could not remove that passkey.') });
+		}
+
+		return { notice: 'Passkey removed.' };
+	},
 
 	signOut: async (event) => {
 		await auth.api.signOut({ headers: event.request.headers });

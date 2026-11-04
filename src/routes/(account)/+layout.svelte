@@ -16,6 +16,7 @@
 	const links = $derived<{ href: string; label: string; icon: IconName }[]>([
 		{ href: resolve('/'), label: 'Account', icon: 'user' },
 		{ href: resolve('/authorized'), label: 'Authorized apps', icon: 'lock' },
+		{ href: resolve('/sessions'), label: 'Sessions', icon: 'laptop-code' },
 		{ href: resolve('/applications'), label: 'Your apps', icon: 'code' },
 		...(data.user.role === 'admin'
 			? ([

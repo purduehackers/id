@@ -9,6 +9,7 @@ import { username } from 'better-auth/plugins/username';
 import { admin } from 'better-auth/plugins/admin';
 import { createAccessControl } from 'better-auth/plugins/access';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
+import { getAuthenticatorName, passkey } from '@better-auth/passkey';
 import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
 import { and, eq, isNotNull } from 'drizzle-orm';
@@ -27,6 +28,7 @@ import { accessTokenClaims, identityClaims, userInfoClaims } from '$lib/server/c
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
+import { describeUserAgent } from '$lib/server/user-agent';
 
 export const devFixedOtp =
 	dev && !emailConfigured() && env.DEV_FIXED_OTP ? env.DEV_FIXED_OTP : null;
@@ -53,6 +55,10 @@ const ADMIN_PLUGIN_PATHS = [
 	'set-user-password',
 	'has-permission'
 ].map((path) => `/admin/${path}`);
+
+const passkeyOrigin = dev
+	? new URL(env.ORIGIN || 'http://localhost:5173').origin
+	: 'https://id.purduehackers.com';
 
 export const auth = betterAuth({
 	baseURL: env.ORIGIN ?? {
@@ -223,6 +229,19 @@ export const auth = betterAuth({
 		}),
 		jwt(),
 		passportSignIn(),
+		passkey({
+			rpID: new URL(passkeyOrigin).hostname,
+			rpName: 'Purdue Hackers ID',
+			origin: passkeyOrigin,
+			authenticatorSelection: { residentKey: 'required', userVerification: 'preferred' },
+			registration: {
+				afterVerification: ({ ctx, verification }) => ({
+					name:
+						getAuthenticatorName(verification.registrationInfo?.aaguid) ??
+						describeUserAgent(ctx.headers?.get('user-agent'))
+				})
+			}
+		}),
 		oauthProvider({
 			loginPage: '/login',
 			consentPage: '/oauth2/consent',

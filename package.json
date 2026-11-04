@@ -22,6 +22,7 @@
 	},
 	"devDependencies": {
 		"@better-auth/oauth-provider": "^1.7.4",
+		"@better-auth/passkey": "1.7.4",
 		"@eslint/js": "^10.0.1",
 		"@libsql/client": "^0.15.15",
 		"@sveltejs/adapter-vercel": "^6.3.3",

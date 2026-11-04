@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
+	import { invalidateAll } from '$app/navigation';
 	import type { ActionData, PageData } from './$types';
 	import IdCard from '$lib/components/IdCard.svelte';
 	import Row from '$lib/components/Row.svelte';
@@ -14,6 +16,41 @@
 
 	const when = (value: string | Date | null) => (value ? new Date(value).toLocaleDateString() : '');
 	const notice = $derived((form && 'notice' in form && form.notice) || data.notice);
+
+	let passkeysSupported = $state<boolean | null>(null);
+	let addingPasskey = $state(false);
+	let passkeyAdded = $state(false);
+	let passkeyError = $state('');
+	let renaming = $state<string | null>(null);
+
+	onMount(() => {
+		passkeysSupported = 'PublicKeyCredential' in window;
+	});
+
+	async function addPasskey() {
+		addingPasskey = true;
+		passkeyAdded = false;
+		passkeyError = '';
+		const { authClient, passkeyProblem } = await import('$lib/auth-client');
+		const { error } = await authClient.passkey.addPasskey();
+		if (error) {
+			passkeyError = passkeyProblem(error) ?? '';
+		} else {
+			await invalidateAll();
+			passkeyAdded = true;
+		}
+		addingPasskey = false;
+	}
+
+	function confirmRemovePasskey(event: SubmitEvent, name: string) {
+		if (
+			!confirm(
+				`Remove ${name}? You will not be able to sign in with it, but your device may keep offering it until you delete it there too.`
+			)
+		) {
+			event.preventDefault();
+		}
+	}
 </script>
 
 <svelte:head><title>Account - Purdue Hackers ID</title></svelte:head>
@@ -116,6 +153,81 @@
 		/>
 		<Button type="submit" icon="plus">Add</Button>
 	</form>
+</Section>
+
+<Section title="Passkeys">
+	{#snippet description()}
+		Sign in with your fingerprint, face or screen lock instead of your password.
+	{/snippet}
+
+	{#if data.passkeys.length}
+		<ul class="flex flex-col">
+			{#each data.passkeys as passkey (passkey.id)}
+				{@const name = passkey.name || 'Passkey'}
+				<Row icon="lock">
+					{#snippet title()}{name}{/snippet}
+					{#snippet meta()}
+						{[
+							passkey.createdAt && `Added ${when(passkey.createdAt)}`,
+							passkey.backedUp ? 'Synced' : 'On one device'
+						]
+							.filter(Boolean)
+							.join(' · ')}
+					{/snippet}
+					{#snippet actions()}
+						<Button
+							variant="ghost"
+							size="sm"
+							icon="edit"
+							aria-label="Rename {name}"
+							onclick={() => (renaming = renaming === passkey.id ? null : passkey.id)}
+						/>
+						<form
+							method="post"
+							action="?/removePasskey"
+							onsubmit={(event) => confirmRemovePasskey(event, name)}
+						>
+							<input type="hidden" name="id" value={passkey.id} />
+							<Button
+								type="submit"
+								variant="ghost"
+								size="sm"
+								icon="trash"
+								aria-label="Remove {name}"
+							/>
+						</form>
+					{/snippet}
+					{#if renaming === passkey.id}
+						<form method="post" action="?/renamePasskey" class="flex items-end gap-3">
+							<input type="hidden" name="id" value={passkey.id} />
+							<Input
+								name="name"
+								size="sm"
+								required
+								maxlength={64}
+								value={passkey.name ?? ''}
+								aria-label="New name for {name}"
+								class="flex-1"
+							/>
+							<Button type="submit" size="sm">Save</Button>
+						</form>
+					{/if}
+				</Row>
+			{/each}
+		</ul>
+	{/if}
+
+	{#if passkeyError}
+		<Notice>{passkeyError}</Notice>
+	{:else if passkeyAdded}
+		<Notice tone="success">Passkey added. You can use it next time you sign in.</Notice>
+	{/if}
+
+	{#if passkeysSupported}
+		<Button icon="plus" disabled={addingPasskey} onclick={addPasskey}>Add a passkey</Button>
+	{:else if passkeysSupported === false}
+		<p>This browser cannot use passkeys.</p>
+	{/if}
 </Section>
 
 {#if data.passports.length}

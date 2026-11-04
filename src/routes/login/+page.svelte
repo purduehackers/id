@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 	import { USERNAME_MAX_LENGTH, USERNAME_MIN_LENGTH, normalizeUsername } from '$lib/username';
@@ -17,6 +17,35 @@
 
 	let registering = $state(untrack(() => form?.username !== undefined || data.signup));
 
+	let passkeysSupported = $state(false);
+	let passkeyError = $state('');
+
+	async function signInWithPasskey(autoFill = false) {
+		passkeyError = '';
+		const { authClient, passkeyProblem } = await import('$lib/auth-client');
+		const { error } = await authClient.signIn.passkey({ autoFill });
+		if (!error) {
+			location.assign(data.next);
+			return;
+		}
+		passkeyError = passkeyProblem(error) ?? '';
+		if (!autoFill) await offerPasskeyAutofill();
+	}
+
+	async function offerPasskeyAutofill() {
+		if (await PublicKeyCredential.isConditionalMediationAvailable?.()) {
+			await signInWithPasskey(true);
+		}
+	}
+
+	onMount(() => {
+		passkeysSupported = 'PublicKeyCredential' in window;
+	});
+
+	$effect(() => {
+		if (passkeysSupported && !registering) untrack(offerPasskeyAutofill);
+	});
+
 	function onUsernameInput(event: Event & { currentTarget: HTMLInputElement }) {
 		const input = event.currentTarget;
 		input.value = normalizeUsername(input.value).replace(/[^a-z0-9]/g, '');
@@ -32,8 +61,8 @@
 			: 'Use your Purdue Hackers ID to continue.'}
 	</PageTitle>
 
-	{#if form?.message ?? data.error}
-		<Notice>{form?.message ?? data.error}</Notice>
+	{#if passkeyError || form?.message || data.error}
+		<Notice>{passkeyError || form?.message || data.error}</Notice>
 	{/if}
 
 	<form
@@ -81,7 +110,7 @@
 					id="identifier"
 					name="identifier"
 					required
-					autocomplete="username"
+					autocomplete="username webauthn"
 					autocapitalize="none"
 					spellcheck="false"
 					value={form && 'identifier' in form ? form.identifier : ''}
@@ -119,6 +148,9 @@
 			<input type="hidden" name="next" value={data.next} />
 			<p class="ph-subheadline text-[12px]">Or continue with</p>
 			<div class="flex flex-wrap gap-2">
+				{#if passkeysSupported}
+					<Button variant="outline" icon="lock" onclick={() => signInWithPasskey()}>Passkey</Button>
+				{/if}
 				<Button
 					variant="outline"
 					icon="credit-card"
