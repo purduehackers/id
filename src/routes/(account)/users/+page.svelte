@@ -245,7 +245,7 @@
 										</button>
 									</form>
 								{/each}
-								<form method="post" action={action('passport')} class="flex items-end gap-2">
+								<form method="post" action={action('passport')} class="flex items-center gap-2">
 									<input type="hidden" name="userId" value={person.id} />
 									<Input
 										name="passport"
@@ -254,7 +254,7 @@
 										required
 										placeholder="+ Passport #"
 										aria-label="Passport number for @{person.username}"
-										class="w-32 font-mono"
+										class="w-32! font-mono"
 									/>
 									<Button type="submit" variant="ghost" size="sm">Give</Button>
 								</form>
@@ -264,11 +264,11 @@
 						{#if person.id !== data.me}
 							<div class="flex flex-col gap-2">
 								<h3 class="ph-subheadline text-[12px]">Role and ban</h3>
-								<div class="flex flex-wrap items-end gap-x-6 gap-y-3">
+								<div class="flex flex-wrap items-center gap-x-6 gap-y-3">
 									<form
 										method="post"
 										action={action('role')}
-										class="flex items-end gap-2"
+										class="flex items-center gap-2"
 										onsubmit={(event) => confirmRole(event, person.username)}
 									>
 										<input type="hidden" name="userId" value={person.id} />
@@ -295,7 +295,7 @@
 										<form
 											method="post"
 											action={action('ban')}
-											class="flex flex-wrap items-end gap-2"
+											class="flex flex-wrap items-center gap-2"
 											onsubmit={(event) => confirmBan(event, person.username)}
 										>
 											<input type="hidden" name="userId" value={person.id} />
@@ -304,7 +304,7 @@
 												size="sm"
 												placeholder="Ban reason (optional)"
 												aria-label="Ban reason for @{person.username}"
-												class="w-48"
+												class="w-48!"
 											/>
 											<Button
 												type="submit"
