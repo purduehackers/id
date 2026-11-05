@@ -3,32 +3,37 @@
 	import Icon from './ph/Icon.svelte';
 	import Identicon from './Identicon.svelte';
 	import { hash } from './pixel';
+	import { formatPhone } from '$lib/profile';
 	import { ROLE_LABELS, isRole } from '$lib/roles';
 
 	type Props = {
 		id: string;
 		name: string;
+		givenName?: string | null;
+		familyName?: string | null;
 		username: string;
 		email: string;
+		phone?: string | null;
 		role?: string | null;
 		graduationYear?: number | null;
 		since: Date | string;
 		passports: number[];
 		linked: string[];
-		addresses: number;
 	};
 
 	let {
 		id,
 		name,
+		givenName,
+		familyName,
 		username,
 		email,
+		phone,
 		role,
 		graduationYear,
 		since,
 		passports,
-		linked,
-		addresses
+		linked
 	}: Props = $props();
 
 	const themes = {
@@ -40,7 +45,7 @@
 	const theme = $derived(themes[isRole(role) ? role : 'member']);
 	const label = $derived(isRole(role) ? ROLE_LABELS[role] : 'Member');
 	const serial = $derived(String(passports[0] ?? hash(id) % 10000).padStart(4, '0'));
-	const issued = $derived(new Date(since));
+	const registered = $derived(new Date(since));
 	const longestWord = $derived(Math.max(...name.split(/\s+/).map((word) => word.length)));
 
 	const mrzName = $derived(
@@ -56,7 +61,7 @@
 	const mrz = $derived([
 		fill(`ID<PRH<${mrzName}`),
 		fill(
-			`${username.toUpperCase()}<<${serial}<${label.slice(0, 3).toUpperCase()}<${issued.getFullYear()}`
+			`${username.toUpperCase()}<<${serial}<${label.slice(0, 3).toUpperCase()}<${registered.getFullYear()}`
 		)
 	]);
 
@@ -126,7 +131,7 @@
 						>
 							<span>@{username}</span>
 							<span>{label}</span>
-							<span>Since {issued.getFullYear()}</span>
+							<span>Since {registered.getFullYear()}</span>
 							{#if graduationYear}<span>Class of {graduationYear}</span>{/if}
 						</span>
 						<span class="truncate text-[13px] sm:text-[14px]">{email}</span>
@@ -157,24 +162,46 @@
 				</div>
 
 				<dl
-					class="grid flex-1 grid-cols-[auto_minmax(0,1fr)] content-start gap-x-5 gap-y-1.5 text-[13px] sm:text-[14px]"
+					class="grid flex-1 grid-cols-2 content-start gap-x-5 gap-y-2 text-[13px] sm:text-[14px]"
 				>
-					<dt class="pt-0.5 ph-subheadline text-[11px]">Passports</dt>
-					<dd class="font-mono font-semibold">
-						{passports.length ? passports.map((p) => `#${p}`).join('  ') : 'None yet'}
-					</dd>
-					<dt class="pt-0.5 ph-subheadline text-[11px]">Linked</dt>
-					<dd>{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
-					<dt class="pt-0.5 ph-subheadline text-[11px]">Addresses</dt>
-					<dd>{addresses} {addresses === 1 ? 'address' : 'addresses'}</dd>
-					<dt class="pt-0.5 ph-subheadline text-[11px]">Issued</dt>
-					<dd>
-						{issued.toLocaleDateString(undefined, {
-							year: 'numeric',
-							month: 'long',
-							day: 'numeric'
-						})}
-					</dd>
+					<div class="min-w-0">
+						<dt class="ph-subheadline text-[10px] sm:text-[11px]">Given names</dt>
+						<dd class="break-words">{givenName || name}</dd>
+					</div>
+					{#if familyName}
+						<div class="min-w-0">
+							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Surname</dt>
+							<dd class="break-words">{familyName}</dd>
+						</div>
+					{/if}
+					<div class="min-w-0">
+						<dt class="ph-subheadline text-[10px] sm:text-[11px]">
+							Passport ID<span class="normal-case">s</span>
+						</dt>
+						<dd class="font-mono font-semibold break-words">
+							{passports.length ? passports.map((p) => `#${p}`).join('  ') : 'None yet'}
+						</dd>
+					</div>
+					<div class="min-w-0">
+						<dt class="ph-subheadline text-[10px] sm:text-[11px]">Registered</dt>
+						<dd>
+							{registered.toLocaleDateString(undefined, {
+								year: 'numeric',
+								month: 'long',
+								day: 'numeric'
+							})}
+						</dd>
+					</div>
+					{#if phone}
+						<div class="min-w-0">
+							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Phone</dt>
+							<dd class="font-mono break-words">{formatPhone(phone)}</dd>
+						</div>
+					{/if}
+					<div class="min-w-0">
+						<dt class="ph-subheadline text-[10px] sm:text-[11px]">Linked</dt>
+						<dd class="break-words">{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
+					</div>
 				</dl>
 
 				<p class="flex items-center gap-2 font-mono text-[10px] uppercase sm:text-[11px]">

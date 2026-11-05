@@ -73,8 +73,11 @@
 <IdCard
 	id={data.user.id}
 	name={data.user.name}
+	givenName={data.user.givenName}
+	familyName={data.user.familyName}
 	username={data.user.username ?? ''}
 	email={data.user.email}
+	phone={data.user.phone}
 	role={data.user.role}
 	graduationYear={data.user.graduationYear}
 	since={data.user.createdAt}
@@ -82,7 +85,6 @@
 	linked={data.connections
 		.filter((c) => c.accountId)
 		.map((c) => (c.id === 'github' && data.github ? `GitHub (@${data.github})` : c.label))}
-	addresses={1 + data.emails.filter((e) => e.verifiedAt).length}
 />
 
 {#if form?.message ?? data.error}
