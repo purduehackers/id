@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
+	DISCORD_SYNC_INTERVAL_MS,
 	ProfileError,
 	capitalizeName,
 	discordHandle,
+	isDiscordSyncDue,
 	formatNationalPhone,
 	formatPhone,
 	parsePhoneInput,
@@ -248,4 +250,14 @@ test('discordHandle reads pomelo and legacy usernames', () => {
 	assert.equal(discordHandle({ username: 'Pete', discriminator: '1869' }), 'Pete#1869');
 	assert.equal(discordHandle({ username: '' }), null);
 	assert.equal(discordHandle({}), null);
+});
+
+test('isDiscordSyncDue checks at most once per interval', () => {
+	const now = 1_800_000_000_000;
+	assert.equal(isDiscordSyncDue(null, now), true);
+	assert.equal(isDiscordSyncDue(undefined, now), true);
+	assert.equal(isDiscordSyncDue(new Date(now - 1000), now), false);
+	assert.equal(isDiscordSyncDue(now - DISCORD_SYNC_INTERVAL_MS + 1, now), false);
+	assert.equal(isDiscordSyncDue(now - DISCORD_SYNC_INTERVAL_MS, now), true);
+	assert.equal(isDiscordSyncDue(new Date(now - DISCORD_SYNC_INTERVAL_MS).toISOString(), now), true);
 });

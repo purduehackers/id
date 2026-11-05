@@ -255,7 +255,6 @@ type Profile = {
 	phone?: string | null;
 	graduationYear?: number | null;
 	github?: string | null;
-	discord?: string | null;
 };
 
 const PROFILE_CLAIMS = [
@@ -272,8 +271,7 @@ const PROFILE_CLAIMS = [
 	},
 	{ claim: 'email', scope: 'email', read: (u: Profile) => u.email },
 	{ claim: 'email_verified', scope: 'email', read: (u: Profile) => u.emailVerified },
-	{ claim: 'phone_number', scope: 'phone', read: (u: Profile) => u.phone ?? null },
-	{ claim: 'discord_username', scope: 'discord', read: (u: Profile) => u.discord ?? null }
+	{ claim: 'phone_number', scope: 'phone', read: (u: Profile) => u.phone ?? null }
 ] as const;
 
 export async function recordProfileUpdate(profile: Profile) {
@@ -285,6 +283,20 @@ export async function recordProfileUpdate(profile: Profile) {
 			user: { ...ref, ...Object.fromEntries(claims.map((c) => [c.claim, c.read(profile)])) }
 		};
 	});
+	deliverSoon();
+}
+
+export async function recordDiscordUsernameChange(userId: string) {
+	const [target] = await db
+		.select({ id: user.id, username: user.username })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	if (!target) return;
+
+	await enqueueForUser(db, target, 'user.updated', (scopes, ref) =>
+		scopes.has('discord') && !PROFILE_CLAIMS.some((c) => scopes.has(c.scope)) ? { user: ref } : null
+	);
 	deliverSoon();
 }
 

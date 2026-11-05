@@ -29,7 +29,8 @@ export const user = sqliteTable('user', {
 	phone: text('phone'),
 	graduationYear: integer('graduation_year'),
 	github: text('github'),
-	discord: text('discord')
+	discord: text('discord'),
+	discordCheckedAt: integer('discord_checked_at', { mode: 'timestamp_ms' })
 });
 
 export const session = sqliteTable(

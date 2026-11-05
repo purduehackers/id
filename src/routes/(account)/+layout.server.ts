@@ -16,7 +16,6 @@ export const load: LayoutServerLoad = (event) => {
 			phone: user.phone ?? null,
 			graduationYear: user.graduationYear ?? null,
 			github: user.github ?? null,
-			discord: user.discord ?? null,
 			createdAt: user.createdAt
 		}
 	};

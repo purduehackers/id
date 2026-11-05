@@ -168,3 +168,12 @@ export function discordHandle(data: {
 	const tag = typeof data.discriminator === 'string' ? data.discriminator : '0';
 	return tag && tag !== '0' ? `${data.username}#${tag}` : data.username;
 }
+
+export const DISCORD_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
+
+export function isDiscordSyncDue(
+	checkedAt: Date | string | number | null | undefined,
+	now = Date.now()
+): boolean {
+	return !checkedAt || now - new Date(checkedAt).getTime() >= DISCORD_SYNC_INTERVAL_MS;
+}

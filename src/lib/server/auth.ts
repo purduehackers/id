@@ -116,7 +116,8 @@ export const auth = betterAuth({
 			phone: { type: 'string', required: false, input: false },
 			graduationYear: { type: 'number', required: false, input: false },
 			github: { type: 'string', required: false, input: false },
-			discord: { type: 'string', required: false, input: false }
+			discord: { type: 'string', required: false, input: false },
+			discordCheckedAt: { type: 'date', required: false, input: false, returned: false }
 		}
 	},
 
@@ -232,7 +233,9 @@ export const auth = betterAuth({
 				async after(account) {
 					if (account.providerId === 'discord') {
 						await recoverByDiscord(account.userId, account.accountId);
-						await syncDiscordAccount(account.userId, account.accessToken);
+						await syncDiscordAccount(account.userId, account.accessToken).catch((error) =>
+							console.error('[auth] Discord username sync failed', error)
+						);
 						await recordDiscordLink(account.userId, account.accountId, true);
 					} else if (account.providerId === 'github') {
 						await syncGithubAccount(account.userId, account.accountId, account.accessToken);
@@ -251,7 +254,9 @@ export const auth = betterAuth({
 			delete: {
 				async after(account) {
 					if (account.providerId === 'discord') {
-						await clearDiscordAccount(account.userId);
+						await clearDiscordAccount(account.userId).catch((error) =>
+							console.error('[auth] Discord username clear failed', error)
+						);
 						await recordDiscordLink(account.userId, account.accountId, false);
 					} else if (account.providerId === 'github') {
 						await clearGithubAccount(account.userId);

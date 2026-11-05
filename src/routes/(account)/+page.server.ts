@@ -50,17 +50,14 @@ export const load: PageServerLoad = async (event) => {
 	const errorCode = event.url.searchParams.get('error');
 	const accounts = await auth.api.listUserAccounts({ headers: event.request.headers });
 	const passkeys = await auth.api.listPasskeys({ headers: event.request.headers });
-	const github = accounts.some((a) => a.providerId === 'github')
-		? await ensureGithubSynced(user.id, user.github)
-		: null;
+	const [github, discord] = await Promise.all([
+		accounts.some((a) => a.providerId === 'github')
+			? ensureGithubSynced(user.id, user.github)
+			: null,
+		accounts.some((a) => a.providerId === 'discord') ? ensureDiscordSynced(user.id) : null
+	]);
 	if (github && github !== user.github) {
 		event.locals.user = { ...user, github };
-	}
-	const discord = accounts.some((a) => a.providerId === 'discord')
-		? await ensureDiscordSynced(user.id, user.discord)
-		: null;
-	if (discord && discord !== user.discord) {
-		event.locals.user = { ...event.locals.user!, discord };
 	}
 
 	const emails = await emailsOf(user.id);
@@ -93,6 +90,7 @@ export const load: PageServerLoad = async (event) => {
 				id: provider.id,
 				label: provider.label,
 				accountId: account?.id ?? null,
+				handle: provider.id === 'github' ? github : provider.id === 'discord' ? discord : null,
 				connectedAt: account?.createdAt ?? null
 			};
 		})

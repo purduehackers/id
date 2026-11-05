@@ -84,13 +84,7 @@
 	passports={data.passports}
 	linked={data.connections
 		.filter((c) => c.accountId)
-		.map((c) =>
-			c.id === 'github' && data.github
-				? `GitHub (@${data.github})`
-				: c.id === 'discord' && data.discord
-					? `Discord (@${data.discord})`
-					: c.label
-		)}
+		.map((c) => (c.handle ? `${c.label} (@${c.handle})` : c.label))}
 />
 
 {#if form?.message ?? data.error}
@@ -357,10 +351,8 @@
 			>
 				{#snippet title()}
 					{connection.label}
-					{#if connection.id === 'github' && data.github}
-						<span class="font-mono text-[14px]">@{data.github}</span>
-					{:else if connection.id === 'discord' && data.discord}
-						<span class="font-mono text-[14px]">@{data.discord}</span>
+					{#if connection.handle}
+						<span class="font-mono text-[14px]">@{connection.handle}</span>
 					{/if}
 				{/snippet}
 				{#snippet meta()}
