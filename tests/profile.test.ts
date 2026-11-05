@@ -166,6 +166,13 @@ test('validatePhone never stores a number different from the one entered', () =>
 	assert.throws(() => validatePhone('+', '+1'), ProfileError);
 	assert.throws(() => validatePhone('765 555 01234', '+1'), ProfileError);
 	assert.throws(() => validatePhone('+1 765 555 01234', '+44'), ProfileError);
+	assert.throws(() => validatePhone('+1 176 555 01234', '+1'), ProfileError);
+	assert.throws(() => validatePhone('+1 1 765 555 0123', '+1'), ProfileError);
+	assert.throws(() => validatePhone('1 176 555 0123', '+1'), ProfileError);
+	assert.throws(() => validatePhone('0765 555 0123', '+1'), ProfileError);
+	assert.throws(() => validatePhone('007700 900077', '+44'), ProfileError);
+	assert.throws(() => validatePhone('0044 7700 900077', '+44'), ProfileError);
+	assert.throws(() => validatePhone('01234567890123', '+44'), ProfileError);
 	assert.throws(() => validatePhone('1234567890123456', '+44'), ProfileError);
 });
 

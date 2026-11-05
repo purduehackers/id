@@ -206,13 +206,16 @@ export const auth = betterAuth({
 					if (!givenName) {
 						throw new APIError('BAD_REQUEST', { message: 'Tell us your first name.' });
 					}
+					if (!familyName) {
+						throw new APIError('BAD_REQUEST', { message: 'Tell us your last name.' });
+					}
 					if (givenName.length > PART_NAME_MAX_LENGTH || familyName.length > PART_NAME_MAX_LENGTH) {
 						throw new APIError('BAD_REQUEST', {
 							message: `Keep each name under ${PART_NAME_MAX_LENGTH} characters.`
 						});
 					}
 					return {
-						data: { ...data, givenName, familyName: familyName || null, role: null }
+						data: { ...data, givenName, familyName, role: null }
 					};
 				}
 			},

@@ -150,6 +150,12 @@ function nameChanges(entry: RosterEntry, user: StoredUser) {
 	return changes;
 }
 
+function hasNoSurname(entry: RosterEntry): boolean {
+	if (entry.firstName || entry.lastName) return !entry.lastName;
+	if (entry.fullName) return !splitNameParts(entry.fullName).lastName;
+	return false;
+}
+
 function rosterChanges(entry: RosterEntry, user: StoredUser) {
 	const changes: Record<string, string | number | null> = { ...nameChanges(entry, user) };
 	if (entry.phone) changes.phone = validatePhone(entry.phone, '+1');
@@ -245,12 +251,12 @@ Options:
 
 		try {
 			const changes = rosterChanges(entry, user);
+			if (hasNoSurname(entry)) singleNames.push(entry.email);
 			const columns = Object.keys(changes);
 			if (columns.length === 0) {
 				unchangedCount++;
 				continue;
 			}
-			if (changes.family_name === null) singleNames.push(entry.email);
 
 			const summary = columns.map((column) => `${column}=${changes[column]}`).join(', ');
 			if (values.dryRun) {

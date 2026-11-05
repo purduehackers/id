@@ -66,14 +66,10 @@ export function isCountryCode(code: string): boolean {
 	return COUNTRY_CODES.some((c) => c.code === code);
 }
 
-export function formatNationalPhone(raw: string, countryCode: string): string {
-	let digits = raw.replace(/\D/g, '');
+function formatNationalDigits(digits: string, countryCode: string): string {
 	if (!digits) return '';
 
 	if (countryCode === '+1') {
-		if (digits.length === 11 && digits.startsWith('1')) {
-			digits = digits.slice(1);
-		}
 		if (digits.length > 10) return digits;
 		if (digits.length <= 3) return digits;
 		if (digits.length <= 6) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
@@ -89,6 +85,14 @@ export function formatNationalPhone(raw: string, countryCode: string): string {
 	return `${digits.slice(0, 3)} ${digits.slice(3, 7)} ${digits.slice(7)}`;
 }
 
+export function formatNationalPhone(raw: string, countryCode: string): string {
+	let digits = raw.replace(/\D/g, '');
+	if (countryCode === '+1' && digits.length === 11 && digits.startsWith('1')) {
+		digits = digits.slice(1);
+	}
+	return formatNationalDigits(digits, countryCode);
+}
+
 export function parsePhoneInput(
 	raw: string,
 	currentCountryCode: string
@@ -102,7 +106,7 @@ export function parsePhoneInput(
 		const rest = compact.slice(matched.code.length);
 		return {
 			countryCode: matched.code,
-			national: formatNationalPhone(rest, matched.code)
+			national: formatNationalDigits(rest, matched.code)
 		};
 	}
 	return {
@@ -137,11 +141,24 @@ export function validatePhone(raw: string, requestedCode: string): string | null
 	}
 
 	const digits = national.replace(/\D/g, '');
-	const subscriber = countryCode === KEEPS_TRUNK_ZERO ? digits : digits.replace(/^0+/, '');
+	const maxSubscriber = E164_MAX_DIGITS - (countryCode.length - 1);
+	const stripTrunkZero =
+		!rawPhone.startsWith('+') &&
+		countryCode !== '+1' &&
+		countryCode !== KEEPS_TRUNK_ZERO &&
+		digits.length <= maxSubscriber;
+	const subscriber = stripTrunkZero ? digits.replace(/^0/, '') : digits;
+	const invalidPrefix =
+		countryCode === '+1'
+			? subscriber.startsWith('0') || subscriber.startsWith('1')
+			: countryCode === KEEPS_TRUNK_ZERO
+				? subscriber.startsWith('00')
+				: subscriber.startsWith('0');
 	if (
+		invalidPrefix ||
 		(countryCode === '+1' && subscriber.length !== 10) ||
 		subscriber.length < 6 ||
-		countryCode.length - 1 + subscriber.length > E164_MAX_DIGITS
+		subscriber.length > maxSubscriber
 	) {
 		throw new ProfileError('That does not look like a complete phone number.');
 	}
