@@ -142,7 +142,7 @@
 		</div>
 
 		<div class="grid gap-7 sm:grid-cols-2">
-			<Field label="Phone number" for="profile-phone" hint="Optional.">
+			<Field label="Phone number" for="profile-phone" optional>
 				<div class="flex items-end gap-3">
 					<Select
 						name="phoneCountry"
@@ -169,7 +169,7 @@
 				</div>
 			</Field>
 
-			<Field label="Graduation year" for="profile-graduation-year" hint="Optional.">
+			<Field label="Graduation year" for="profile-graduation-year" optional>
 				<Input
 					id="profile-graduation-year"
 					name="graduationYear"

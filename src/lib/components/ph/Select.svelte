@@ -11,7 +11,7 @@
 	<select
 		bind:value
 		class={[
-			'w-full min-w-0 cursor-pointer appearance-none border-0 border-b border-input bg-transparent pr-7 pl-0 text-foreground transition-[border-color,box-shadow] duration-150 outline-none hover:border-foreground/60 focus:border-foreground focus:shadow-[0_1px_0_0_var(--foreground)] focus-visible:outline-none',
+			'w-full min-w-0 cursor-pointer appearance-none border-0 border-b border-input bg-transparent pr-7 pl-0 text-foreground transition-[border-color,box-shadow] duration-150 outline-none hover:border-foreground/60 focus:border-foreground focus:shadow-[0_1px_0_0_var(--foreground)] focus-visible:outline-none [&_option]:bg-background [&_option]:text-foreground',
 			size === 'sm' ? 'h-9 text-[15px]' : 'h-12 text-lg'
 		]}
 		{...rest}
