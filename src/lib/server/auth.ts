@@ -28,6 +28,12 @@ import { accessTokenClaims, identityClaims, userInfoClaims } from '$lib/server/c
 import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
+import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
+import {
+	clearGithubAccount,
+	syncGithubAccount,
+	syncGithubAccountInBackground
+} from '$lib/server/profile';
 import { describeUserAgent } from '$lib/server/user-agent';
 import {
 	alertConsent,
@@ -101,7 +107,12 @@ export const auth = betterAuth({
 
 	user: {
 		additionalFields: {
-			securityEmails: { type: 'boolean', defaultValue: true, input: false }
+			securityEmails: { type: 'boolean', defaultValue: true, input: false },
+			givenName: { type: 'string', required: false, input: true },
+			familyName: { type: 'string', required: false, input: true },
+			phone: { type: 'string', required: false, input: false },
+			graduationYear: { type: 'number', required: false, input: false },
+			github: { type: 'string', required: false, input: false }
 		}
 	},
 
@@ -120,7 +131,7 @@ export const auth = betterAuth({
 		}
 	},
 
-	disabledPaths: ADMIN_PLUGIN_PATHS,
+	disabledPaths: ['/update-user', ...ADMIN_PLUGIN_PATHS],
 
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {
@@ -188,7 +199,24 @@ export const auth = betterAuth({
 							message: 'That email already belongs to a Purdue Hackers ID.'
 						});
 					}
-					return { data: { ...data, role: null } };
+					const parts = data as { givenName?: string | null; familyName?: string | null };
+					const guess = parts.givenName == null ? splitNameParts(data.name) : null;
+					const givenName = normalizeNamePart(parts.givenName ?? guess?.firstName ?? '');
+					const familyName = normalizeNamePart(parts.familyName ?? guess?.lastName ?? '');
+					if (!givenName) {
+						throw new APIError('BAD_REQUEST', { message: 'Tell us your first name.' });
+					}
+					if (!familyName) {
+						throw new APIError('BAD_REQUEST', { message: 'Tell us your last name.' });
+					}
+					if (givenName.length > PART_NAME_MAX_LENGTH || familyName.length > PART_NAME_MAX_LENGTH) {
+						throw new APIError('BAD_REQUEST', {
+							message: `Keep each name under ${PART_NAME_MAX_LENGTH} characters.`
+						});
+					}
+					return {
+						data: { ...data, givenName, familyName, role: null }
+					};
 				}
 			},
 			update: {
@@ -201,6 +229,15 @@ export const auth = betterAuth({
 					if (account.providerId === 'discord') {
 						await recoverByDiscord(account.userId, account.accountId);
 						await recordDiscordLink(account.userId, account.accountId, true);
+					} else if (account.providerId === 'github') {
+						await syncGithubAccount(account.userId, account.accountId, account.accessToken);
+					}
+				}
+			},
+			update: {
+				after: async (account) => {
+					if (account.providerId === 'github') {
+						syncGithubAccountInBackground(account.userId, account.accountId, account.accessToken);
 					}
 				}
 			},
@@ -208,6 +245,8 @@ export const auth = betterAuth({
 				async after(account) {
 					if (account.providerId === 'discord') {
 						await recordDiscordLink(account.userId, account.accountId, false);
+					} else if (account.providerId === 'github') {
+						await clearGithubAccount(account.userId);
 					}
 				}
 			}
@@ -284,7 +323,15 @@ export const auth = betterAuth({
 			allowUnauthenticatedClientRegistration: false,
 			clientRegistrationRequirePKCE: true,
 			clientRegistrationDefaultScopes: ['openid', 'profile', 'email', 'user:read'],
-			clientRegistrationAllowedScopes: ['openid', 'profile', 'email', 'roles', 'user:read', 'user'],
+			clientRegistrationAllowedScopes: [
+				'openid',
+				'profile',
+				'email',
+				'phone',
+				'roles',
+				'user:read',
+				'user'
+			],
 			customUserInfoClaims: userInfoClaims,
 			customIdTokenClaims: identityClaims,
 			customAccessTokenClaims: accessTokenClaims,

@@ -33,7 +33,16 @@ const FILTERS: Record<UserFilter, () => SQL> = {
 function searchFor(query: string) {
 	const q = query.trim().toLowerCase();
 	const match = (column: AnySQLiteColumn) => sql`instr(lower(${column}), ${q}) > 0`;
-	return q ? or(match(user.username), match(user.email), match(user.name)) : undefined;
+	const phoneDigits = /^[\d\s()+.-]+$/.test(q) ? q.replace(/\D/g, '') : '';
+	return q
+		? or(
+				match(user.username),
+				match(user.email),
+				match(user.name),
+				match(user.github),
+				phoneDigits ? sql`instr(${user.phone}, ${phoneDigits}) > 0` : undefined
+			)
+		: undefined;
 }
 
 export async function listUsers(query: string, filter: UserFilter | null) {
@@ -44,6 +53,9 @@ export async function listUsers(query: string, filter: UserFilter | null) {
 			username: user.username,
 			email: user.email,
 			emailVerified: user.emailVerified,
+			phone: user.phone,
+			graduationYear: user.graduationYear,
+			github: user.github,
 			role: user.role,
 			banned: user.banned,
 			banReason: user.banReason,

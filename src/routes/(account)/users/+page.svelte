@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
+	import { formatPhone } from '$lib/profile';
 	import { ROLE_LABELS, isRole } from '$lib/roles';
 	import Identicon from '$lib/components/Identicon.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
@@ -159,8 +160,20 @@
 									{/if}
 									{#if person.id === data.me}<Badge color="yellow">That's you!</Badge>{/if}
 								</span>
-								<span class="font-mono text-[13px] break-all">@{person.username}</span>
-								<span class="text-[14px] break-all">{person.email}</span>
+								<span class="font-mono text-[13px] break-all">
+									@{person.username}
+									{#if person.graduationYear}
+										· Class of {person.graduationYear}
+									{/if}
+									{#if person.github}
+										· gh/{person.github}
+									{/if}
+								</span>
+								<span class="text-[14px] break-all">
+									{person.email}{#if person.phone}
+										<span class="font-mono text-[13px]"> · {formatPhone(person.phone)}</span>
+									{/if}
+								</span>
 							</div>
 							<Button
 								variant="ghost"

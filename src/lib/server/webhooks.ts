@@ -28,8 +28,8 @@ export const WEBHOOK_EVENTS = {
 	'user.banned': { description: 'A user was banned.', needs: [] },
 	'user.unbanned': { description: 'A user was unbanned.', needs: [] },
 	'user.updated': {
-		description: 'A user was updated. Carries their current name, username, avatar or email.',
-		needs: ['profile', 'email']
+		description: 'A user was updated. Carries their current profile, email or phone number.',
+		needs: ['profile', 'email', 'phone']
 	},
 	'user.discord.linked': { description: 'A user connected a Discord account.', needs: ['discord'] },
 	'user.discord.unlinked': {
@@ -41,6 +41,7 @@ export type WebhookEvent = keyof typeof WEBHOOK_EVENTS;
 
 const DIRECTORY_EXPANDS: Record<string, string[]> = {
 	'directory:roles': ['roles', 'profile'],
+	'directory:contact': ['email', 'phone'],
 	'directory:discord': ['discord']
 };
 
@@ -240,18 +241,32 @@ export const banChanged: Build = (_scopes, ref) => ({ user: ref });
 type Profile = {
 	id: string;
 	name: string;
+	givenName?: string | null;
+	familyName?: string | null;
 	username?: string | null;
 	image?: string | null;
 	email: string;
 	emailVerified: boolean;
+	phone?: string | null;
+	graduationYear?: number | null;
+	github?: string | null;
 };
 
 const PROFILE_CLAIMS = [
 	{ claim: 'name', scope: 'profile', read: (u: Profile) => u.name },
+	{ claim: 'given_name', scope: 'profile', read: (u: Profile) => u.givenName ?? null },
+	{ claim: 'family_name', scope: 'profile', read: (u: Profile) => u.familyName ?? null },
 	{ claim: 'preferred_username', scope: 'profile', read: (u: Profile) => u.username },
 	{ claim: 'picture', scope: 'profile', read: (u: Profile) => pictureFor(u) },
+	{ claim: 'github', scope: 'profile', read: (u: Profile) => u.github ?? null },
+	{
+		claim: 'graduation_year',
+		scope: 'profile',
+		read: (u: Profile) => u.graduationYear ?? null
+	},
 	{ claim: 'email', scope: 'email', read: (u: Profile) => u.email },
-	{ claim: 'email_verified', scope: 'email', read: (u: Profile) => u.emailVerified }
+	{ claim: 'email_verified', scope: 'email', read: (u: Profile) => u.emailVerified },
+	{ claim: 'phone_number', scope: 'phone', read: (u: Profile) => u.phone ?? null }
 ] as const;
 
 export async function recordProfileUpdate(profile: Profile) {

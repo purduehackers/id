@@ -11,13 +11,25 @@
 		username: string;
 		email: string;
 		role?: string | null;
+		graduationYear?: number | null;
 		since: Date | string;
 		passports: number[];
 		linked: string[];
 		addresses: number;
 	};
 
-	let { id, name, username, email, role, since, passports, linked, addresses }: Props = $props();
+	let {
+		id,
+		name,
+		username,
+		email,
+		role,
+		graduationYear,
+		since,
+		passports,
+		linked,
+		addresses
+	}: Props = $props();
 
 	const themes = {
 		admin: { card: 'bg-ph-purple text-ph-cream', accent: 'var(--ph-yellow)' },
@@ -115,6 +127,7 @@
 							<span>@{username}</span>
 							<span>{label}</span>
 							<span>Since {issued.getFullYear()}</span>
+							{#if graduationYear}<span>Class of {graduationYear}</span>{/if}
 						</span>
 						<span class="truncate text-[13px] sm:text-[14px]">{email}</span>
 					</div>

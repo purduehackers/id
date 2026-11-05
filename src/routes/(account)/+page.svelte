@@ -7,15 +7,47 @@
 	import Section from '$lib/components/Section.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
+	import Field from '$lib/components/ph/Field.svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
 	import Input from '$lib/components/ph/Input.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
+	import Select from '$lib/components/ph/Select.svelte';
+	import {
+		COUNTRY_CODES,
+		PART_NAME_MAX_LENGTH,
+		formatNationalPhone,
+		parsePhoneInput,
+		splitPhone
+	} from '$lib/profile';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const when = (value: string | Date | null) => (value ? new Date(value).toLocaleDateString() : '');
 	const notice = $derived((form && 'notice' in form && form.notice) || data.notice);
+	const profileValue = (
+		field: 'firstName' | 'lastName' | 'phoneCountry' | 'phone' | 'graduationYear',
+		fallback: string
+	) => (form && 'profile' in form && form.profile ? form.profile[field] : fallback);
+
+	const initialPhone = $derived(splitPhone(data.user.phone));
+
+	let phoneCountry = $derived(profileValue('phoneCountry', initialPhone.countryCode));
+	let phoneNational = $derived(profileValue('phone', initialPhone.national));
+
+	function onPhoneCountryChange(event: Event) {
+		const next = (event.currentTarget as HTMLSelectElement).value;
+		phoneCountry = next;
+		phoneNational = formatNationalPhone(phoneNational, next);
+	}
+
+	function onPhoneInput(event: Event) {
+		const input = event.currentTarget as HTMLInputElement;
+		const parsed = parsePhoneInput(input.value, phoneCountry);
+		phoneCountry = parsed.countryCode;
+		phoneNational = parsed.national;
+		input.value = parsed.national;
+	}
 
 	let passkeysSupported = $state<boolean | null>(null);
 	let addingPasskey = $state(false);
@@ -63,9 +95,12 @@
 	username={data.user.username ?? ''}
 	email={data.user.email}
 	role={data.user.role}
+	graduationYear={data.user.graduationYear}
 	since={data.user.createdAt}
 	passports={data.passports}
-	linked={data.connections.filter((c) => c.accountId).map((c) => c.label)}
+	linked={data.connections
+		.filter((c) => c.accountId)
+		.map((c) => (c.id === 'github' && data.github ? `GitHub (@${data.github})` : c.label))}
 	addresses={1 + data.emails.filter((e) => e.verifiedAt).length}
 />
 
@@ -74,6 +109,88 @@
 {:else if notice}
 	<Notice tone="success">{notice}</Notice>
 {/if}
+
+<Section title="Profile">
+	{#snippet description()}
+		Keep your details up to date. Apps you authorize and the Purdue Hackers directory only see what
+		they have permission for.
+	{/snippet}
+
+	<form method="post" action="?/updateProfile" class="flex flex-col gap-7">
+		<div class="grid gap-7 sm:grid-cols-2">
+			<Field label="First name" for="profile-first-name">
+				<Input
+					id="profile-first-name"
+					name="firstName"
+					required
+					maxlength={PART_NAME_MAX_LENGTH}
+					autocomplete="given-name"
+					value={profileValue('firstName', data.user.givenName ?? '')}
+				/>
+			</Field>
+
+			<Field label="Last name" for="profile-last-name">
+				<Input
+					id="profile-last-name"
+					name="lastName"
+					required
+					maxlength={PART_NAME_MAX_LENGTH}
+					autocomplete="family-name"
+					value={profileValue('lastName', data.user.familyName ?? '')}
+				/>
+			</Field>
+		</div>
+
+		<div class="grid gap-7 sm:grid-cols-2">
+			<Field label="Phone number" for="profile-phone" hint="Optional.">
+				<div class="flex items-end gap-3">
+					<Select
+						name="phoneCountry"
+						value={phoneCountry}
+						onchange={onPhoneCountryChange}
+						aria-label="Country code"
+						class="w-36 shrink-0 font-mono"
+					>
+						{#each COUNTRY_CODES as entry (entry.code)}
+							<option value={entry.code}>{entry.label}</option>
+						{/each}
+					</Select>
+					<Input
+						id="profile-phone"
+						name="phone"
+						type="tel"
+						autocomplete="tel-national"
+						placeholder={COUNTRY_CODES.find((c) => c.code === phoneCountry)?.placeholder ??
+							'(765) 555-0123'}
+						value={phoneNational}
+						oninput={onPhoneInput}
+						class="flex-1 font-mono"
+					/>
+				</div>
+			</Field>
+
+			<Field label="Graduation year" for="profile-graduation-year" hint="Optional.">
+				<Input
+					id="profile-graduation-year"
+					name="graduationYear"
+					inputmode="numeric"
+					pattern="[0-9][0-9][0-9][0-9]"
+					maxlength={4}
+					placeholder="2026"
+					value={profileValue(
+						'graduationYear',
+						data.user.graduationYear ? String(data.user.graduationYear) : ''
+					)}
+					class="font-mono"
+				/>
+			</Field>
+		</div>
+
+		<div>
+			<Button type="submit">Save profile</Button>
+		</div>
+	</form>
+</Section>
 
 <Section title="Email addresses">
 	<ul class="flex flex-col">
@@ -266,9 +383,18 @@
 			<Row
 				icon={connection.id === 'discord' || connection.id === 'github' ? connection.id : 'link'}
 			>
-				{#snippet title()}{connection.label}{/snippet}
+				{#snippet title()}
+					{connection.label}
+					{#if connection.id === 'github' && data.github}
+						<span class="font-mono text-[14px]">@{data.github}</span>
+					{/if}
+				{/snippet}
 				{#snippet meta()}
-					{connection.accountId ? `Connected ${when(connection.connectedAt)}` : 'Not connected'}
+					{connection.accountId
+						? `Connected ${when(connection.connectedAt)}`
+						: connection.id === 'github'
+							? 'Connect to show your GitHub on your profile'
+							: 'Not connected'}
 				{/snippet}
 				{#snippet actions()}
 					{#if connection.accountId}

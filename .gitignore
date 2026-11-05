@@ -23,7 +23,8 @@ vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 
 .direnv
-scripts
+scripts/*
+!scripts/import-roster.ts
 
 *.db
 *.db-shm

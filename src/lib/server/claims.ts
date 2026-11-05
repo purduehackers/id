@@ -6,7 +6,14 @@ type ClaimInfo = { user: ClaimUser; scopes: string[] };
 
 export function identityClaims({ user, scopes }: ClaimInfo) {
 	return {
-		...(scopes.includes('profile') && { preferred_username: user.username }),
+		...(scopes.includes('profile') && {
+			preferred_username: user.username,
+			...(user.givenName ? { given_name: user.givenName } : {}),
+			...(user.familyName ? { family_name: user.familyName } : {}),
+			...(user.github ? { github: user.github } : {}),
+			...(user.graduationYear ? { graduation_year: user.graduationYear } : {})
+		}),
+		...(scopes.includes('phone') && user.phone ? { phone_number: user.phone } : {}),
 		...(scopes.includes('roles') && { roles: grantedRoles(user.role as string) })
 	};
 }
@@ -27,19 +34,13 @@ export function accessTokenClaims({ user, scopes }: { user?: ClaimUser | null; s
 	return user && scopes.includes('roles') ? { roles: grantedRoles(user.role as string) } : {};
 }
 
-function splitName(name: string) {
-	const parts = name.split(' ').filter(Boolean);
-	return parts.length <= 1 ? {} : { given: parts.slice(0, -1).join(' '), family: parts.at(-1) };
-}
-
 function standardClaims(user: PreviewUser, scopes: string[]) {
-	const { given, family } = splitName(user.name);
 	return {
 		...(scopes.includes('profile') && {
 			name: user.name,
 			picture: pictureFor(user),
-			given_name: given,
-			family_name: family
+			given_name: user.givenName || undefined,
+			family_name: user.familyName || undefined
 		}),
 		...(scopes.includes('email') && {
 			email: user.email,
@@ -51,6 +52,8 @@ function standardClaims(user: PreviewUser, scopes: string[]) {
 type PreviewUser = ClaimUser & {
 	id: string;
 	name: string;
+	givenName?: string | null;
+	familyName?: string | null;
 	email: string;
 	emailVerified: boolean;
 	image?: string | null;

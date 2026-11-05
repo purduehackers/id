@@ -7,6 +7,7 @@ import { user as userTable } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
 import { passportsOf } from '$lib/server/passport';
+import { ProfileError, ensureGithubSynced, updateProfile } from '$lib/server/profile';
 import {
 	EmailError,
 	addEmail,
@@ -43,6 +44,12 @@ export const load: PageServerLoad = async (event) => {
 	const errorCode = event.url.searchParams.get('error');
 	const accounts = await auth.api.listUserAccounts({ headers: event.request.headers });
 	const passkeys = await auth.api.listPasskeys({ headers: event.request.headers });
+	const github = accounts.some((a) => a.providerId === 'github')
+		? await ensureGithubSynced(user.id, user.github)
+		: null;
+	if (github && github !== user.github) {
+		event.locals.user = { ...user, github };
+	}
 
 	const emails = await emailsOf(user.id);
 	const passports = (await passportsOf(user.id)).filter((p) => p.activated);
@@ -56,6 +63,7 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		notice: linked ? `${linked} connected.${passportNotice}` : null,
+		github,
 		passports: ids,
 		passkeys: passkeys.map((passkey) => ({
 			id: passkey.id,
@@ -99,6 +107,35 @@ async function emailAction(
 }
 
 export const actions: Actions = {
+	updateProfile: async (event) => {
+		const user = requireUser(event);
+		const formData = await event.request.formData();
+		const firstName = formData.get('firstName')?.toString() ?? '';
+		const lastName = formData.get('lastName')?.toString() ?? '';
+		const phoneCountry = formData.get('phoneCountry')?.toString() ?? '+1';
+		const phone = formData.get('phone')?.toString() ?? '';
+		const graduationYear = formData.get('graduationYear')?.toString() ?? '';
+		try {
+			const updated = await updateProfile(user.id, {
+				firstName,
+				lastName,
+				phoneCountry,
+				phone,
+				graduationYear
+			});
+			event.locals.user = { ...user, ...updated };
+			return { notice: 'Profile saved.' };
+		} catch (error) {
+			if (error instanceof ProfileError) {
+				return fail(400, {
+					profile: { firstName, lastName, phoneCountry, phone, graduationYear },
+					message: error.message
+				});
+			}
+			throw error;
+		}
+	},
+
 	link: async (event) => {
 		requireUser(event);
 		const formData = await event.request.formData();
@@ -176,10 +213,11 @@ export const actions: Actions = {
 		emailAction(event, async (user, id) => `Removed ${await removeEmail(user.id, id)}.`),
 
 	makePrimary: (event) =>
-		emailAction(
-			event,
-			async (user, id) => `${await makePrimary(user, id)} is now your primary email.`
-		),
+		emailAction(event, async (user, id) => {
+			const primary = await makePrimary(user, id);
+			event.locals.user = { ...user, email: primary, emailVerified: true };
+			return `${primary} is now your primary email.`;
+		}),
 
 	renamePasskey: async (event) => {
 		requireUser(event);

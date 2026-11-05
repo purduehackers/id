@@ -25,3 +25,7 @@ export function losesRoles(from: string | null, to: string | null) {
 	const kept = new Set(grantedRoles(to));
 	return grantedRoles(from).some((role) => !kept.has(role));
 }
+
+export function rolesGranting(wanted: Role[]): Role[] {
+	return ROLES.filter((role) => GRANTS[role].some((granted) => wanted.includes(granted)));
+}

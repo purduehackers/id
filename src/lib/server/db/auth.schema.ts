@@ -3,7 +3,11 @@ import { sqliteTable, text, integer, index, uniqueIndex } from 'drizzle-orm/sqli
 
 export const user = sqliteTable('user', {
 	id: text('id').primaryKey(),
-	name: text('name').notNull(),
+	name: text('name')
+		.generatedAlwaysAs(sql`trim(coalesce(given_name, '') || ' ' || coalesce(family_name, ''))`, {
+			mode: 'virtual'
+		})
+		.notNull(),
 	email: text('email').notNull().unique(),
 	emailVerified: integer('email_verified', { mode: 'boolean' }).default(false).notNull(),
 	image: text('image'),
@@ -19,7 +23,12 @@ export const user = sqliteTable('user', {
 	banned: integer('banned', { mode: 'boolean' }).default(false).notNull(),
 	banReason: text('ban_reason'),
 	banExpires: integer('ban_expires', { mode: 'timestamp_ms' }),
-	securityEmails: integer('security_emails', { mode: 'boolean' }).default(true).notNull()
+	securityEmails: integer('security_emails', { mode: 'boolean' }).default(true).notNull(),
+	givenName: text('given_name'),
+	familyName: text('family_name'),
+	phone: text('phone'),
+	graduationYear: integer('graduation_year'),
+	github: text('github')
 });
 
 export const session = sqliteTable(
