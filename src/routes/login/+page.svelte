@@ -9,6 +9,7 @@
 	import DitherButton from '$lib/components/ph/DitherButton.svelte';
 	import Field from '$lib/components/ph/Field.svelte';
 	import Input from '$lib/components/ph/Input.svelte';
+	import NameInput from '$lib/components/ph/NameInput.svelte';
 	import Link from '$lib/components/ph/Link.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
@@ -76,7 +77,7 @@
 		{#if registering}
 			<div class="grid gap-4 sm:grid-cols-2">
 				<Field label="First name" for="firstName">
-					<Input
+					<NameInput
 						id="firstName"
 						name="firstName"
 						required
@@ -87,7 +88,7 @@
 				</Field>
 
 				<Field label="Last name" for="lastName">
-					<Input
+					<NameInput
 						id="lastName"
 						name="lastName"
 						required

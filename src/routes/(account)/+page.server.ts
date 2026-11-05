@@ -8,6 +8,7 @@ import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
 import { passportsOf } from '$lib/server/passport';
 import { ProfileError, ensureGithubSynced, updateProfile } from '$lib/server/profile';
+import { DEFAULT_PHONE_COUNTRY } from '$lib/profile';
 import {
 	EmailError,
 	addEmail,
@@ -112,7 +113,7 @@ export const actions: Actions = {
 		const formData = await event.request.formData();
 		const firstName = formData.get('firstName')?.toString() ?? '';
 		const lastName = formData.get('lastName')?.toString() ?? '';
-		const phoneCountry = formData.get('phoneCountry')?.toString() ?? '+1';
+		const phoneCountry = formData.get('phoneCountry')?.toString() ?? DEFAULT_PHONE_COUNTRY;
 		const phone = formData.get('phone')?.toString() ?? '';
 		const graduationYear = formData.get('graduationYear')?.toString() ?? '';
 		try {

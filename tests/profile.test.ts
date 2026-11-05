@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
 	ProfileError,
+	capitalizeName,
 	formatNationalPhone,
 	formatPhone,
 	parsePhoneInput,
@@ -18,7 +19,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 		validateProfile({
 			firstName: '  Purdue ',
 			lastName: ' Pete  ',
-			phoneCountry: '+1',
+			phoneCountry: 'US',
 			phone: '',
 			graduationYear: ''
 		}),
@@ -35,7 +36,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 		validateProfile({
 			firstName: 'Ada',
 			lastName: 'Lovelace',
-			phoneCountry: '+1',
+			phoneCountry: 'US',
 			phone: '7655550123',
 			graduationYear: ' 2026 '
 		}),
@@ -52,15 +53,15 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 		validateProfile({
 			firstName: 'Alan',
 			lastName: 'Turing',
-			phoneCountry: '+44',
-			phone: '7700900077',
+			phoneCountry: 'GB',
+			phone: '7400123456',
 			graduationYear: '2027'
 		}),
 		{
 			name: 'Alan Turing',
 			givenName: 'Alan',
 			familyName: 'Turing',
-			phone: '+447700900077',
+			phone: '+447400123456',
 			graduationYear: 2027
 		}
 	);
@@ -72,7 +73,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 			validateProfile({
 				firstName: '   ',
 				lastName: 'Pete',
-				phoneCountry: '+1',
+				phoneCountry: 'US',
 				phone: '',
 				graduationYear: ''
 			}),
@@ -83,7 +84,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 			validateProfile({
 				firstName: 'Purdue',
 				lastName: '   ',
-				phoneCountry: '+1',
+				phoneCountry: 'US',
 				phone: '',
 				graduationYear: ''
 			}),
@@ -94,7 +95,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 			validateProfile({
 				firstName: 'Ada',
 				lastName: 'Lovelace',
-				phoneCountry: '+1',
+				phoneCountry: 'US',
 				phone: '123',
 				graduationYear: ''
 			}),
@@ -105,7 +106,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 			validateProfile({
 				firstName: 'Ada',
 				lastName: 'Lovelace',
-				phoneCountry: '+999',
+				phoneCountry: 'ZZ',
 				phone: '7655550123',
 				graduationYear: ''
 			}),
@@ -116,7 +117,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 			validateProfile({
 				firstName: 'Ada',
 				lastName: 'Lovelace',
-				phoneCountry: '+1',
+				phoneCountry: 'US',
 				phone: '',
 				graduationYear: '26'
 			}),
@@ -127,7 +128,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 			validateProfile({
 				firstName: 'Ada',
 				lastName: 'Lovelace',
-				phoneCountry: '+1',
+				phoneCountry: 'US',
 				phone: '',
 				graduationYear: '1800'
 			}),
@@ -135,54 +136,73 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 	);
 });
 
-test('phone formatting and parsing handle country codes and national digits', () => {
-	assert.equal(formatNationalPhone('7655550123', '+1'), '(765) 555-0123');
-	assert.equal(formatNationalPhone('17655550123', '+1'), '(765) 555-0123');
-	assert.equal(formatNationalPhone('76555', '+1'), '(765) 55');
-	assert.deepEqual(parsePhoneInput('+44 7700 900077', '+1'), {
-		countryCode: '+44',
-		national: '770 090 0077'
+test('phone numbers are grouped the way each country writes them', () => {
+	assert.equal(formatNationalPhone('7655550123', 'US'), '(765) 555-0123');
+	assert.equal(formatNationalPhone('76555', 'US'), '(765) 55');
+	assert.equal(formatNationalPhone('11912345678', 'BR'), '(11) 91234-5678');
+	assert.equal(formatNationalPhone('0612345678', 'FR'), '06 12 34 56 78');
+	assert.equal(formatNationalPhone('9876543210', 'IN'), '98765 43210');
+	assert.equal(formatNationalPhone('7400123456', 'GB'), '7400 123456');
+	assert.equal(formatNationalPhone('07400123456', 'GB'), '07400 123456');
+	assert.equal(formatNationalPhone('15123456789', 'DE'), '1512 3456789');
+});
+
+test('deleting back through a phone number never gets stuck on punctuation', () => {
+	assert.equal(formatNationalPhone('765', 'US'), '(765');
+	assert.equal(formatNationalPhone('(76', 'US'), '76');
+});
+
+test('formatting never drops digits', () => {
+	const tooLong = '90123456789012345678';
+	assert.equal(formatNationalPhone(tooLong, 'BR').replace(/\D/g, ''), tooLong);
+});
+
+test('a pasted or stored number picks its own country', () => {
+	assert.deepEqual(parsePhoneInput('+44 7400 123456', 'US'), {
+		country: 'GB',
+		national: '7400 123456'
 	});
-	assert.deepEqual(splitPhone('+17655550123'), {
-		countryCode: '+1',
-		national: '(765) 555-0123'
+	assert.deepEqual(parsePhoneInput('+55 11 91234-5678', 'US'), {
+		country: 'BR',
+		national: '(11) 91234-5678'
 	});
-	assert.deepEqual(splitPhone(null), {
-		countryCode: '+1',
-		national: ''
-	});
-	assert.equal(formatPhone('+17655550123'), '+1 (765) 555-0123');
-	assert.equal(formatPhone('+447700900077'), '+44 770 090 0077');
+	assert.deepEqual(splitPhone('+17655550123'), { country: 'US', national: '(765) 555-0123' });
+	assert.deepEqual(splitPhone('+14165550123'), { country: 'CA', national: '(416) 555-0123' });
+	assert.equal(splitPhone('+390612345678').country, 'IT');
+	assert.deepEqual(splitPhone(null), { country: 'US', national: '' });
+	assert.equal(formatPhone('+5511912345678'), '+55 11 91234 5678');
+	assert.equal(formatPhone('not a number'), 'not a number');
 });
 
 test('a country code can be typed one character at a time', () => {
-	assert.deepEqual(parsePhoneInput('+', '+1'), { countryCode: '+1', national: '+' });
-	assert.deepEqual(parsePhoneInput('+4', '+1'), { countryCode: '+1', national: '+4' });
-	assert.deepEqual(parsePhoneInput('+44', '+1'), { countryCode: '+44', national: '' });
+	assert.deepEqual(parsePhoneInput('+', 'US'), { country: 'US', national: '+' });
+	assert.deepEqual(parsePhoneInput('+4', 'US'), { country: 'US', national: '+4' });
+	assert.deepEqual(parsePhoneInput('+44', 'US'), { country: 'GB', national: '' });
+	assert.deepEqual(parsePhoneInput('+1', 'BR'), { country: 'US', national: '' });
+	assert.deepEqual(parsePhoneInput('+1', 'CA'), { country: 'CA', national: '' });
 });
 
-test('validatePhone never stores a number different from the one entered', () => {
-	assert.throws(() => validatePhone('+7 912 345 6789', '+1'), ProfileError);
-	assert.throws(() => validatePhone('+', '+1'), ProfileError);
-	assert.throws(() => validatePhone('765 555 01234', '+1'), ProfileError);
-	assert.throws(() => validatePhone('+1 765 555 01234', '+44'), ProfileError);
-	assert.throws(() => validatePhone('+1 176 555 01234', '+1'), ProfileError);
-	assert.throws(() => validatePhone('+1 1 765 555 0123', '+1'), ProfileError);
-	assert.throws(() => validatePhone('1 176 555 0123', '+1'), ProfileError);
-	assert.throws(() => validatePhone('0765 555 0123', '+1'), ProfileError);
-	assert.throws(() => validatePhone('007700 900077', '+44'), ProfileError);
-	assert.throws(() => validatePhone('0044 7700 900077', '+44'), ProfileError);
-	assert.throws(() => validatePhone('01234567890123', '+44'), ProfileError);
-	assert.throws(() => validatePhone('1234567890123456', '+44'), ProfileError);
+test('validatePhone rejects numbers that are not real for the country', () => {
+	assert.throws(() => validatePhone('123', 'US'), ProfileError);
+	assert.throws(() => validatePhone('+', 'US'), ProfileError);
+	assert.throws(() => validatePhone('765 555 01234', 'US'), ProfileError);
+	assert.throws(() => validatePhone('0765 555 0123', 'US'), ProfileError);
+	assert.throws(() => validatePhone('1 176 555 0123', 'US'), ProfileError);
+	assert.throws(() => validatePhone('1234567890123456', 'GB'), ProfileError);
+	assert.throws(() => validatePhone('07700 900077', 'GB'), ProfileError);
+	assert.throws(() => validatePhone('+999 123456789', 'US'), ProfileError);
+	assert.throws(() => validatePhone('7655550123', 'ZZ'), ProfileError);
 });
 
 test('validatePhone returns E.164', () => {
-	assert.equal(validatePhone('', '+1'), null);
-	assert.equal(validatePhone('(765) 555-0123', '+1'), '+17655550123');
-	assert.equal(validatePhone('1 765 555 0123', '+1'), '+17655550123');
-	assert.equal(validatePhone('+44 7700 900077', '+1'), '+447700900077');
-	assert.equal(validatePhone('07700 900077', '+44'), '+447700900077');
-	assert.equal(validatePhone('06 1234 5678', '+39'), '+390612345678');
+	assert.equal(validatePhone('', 'US'), null);
+	assert.equal(validatePhone('(765) 555-0123', 'US'), '+17655550123');
+	assert.equal(validatePhone('1 765 555 0123', 'US'), '+17655550123');
+	assert.equal(validatePhone('+44 7400 123456', 'US'), '+447400123456');
+	assert.equal(validatePhone('07400 123456', 'GB'), '+447400123456');
+	assert.equal(validatePhone('06 1234 5678', 'IT'), '+390612345678');
+	assert.equal(validatePhone('(11) 91234-5678', 'BR'), '+5511912345678');
+	assert.equal(validatePhone('+7 912 345 6789', 'US'), '+79123456789');
 });
 
 test('splitNameParts guesses the parts of a free-text name', () => {
@@ -205,4 +225,18 @@ test('rolesGranting expands roles for directory filtering', () => {
 	assert.deepEqual(rolesGranting(['alumni']), ['alumni']);
 	assert.deepEqual(rolesGranting(['organizer', 'alumni']), ['alumni', 'organizer', 'admin']);
 	assert.deepEqual(rolesGranting(['admin']), ['admin']);
+});
+
+test('capitalizeName raises the start of each name without touching the rest', () => {
+	assert.equal(capitalizeName('gabriel di lucca'), 'Gabriel Di Lucca');
+	assert.equal(capitalizeName('minatel'), 'Minatel');
+	assert.equal(capitalizeName('mary-jane'), 'Mary-Jane');
+	assert.equal(capitalizeName("o'brien"), "O'Brien");
+	assert.equal(capitalizeName('d’angelo'), 'D’Angelo');
+	assert.equal(capitalizeName("sa'id"), "Sa'id");
+	assert.equal(capitalizeName('álvaro'), 'Álvaro');
+	assert.equal(capitalizeName('McDonald'), 'McDonald');
+	assert.equal(capitalizeName('gabriel '), 'Gabriel ');
+	assert.equal(capitalizeName('王 小明'), '王 小明');
+	assert.equal(capitalizeName(''), '');
 });

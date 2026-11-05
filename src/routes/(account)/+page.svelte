@@ -10,16 +10,11 @@
 	import Field from '$lib/components/ph/Field.svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
 	import Input from '$lib/components/ph/Input.svelte';
+	import NameInput from '$lib/components/ph/NameInput.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
-	import Select from '$lib/components/ph/Select.svelte';
-	import {
-		COUNTRY_CODES,
-		PART_NAME_MAX_LENGTH,
-		formatNationalPhone,
-		parsePhoneInput,
-		splitPhone
-	} from '$lib/profile';
+	import PhoneInput from '$lib/components/ph/PhoneInput.svelte';
+	import { PART_NAME_MAX_LENGTH, splitPhone } from '$lib/profile';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -32,22 +27,8 @@
 
 	const initialPhone = $derived(splitPhone(data.user.phone));
 
-	let phoneCountry = $derived(profileValue('phoneCountry', initialPhone.countryCode));
+	let phoneCountry = $derived(profileValue('phoneCountry', initialPhone.country));
 	let phoneNational = $derived(profileValue('phone', initialPhone.national));
-
-	function onPhoneCountryChange(event: Event) {
-		const next = (event.currentTarget as HTMLSelectElement).value;
-		phoneCountry = next;
-		phoneNational = formatNationalPhone(phoneNational, next);
-	}
-
-	function onPhoneInput(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const parsed = parsePhoneInput(input.value, phoneCountry);
-		phoneCountry = parsed.countryCode;
-		phoneNational = parsed.national;
-		input.value = parsed.national;
-	}
 
 	let passkeysSupported = $state<boolean | null>(null);
 	let addingPasskey = $state(false);
@@ -119,7 +100,7 @@
 	<form method="post" action="?/updateProfile" class="flex flex-col gap-7">
 		<div class="grid gap-7 sm:grid-cols-2">
 			<Field label="First name" for="profile-first-name">
-				<Input
+				<NameInput
 					id="profile-first-name"
 					name="firstName"
 					required
@@ -130,7 +111,7 @@
 			</Field>
 
 			<Field label="Last name" for="profile-last-name">
-				<Input
+				<NameInput
 					id="profile-last-name"
 					name="lastName"
 					required
@@ -143,30 +124,13 @@
 
 		<div class="grid gap-7 sm:grid-cols-2">
 			<Field label="Phone number" for="profile-phone" optional>
-				<div class="flex items-end gap-3">
-					<Select
-						name="phoneCountry"
-						value={phoneCountry}
-						onchange={onPhoneCountryChange}
-						aria-label="Country code"
-						class="w-36 shrink-0 font-mono"
-					>
-						{#each COUNTRY_CODES as entry (entry.code)}
-							<option value={entry.code}>{entry.label}</option>
-						{/each}
-					</Select>
-					<Input
-						id="profile-phone"
-						name="phone"
-						type="tel"
-						autocomplete="tel-national"
-						placeholder={COUNTRY_CODES.find((c) => c.code === phoneCountry)?.placeholder ??
-							'(765) 555-0123'}
-						value={phoneNational}
-						oninput={onPhoneInput}
-						class="flex-1 font-mono"
-					/>
-				</div>
+				<PhoneInput
+					id="profile-phone"
+					name="phone"
+					countryName="phoneCountry"
+					bind:country={phoneCountry}
+					bind:value={phoneNational}
+				/>
 			</Field>
 
 			<Field label="Graduation year" for="profile-graduation-year" optional>
