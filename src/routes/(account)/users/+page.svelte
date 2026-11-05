@@ -168,6 +168,9 @@
 									{#if person.github}
 										· gh/{person.github}
 									{/if}
+									{#if person.discord}
+										· dc/{person.discord}
+									{/if}
 								</span>
 								<span class="text-[14px] break-all">
 									{person.email}{#if person.phone}

@@ -7,7 +7,12 @@ import { user as userTable } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
 import { passportsOf } from '$lib/server/passport';
-import { ProfileError, ensureGithubSynced, updateProfile } from '$lib/server/profile';
+import {
+	ProfileError,
+	ensureDiscordSynced,
+	ensureGithubSynced,
+	updateProfile
+} from '$lib/server/profile';
 import { DEFAULT_PHONE_COUNTRY } from '$lib/profile';
 import {
 	EmailError,
@@ -51,6 +56,12 @@ export const load: PageServerLoad = async (event) => {
 	if (github && github !== user.github) {
 		event.locals.user = { ...user, github };
 	}
+	const discord = accounts.some((a) => a.providerId === 'discord')
+		? await ensureDiscordSynced(user.id, user.discord)
+		: null;
+	if (discord && discord !== user.discord) {
+		event.locals.user = { ...event.locals.user!, discord };
+	}
 
 	const emails = await emailsOf(user.id);
 	const passports = (await passportsOf(user.id)).filter((p) => p.activated);
@@ -65,6 +76,7 @@ export const load: PageServerLoad = async (event) => {
 	return {
 		notice: linked ? `${linked} connected.${passportNotice}` : null,
 		github,
+		discord,
 		passports: ids,
 		passkeys: passkeys.map((passkey) => ({
 			id: passkey.id,

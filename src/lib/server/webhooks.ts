@@ -28,8 +28,9 @@ export const WEBHOOK_EVENTS = {
 	'user.banned': { description: 'A user was banned.', needs: [] },
 	'user.unbanned': { description: 'A user was unbanned.', needs: [] },
 	'user.updated': {
-		description: 'A user was updated. Carries their current profile, email or phone number.',
-		needs: ['profile', 'email', 'phone']
+		description:
+			'A user was updated. Carries their current profile, email, phone number or Discord username.',
+		needs: ['profile', 'email', 'phone', 'discord']
 	},
 	'user.discord.linked': { description: 'A user connected a Discord account.', needs: ['discord'] },
 	'user.discord.unlinked': {
@@ -197,16 +198,19 @@ export async function enqueueForUser(
 		granted.set(row.endpointId, [...(granted.get(row.endpointId) ?? []), ...row.scopes]);
 	}
 
-	let discordId: string | null | undefined;
+	let discord: { id: string; username: string | null } | null | undefined;
 	for (const [endpointId, list] of granted) {
 		const scopes = expandScopes(list);
-		if (scopes.has('discord') && discordId === undefined) {
-			discordId = await linkedDiscord(tx, target.id);
+		if (scopes.has('discord') && discord === undefined) {
+			discord = await linkedDiscord(tx, target.id);
 		}
 		const ref: Ref = {
 			sub: target.id,
 			...(scopes.has('profile') && { preferred_username: target.username }),
-			...(scopes.has('discord') && { discord_id: discordId ?? null })
+			...(scopes.has('discord') && {
+				discord_id: discord?.id ?? null,
+				discord_username: discord?.username ?? null
+			})
 		};
 		const data = build(scopes, ref);
 		if (!data) continue;
@@ -222,11 +226,12 @@ export async function enqueueForUser(
 
 async function linkedDiscord(tx: Tx | Db, userId: string) {
 	const [row] = await tx
-		.select({ id: account.accountId })
+		.select({ id: account.accountId, username: user.discord })
 		.from(account)
+		.innerJoin(user, eq(user.id, account.userId))
 		.where(and(eq(account.userId, userId), eq(account.providerId, 'discord')))
 		.limit(1);
-	return row?.id ?? null;
+	return row ?? null;
 }
 
 export function rolesChanged(previous: string | null, next: string | null): Build {
@@ -250,6 +255,7 @@ type Profile = {
 	phone?: string | null;
 	graduationYear?: number | null;
 	github?: string | null;
+	discord?: string | null;
 };
 
 const PROFILE_CLAIMS = [
@@ -266,7 +272,8 @@ const PROFILE_CLAIMS = [
 	},
 	{ claim: 'email', scope: 'email', read: (u: Profile) => u.email },
 	{ claim: 'email_verified', scope: 'email', read: (u: Profile) => u.emailVerified },
-	{ claim: 'phone_number', scope: 'phone', read: (u: Profile) => u.phone ?? null }
+	{ claim: 'phone_number', scope: 'phone', read: (u: Profile) => u.phone ?? null },
+	{ claim: 'discord_username', scope: 'discord', read: (u: Profile) => u.discord ?? null }
 ] as const;
 
 export async function recordProfileUpdate(profile: Profile) {
@@ -283,7 +290,7 @@ export async function recordProfileUpdate(profile: Profile) {
 
 export async function recordDiscordLink(userId: string, discordId: string, linked: boolean) {
 	const [target] = await db
-		.select({ id: user.id, username: user.username })
+		.select({ id: user.id, username: user.username, discord: user.discord })
 		.from(user)
 		.where(eq(user.id, userId))
 		.limit(1);
@@ -291,7 +298,15 @@ export async function recordDiscordLink(userId: string, discordId: string, linke
 
 	const type = linked ? 'user.discord.linked' : 'user.discord.unlinked';
 	await enqueueForUser(db, target, type, (scopes, ref) =>
-		scopes.has('discord') ? { user: { ...ref, discord_id: discordId } } : null
+		scopes.has('discord')
+			? {
+					user: {
+						...ref,
+						discord_id: discordId,
+						discord_username: linked ? (target.discord ?? null) : null
+					}
+				}
+			: null
 	);
 	deliverSoon();
 }

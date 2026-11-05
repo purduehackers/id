@@ -2,6 +2,7 @@ import { waitUntil } from '@vercel/functions';
 import { and, eq } from 'drizzle-orm';
 import {
 	ProfileError,
+	discordHandle,
 	validateProfile,
 	type ProfileInput,
 	type ValidatedProfile
@@ -13,6 +14,7 @@ import { account, user } from '$lib/server/db/schema';
 export { ProfileError, validateProfile, type ProfileInput, type ValidatedProfile };
 
 const GITHUB_TIMEOUT = 5_000;
+const DISCORD_TIMEOUT = 5_000;
 
 export async function updateProfile(
 	userId: string,
@@ -109,4 +111,75 @@ export async function ensureGithubSynced(
 export async function clearGithubAccount(userId: string) {
 	const ctx = await auth.$context;
 	await ctx.internalAdapter.updateUser(userId, { github: null });
+}
+
+type DiscordUser = Parameters<typeof discordHandle>[0];
+
+export async function fetchDiscordUsername(accessToken?: string | null): Promise<string | null> {
+	if (!accessToken) return null;
+	try {
+		const res = await fetch('https://discord.com/api/v10/users/@me', {
+			headers: {
+				authorization: `Bearer ${accessToken}`,
+				'user-agent': 'PurdueHackersID'
+			},
+			signal: AbortSignal.timeout(DISCORD_TIMEOUT)
+		});
+		if (res.ok) return discordHandle((await res.json()) as DiscordUser);
+	} catch {
+		// Ignore transient Discord API errors; next sync or page load can retry.
+	}
+	return null;
+}
+
+export async function syncDiscordAccount(
+	userId: string,
+	accessToken?: string | null
+): Promise<string | null> {
+	const discord = await fetchDiscordUsername(accessToken);
+	if (!discord) return null;
+	const [current] = await db
+		.select({ discord: user.discord })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	if (current?.discord === discord) return discord;
+	const ctx = await auth.$context;
+	await ctx.internalAdapter.updateUser(userId, { discord });
+	return discord;
+}
+
+export function syncDiscordAccountInBackground(userId: string, accessToken?: string | null) {
+	waitUntil(
+		syncDiscordAccount(userId, accessToken).catch((error) =>
+			console.error('[profile] Discord sync failed', error)
+		)
+	);
+}
+
+export async function ensureDiscordSynced(
+	userId: string,
+	currentDiscord?: string | null
+): Promise<string | null> {
+	if (currentDiscord) return currentDiscord;
+	const [linked] = await db
+		.select({ id: account.id, accessToken: account.accessToken })
+		.from(account)
+		.where(and(eq(account.userId, userId), eq(account.providerId, 'discord')))
+		.limit(1);
+	if (!linked) return null;
+	// Discord tokens expire after a week, so refresh accounts linked before usernames were synced.
+	let accessToken = linked.accessToken;
+	try {
+		const tokens = await auth.api.getAccessToken({ body: { accountId: linked.id, userId } });
+		accessToken = tokens.accessToken ?? accessToken;
+	} catch {
+		// Fall back to the stored token; a failed refresh just means no username yet.
+	}
+	return syncDiscordAccount(userId, accessToken);
+}
+
+export async function clearDiscordAccount(userId: string) {
+	const ctx = await auth.$context;
+	await ctx.internalAdapter.updateUser(userId, { discord: null });
 }

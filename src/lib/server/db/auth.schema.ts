@@ -28,7 +28,8 @@ export const user = sqliteTable('user', {
 	familyName: text('family_name'),
 	phone: text('phone'),
 	graduationYear: integer('graduation_year'),
-	github: text('github')
+	github: text('github'),
+	discord: text('discord')
 });
 
 export const session = sqliteTable(

@@ -63,7 +63,7 @@ There's another example in `examples/demo-client` that doesn't rely on external 
   - `phone`: returns `phone_number` in E.164 format, like `+17655550123`.
 - **Directory API**:
   - Query team members via `GET /api/directory/users?role=organizer,alumni`.
-  - Requires OAuth 2.0 `client_credentials` with scopes `directory:roles` and optionally `directory:contact` (for email and phone number).
+  - Requires OAuth 2.0 `client_credentials` with scopes `directory:roles` and optionally `directory:contact` (for email and phone number) or `directory:discord` (for `discord_id` and `discord_username`).
   - See [`examples/demo-client/directory.ts`](./examples/demo-client/directory.ts) for a full runnable example.
 - **Roster Import**:
   - Backfill existing Notion rosters using `deno run -A scripts/import-roster.ts roster.csv` (or `bun run scripts/import-roster.ts roster.csv`).

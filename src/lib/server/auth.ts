@@ -30,7 +30,10 @@ import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
 import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
 import {
+	clearDiscordAccount,
 	clearGithubAccount,
+	syncDiscordAccount,
+	syncDiscordAccountInBackground,
 	syncGithubAccount,
 	syncGithubAccountInBackground
 } from '$lib/server/profile';
@@ -112,7 +115,8 @@ export const auth = betterAuth({
 			familyName: { type: 'string', required: false, input: true },
 			phone: { type: 'string', required: false, input: false },
 			graduationYear: { type: 'number', required: false, input: false },
-			github: { type: 'string', required: false, input: false }
+			github: { type: 'string', required: false, input: false },
+			discord: { type: 'string', required: false, input: false }
 		}
 	},
 
@@ -228,6 +232,7 @@ export const auth = betterAuth({
 				async after(account) {
 					if (account.providerId === 'discord') {
 						await recoverByDiscord(account.userId, account.accountId);
+						await syncDiscordAccount(account.userId, account.accessToken);
 						await recordDiscordLink(account.userId, account.accountId, true);
 					} else if (account.providerId === 'github') {
 						await syncGithubAccount(account.userId, account.accountId, account.accessToken);
@@ -236,7 +241,9 @@ export const auth = betterAuth({
 			},
 			update: {
 				after: async (account) => {
-					if (account.providerId === 'github') {
+					if (account.providerId === 'discord') {
+						syncDiscordAccountInBackground(account.userId, account.accessToken);
+					} else if (account.providerId === 'github') {
 						syncGithubAccountInBackground(account.userId, account.accountId, account.accessToken);
 					}
 				}
@@ -244,6 +251,7 @@ export const auth = betterAuth({
 			delete: {
 				async after(account) {
 					if (account.providerId === 'discord') {
+						await clearDiscordAccount(account.userId);
 						await recordDiscordLink(account.userId, account.accountId, false);
 					} else if (account.providerId === 'github') {
 						await clearGithubAccount(account.userId);

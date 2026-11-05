@@ -34,6 +34,7 @@ type DirectoryUser = {
 	email_verified?: boolean;
 	phone_number?: string | null;
 	discord_id?: string | null;
+	discord_username?: string | null;
 };
 
 async function getAccessToken(): Promise<string> {

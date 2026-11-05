@@ -3,6 +3,7 @@ import { test } from 'node:test';
 import {
 	ProfileError,
 	capitalizeName,
+	discordHandle,
 	formatNationalPhone,
 	formatPhone,
 	parsePhoneInput,
@@ -239,4 +240,12 @@ test('capitalizeName raises the start of each name without touching the rest', (
 	assert.equal(capitalizeName('gabriel '), 'Gabriel ');
 	assert.equal(capitalizeName('王 小明'), '王 小明');
 	assert.equal(capitalizeName(''), '');
+});
+
+test('discordHandle reads pomelo and legacy usernames', () => {
+	assert.equal(discordHandle({ username: 'purduepete', discriminator: '0' }), 'purduepete');
+	assert.equal(discordHandle({ username: 'purduepete' }), 'purduepete');
+	assert.equal(discordHandle({ username: 'Pete', discriminator: '1869' }), 'Pete#1869');
+	assert.equal(discordHandle({ username: '' }), null);
+	assert.equal(discordHandle({}), null);
 });

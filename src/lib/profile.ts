@@ -158,3 +158,13 @@ export function validateProfile(input: ProfileInput): ValidatedProfile {
 
 	return { name, givenName, familyName, phone, graduationYear };
 }
+
+/** Reads a Discord `/users/@me` body. Legacy accounts keep their `name#1234` tag. */
+export function discordHandle(data: {
+	username?: unknown;
+	discriminator?: unknown;
+}): string | null {
+	if (typeof data.username !== 'string' || !data.username) return null;
+	const tag = typeof data.discriminator === 'string' ? data.discriminator : '0';
+	return tag && tag !== '0' ? `${data.username}#${tag}` : data.username;
+}

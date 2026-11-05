@@ -66,6 +66,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			phone: user.phone,
 			graduationYear: user.graduationYear,
 			github: user.github,
+			discord: user.discord,
 			image: user.image,
 			role: user.role,
 			banned: user.banned,
@@ -101,7 +102,10 @@ export const GET: RequestHandler = async ({ request, url }) => {
 				email_verified: row.emailVerified,
 				phone_number: row.phone
 			}),
-			...(withDiscord && { discord_id: row.discordId ?? null })
+			...(withDiscord && {
+				discord_id: row.discordId ?? null,
+				discord_username: row.discordId ? (row.discord ?? null) : null
+			})
 		})),
 		next_cursor: rows.length > limit ? page.at(-1)!.id : null
 	});
