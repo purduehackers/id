@@ -185,7 +185,7 @@
 						variant="outline"
 						name="provider"
 						value={provider.id}
-						icon={provider.id === 'discord' || provider.id === 'github' ? provider.id : undefined}
+						icon={provider.id}
 					>
 						{provider.label}
 					</Button>

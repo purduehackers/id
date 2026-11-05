@@ -5,7 +5,7 @@
  * uses OAuth 2.0 client credentials to fetch directory data from `id`.
  *
  * Required OAuth scopes:
- * - `directory:roles`: Access to roles, GitHub handle, and graduation year.
+ * - `directory:roles`: Access to roles and graduation year.
  * - `directory:contact` (optional): Access to member email and phone number.
  *
  * Usage:
@@ -27,7 +27,6 @@ type DirectoryUser = {
 	family_name: string | null;
 	picture: string;
 	roles: string[];
-	github: string | null;
 	graduation_year: number | null;
 	banned: boolean;
 	email?: string;
@@ -97,10 +96,9 @@ async function main() {
 		console.log(`\nFound ${members.length} team members:`);
 		for (const member of members) {
 			const grad = member.graduation_year ? ` '` + String(member.graduation_year).slice(-2) : '';
-			const github = member.github ? ` (@${member.github})` : '';
 			const contact = [member.email, member.phone_number].filter(Boolean).join(' | ');
 
-			console.log(`- ${member.name}${grad}${github} [${member.roles.join(', ')}]`);
+			console.log(`- ${member.name}${grad} [${member.roles.join(', ')}]`);
 			if (contact) {
 				console.log(`    Contact: ${contact}`);
 			}

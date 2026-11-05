@@ -7,6 +7,7 @@ import { db } from '$lib/server/db';
 import { user } from '$lib/server/db/schema';
 import { normalizeUsername, usernameProblem } from '$lib/username';
 import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
+import { PROVIDERS, type Provider } from '$lib/providers';
 import { primaryEmailFor } from '$lib/server/emails';
 
 function safeNext(raw: string | null | undefined): string {
@@ -18,13 +19,6 @@ function resumeTarget(url: URL): string | null {
 	if (!url.searchParams.get('sig') || !url.searchParams.get('client_id')) return null;
 	return `/api/auth/oauth2/authorize${url.search}`;
 }
-
-const PROVIDERS = [
-	{ id: 'discord', label: 'Discord' },
-	{ id: 'github', label: 'GitHub' }
-] as const;
-
-type Provider = (typeof PROVIDERS)[number]['id'];
 
 const EXPIRED = 'That linking attempt expired or was interrupted. Please try again.';
 const SIGN_IN_ERRORS: Record<string, string> = {

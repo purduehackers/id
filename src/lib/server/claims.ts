@@ -10,7 +10,6 @@ export function identityClaims({ user, scopes }: ClaimInfo) {
 			preferred_username: user.username,
 			...(user.givenName ? { given_name: user.givenName } : {}),
 			...(user.familyName ? { family_name: user.familyName } : {}),
-			...(user.github ? { github: user.github } : {}),
 			...(user.graduationYear ? { graduation_year: user.graduationYear } : {})
 		}),
 		...(scopes.includes('phone') && user.phone ? { phone_number: user.phone } : {}),

@@ -65,7 +65,6 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			emailVerified: user.emailVerified,
 			phone: user.phone,
 			graduationYear: user.graduationYear,
-			github: user.github,
 			image: user.image,
 			role: user.role,
 			banned: user.banned,
@@ -93,7 +92,6 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			family_name: row.familyName,
 			picture: pictureFor(row),
 			roles: grantedRoles(row.role),
-			github: row.github,
 			graduation_year: row.graduationYear,
 			banned: row.banned,
 			...(withContact && {

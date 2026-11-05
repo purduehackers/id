@@ -7,8 +7,9 @@ import { user as userTable } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
 import { passportsOf } from '$lib/server/passport';
-import { ProfileError, ensureGithubSynced, updateProfile } from '$lib/server/profile';
+import { ProfileError, updateProfile } from '$lib/server/profile';
 import { DEFAULT_PHONE_COUNTRY } from '$lib/profile';
+import { PROVIDERS, type Provider } from '$lib/providers';
 import {
 	EmailError,
 	addEmail,
@@ -18,13 +19,6 @@ import {
 	resendCode,
 	verifyEmail
 } from '$lib/server/emails';
-
-const PROVIDERS = [
-	{ id: 'discord', label: 'Discord' },
-	{ id: 'github', label: 'GitHub' }
-] as const;
-
-type Provider = (typeof PROVIDERS)[number]['id'];
 
 const PASSKEY_NAME_MAX_LENGTH = 64;
 
@@ -45,12 +39,6 @@ export const load: PageServerLoad = async (event) => {
 	const errorCode = event.url.searchParams.get('error');
 	const accounts = await auth.api.listUserAccounts({ headers: event.request.headers });
 	const passkeys = await auth.api.listPasskeys({ headers: event.request.headers });
-	const github = accounts.some((a) => a.providerId === 'github')
-		? await ensureGithubSynced(user.id, user.github)
-		: null;
-	if (github && github !== user.github) {
-		event.locals.user = { ...user, github };
-	}
 
 	const emails = await emailsOf(user.id);
 	const passports = (await passportsOf(user.id)).filter((p) => p.activated);
@@ -64,7 +52,6 @@ export const load: PageServerLoad = async (event) => {
 
 	return {
 		notice: linked ? `${linked} connected.${passportNotice}` : null,
-		github,
 		passports: ids,
 		passkeys: passkeys.map((passkey) => ({
 			id: passkey.id,

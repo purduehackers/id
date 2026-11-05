@@ -82,9 +82,7 @@
 	graduationYear={data.user.graduationYear}
 	since={data.user.createdAt}
 	passports={data.passports}
-	linked={data.connections
-		.filter((c) => c.accountId)
-		.map((c) => (c.id === 'github' && data.github ? `GitHub (@${data.github})` : c.label))}
+	linked={data.connections.filter((c) => c.accountId).map((c) => c.label)}
 />
 
 {#if form?.message ?? data.error}
@@ -346,21 +344,12 @@
 <Section title="Connected accounts">
 	<ul class="flex flex-col">
 		{#each data.connections as connection (connection.id)}
-			<Row
-				icon={connection.id === 'discord' || connection.id === 'github' ? connection.id : 'link'}
-			>
+			<Row icon={connection.id}>
 				{#snippet title()}
 					{connection.label}
-					{#if connection.id === 'github' && data.github}
-						<span class="font-mono text-[14px]">@{data.github}</span>
-					{/if}
 				{/snippet}
 				{#snippet meta()}
-					{connection.accountId
-						? `Connected ${when(connection.connectedAt)}`
-						: connection.id === 'github'
-							? 'Connect to show your GitHub on your profile'
-							: 'Not connected'}
+					{connection.accountId ? `Connected ${when(connection.connectedAt)}` : 'Not connected'}
 				{/snippet}
 				{#snippet actions()}
 					{#if connection.accountId}

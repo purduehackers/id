@@ -4,20 +4,14 @@ The new Purdue Hackers ID, an OICD provider that other apps can sign in.
 
 ## Setup
 
-You can run and build with **Deno** (default) or **Bun**:
+You can run and build with **Deno**:
 
 ```sh
 cp .env.example .env
 
-# Using Deno
 deno install
 deno task db:push
 deno task dev
-
-# Using Bun
-bun install
-bun run db:push
-bun run dev
 ```
 
 ## Usage
@@ -59,11 +53,9 @@ There's another example in `examples/demo-client` that doesn't rely on external 
 ### Member Directory & Profiles
 
 - **Profile Scopes**:
-  - `profile`: returns `name`, `given_name`, `family_name`, `picture`, `github`, and `graduation_year`.
+  - `profile`: returns `name`, `given_name`, `family_name`, `picture`, and `graduation_year`.
   - `phone`: returns `phone_number` in E.164 format, like `+17655550123`.
 - **Directory API**:
   - Query team members via `GET /api/directory/users?role=organizer,alumni`.
   - Requires OAuth 2.0 `client_credentials` with scopes `directory:roles` and optionally `directory:contact` (for email and phone number).
   - See [`examples/demo-client/directory.ts`](./examples/demo-client/directory.ts) for a full runnable example.
-- **Roster Import**:
-  - Backfill existing Notion rosters using `deno run -A scripts/import-roster.ts roster.csv` (or `bun run scripts/import-roster.ts roster.csv`).

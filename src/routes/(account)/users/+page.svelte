@@ -2,6 +2,7 @@
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 	import { formatPhone } from '$lib/profile';
+	import { PROVIDERS, type Provider } from '$lib/providers';
 	import { ROLE_LABELS, isRole } from '$lib/roles';
 	import Identicon from '$lib/components/Identicon.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
@@ -10,7 +11,6 @@
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
-	import type { IconName } from '$lib/components/ph/icons';
 	import Input from '$lib/components/ph/Input.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 	import Select from '$lib/components/ph/Select.svelte';
@@ -23,10 +23,10 @@
 		{ filter: 'banned', label: 'Banned', color: 'bg-ph-orange', tilt: '-1.5deg' }
 	] as const;
 
-	const CONNECTIONS: { id: string; label: string; icon: IconName; color: string }[] = [
-		{ id: 'discord', label: 'Discord', icon: 'discord', color: 'bg-ph-periwinkle text-ph-black' },
-		{ id: 'github', label: 'GitHub', icon: 'github', color: 'bg-foreground text-background' }
-	];
+	const CONNECTION_COLORS: Record<Provider, string> = {
+		discord: 'bg-ph-periwinkle text-ph-black',
+		github: 'bg-foreground text-background'
+	};
 
 	const ROLE_COLORS = { admin: 'purple', organizer: 'pink', alumni: 'teal' } as const;
 
@@ -165,9 +165,6 @@
 									{#if person.graduationYear}
 										· Class of {person.graduationYear}
 									{/if}
-									{#if person.github}
-										· gh/{person.github}
-									{/if}
 								</span>
 								<span class="text-[14px] break-all">
 									{person.email}{#if person.phone}
@@ -193,7 +190,7 @@
 						{/if}
 
 						<div class="flex flex-wrap items-center gap-1.5">
-							{#each CONNECTIONS as connection (connection.id)}
+							{#each PROVIDERS as connection (connection.id)}
 								{@const linked = person.connections.includes(connection.id)}
 								<span
 									role="img"
@@ -202,11 +199,11 @@
 									class={[
 										'grid size-7 place-items-center transition-transform duration-150 motion-safe:hover:-translate-y-1 motion-safe:hover:rotate-6',
 										linked
-											? connection.color
+											? CONNECTION_COLORS[connection.id]
 											: 'border border-dashed border-foreground/30 text-foreground/30'
 									]}
 								>
-									<Icon name={connection.icon} class="size-4" />
+									<Icon name={connection.id} class="size-4" />
 								</span>
 							{/each}
 							{#if person.passkeys}

@@ -249,7 +249,6 @@ type Profile = {
 	emailVerified: boolean;
 	phone?: string | null;
 	graduationYear?: number | null;
-	github?: string | null;
 };
 
 const PROFILE_CLAIMS = [
@@ -258,7 +257,6 @@ const PROFILE_CLAIMS = [
 	{ claim: 'family_name', scope: 'profile', read: (u: Profile) => u.familyName ?? null },
 	{ claim: 'preferred_username', scope: 'profile', read: (u: Profile) => u.username },
 	{ claim: 'picture', scope: 'profile', read: (u: Profile) => pictureFor(u) },
-	{ claim: 'github', scope: 'profile', read: (u: Profile) => u.github ?? null },
 	{
 		claim: 'graduation_year',
 		scope: 'profile',

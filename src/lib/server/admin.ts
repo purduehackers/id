@@ -39,7 +39,6 @@ function searchFor(query: string) {
 				match(user.username),
 				match(user.email),
 				match(user.name),
-				match(user.github),
 				phoneDigits ? sql`instr(${user.phone}, ${phoneDigits}) > 0` : undefined
 			)
 		: undefined;
@@ -55,7 +54,6 @@ export async function listUsers(query: string, filter: UserFilter | null) {
 			emailVerified: user.emailVerified,
 			phone: user.phone,
 			graduationYear: user.graduationYear,
-			github: user.github,
 			role: user.role,
 			banned: user.banned,
 			banReason: user.banReason,

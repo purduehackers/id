@@ -32,7 +32,7 @@ export const SCOPES: Scope[] = [...MEMBER_CLIENT_SCOPES, ...DIRECTORY_SCOPES];
 
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 	openid: 'Confirm who you are',
-	profile: 'See your name, username, avatar, GitHub and graduation year',
+	profile: 'See your name, username, avatar and graduation year',
 	email: 'See your email address',
 	phone: 'See your phone number',
 	offline_access: 'Stay signed in when you are away',
