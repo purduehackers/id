@@ -29,6 +29,13 @@
       "when": 1793857315133,
       "tag": "0003_drop_user_github",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793857400000,
+      "tag": "0004_update_directory_resource_scopes",
+      "breakpoints": true
     }
   ]
 }
