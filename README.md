@@ -1,6 +1,6 @@
 # 🦑 squid
 
-The new Purdue Hackers ID, an OICD provider that other apps can sign in.
+The new Purdue Hackers ID, an OIDC provider that other apps can sign in.
 
 ## Setup
 
