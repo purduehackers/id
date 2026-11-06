@@ -2,7 +2,7 @@ import { json } from '@sveltejs/kit';
 import { and, asc, eq, gt, inArray } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
-import { account, user } from '$lib/server/db/schema';
+import { account, user, userEmail } from '$lib/server/db/schema';
 import { authorizeDirectoryRequest } from '$lib/server/directory';
 import { ROLES, grantedRoles, isRole, rolesGranting, type Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
@@ -83,24 +83,46 @@ export const GET: RequestHandler = async ({ request, url }) => {
 		.limit(limit + 1);
 
 	const page = rows.slice(0, limit);
+	const userIds = page.map((r) => r.id);
+	const secondaryEmails =
+		withContact && userIds.length > 0
+			? await db
+					.select({
+						userId: userEmail.userId,
+						email: userEmail.email,
+						verifiedAt: userEmail.verifiedAt
+					})
+					.from(userEmail)
+					.where(inArray(userEmail.userId, userIds))
+			: [];
+
 	return json({
-		users: page.map((row) => ({
-			sub: row.id,
-			preferred_username: row.username,
-			name: row.name,
-			given_name: row.givenName,
-			family_name: row.familyName,
-			picture: pictureFor(row),
-			roles: grantedRoles(row.role),
-			graduation_year: row.graduationYear,
-			banned: row.banned,
-			...(withContact && {
-				email: row.email,
-				email_verified: row.emailVerified,
-				phone_number: row.phone
-			}),
-			...(withDiscord && { discord_id: row.discordId ?? null })
-		})),
+		users: page.map((row) => {
+			const userSecondary = secondaryEmails.filter((e) => e.userId === row.id && e.verifiedAt);
+			const allEmails = [
+				{ email: row.email, primary: true, verified: row.emailVerified },
+				...userSecondary.map((e) => ({ email: e.email, primary: false, verified: true }))
+			];
+
+			return {
+				sub: row.id,
+				preferred_username: row.username,
+				name: row.name,
+				given_name: row.givenName,
+				family_name: row.familyName,
+				picture: pictureFor(row),
+				roles: grantedRoles(row.role),
+				graduation_year: row.graduationYear,
+				banned: row.banned,
+				...(withContact && {
+					email: row.email,
+					email_verified: row.emailVerified,
+					emails: allEmails,
+					phone_number: row.phone
+				}),
+				...(withDiscord && { discord_id: row.discordId ?? null })
+			};
+		}),
 		next_cursor: rows.length > limit ? page.at(-1)!.id : null
 	});
 };
