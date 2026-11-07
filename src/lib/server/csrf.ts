@@ -34,7 +34,6 @@ export function isForbiddenFormSubmission(request: Request): boolean {
 		origin === null &&
 		!request.headers.has('cookie') &&
 		!request.headers.has('sec-fetch-site') &&
-		!request.headers.has('sec-fetch-mode') &&
 		!request.headers.has('sec-fetch-dest')
 	) {
 		return false;
