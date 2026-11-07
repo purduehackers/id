@@ -33,9 +33,9 @@
 	let phoneNational = $derived(profileValue('phone', initialPhone.national));
 
 	const tile = $derived(swatch(data.user.id));
-	let picturePreview = $state<string | null>(null);
 	let pictureError = $state('');
 	let uploadingPicture = $state(false);
+	let pictureInput = $state<HTMLInputElement>();
 
 	let passkeysSupported = $state<boolean | null>(null);
 	let addingPasskey = $state(false);
@@ -45,14 +45,9 @@
 
 	onMount(() => {
 		passkeysSupported = 'PublicKeyCredential' in window;
+		// The change event is lost if the file was chosen before hydration.
+		if (pictureInput?.files?.length) uploadPicture();
 	});
-
-	function previewPicture(event: Event) {
-		const file = (event.currentTarget as HTMLInputElement).files?.[0];
-		if (picturePreview) URL.revokeObjectURL(picturePreview);
-		picturePreview = file ? URL.createObjectURL(file) : null;
-		pictureError = '';
-	}
 
 	async function shrinkPicture(file: File): Promise<File | null> {
 		const bitmap = await createImageBitmap(file).catch(() => null);
@@ -67,24 +62,32 @@
 		return blob && new File([blob], 'picture', { type: blob.type });
 	}
 
-	async function submitPicture(event: SubmitEvent) {
-		const form = event.currentTarget as HTMLFormElement;
-		const input = form.elements.namedItem('picture') as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file || file.size <= AVATAR_MAX_BYTES) return;
+	async function uploadPicture() {
+		const input = pictureInput;
+		const file = input?.files?.[0];
+		if (!input || !file) return;
 
-		event.preventDefault();
+		pictureError = '';
 		uploadingPicture = true;
-		const smaller = await shrinkPicture(file);
-		if (!smaller) {
-			pictureError = 'We could not read that picture. Try a different one.';
-			uploadingPicture = false;
-			return;
+		if (file.size > AVATAR_MAX_BYTES) {
+			const smaller = await shrinkPicture(file);
+			if (!smaller) {
+				pictureError = 'We could not read that picture. Try a different one.';
+				uploadingPicture = false;
+				input.value = '';
+				return;
+			}
+			const files = new DataTransfer();
+			files.items.add(smaller);
+			input.files = files.files;
 		}
-		const files = new DataTransfer();
-		files.items.add(smaller);
-		input.files = files.files;
-		form.submit();
+		input.form?.submit();
+	}
+
+	function restorePicture(event: PageTransitionEvent) {
+		if (!event.persisted) return;
+		uploadingPicture = false;
+		if (pictureInput) pictureInput.value = '';
 	}
 
 	async function addPasskey() {
@@ -114,6 +117,7 @@
 </script>
 
 <svelte:head><title>Account - Purdue Hackers ID</title></svelte:head>
+<svelte:window onpageshow={restorePicture} />
 
 <h1 class="sr-only">Your account</h1>
 
@@ -145,47 +149,47 @@
 		they have permission for.
 	{/snippet}
 
-	<div class="flex items-start gap-5">
-		<span class={['grid size-20 shrink-0 place-items-center overflow-hidden', tile.bg, tile.fg]}>
-			{#if picturePreview ?? data.user.image}
-				<img src={picturePreview ?? data.user.image} alt="" class="size-full object-cover" />
+	<div class="flex items-center gap-5">
+		<span class={['grid size-16 shrink-0 place-items-center overflow-hidden', tile.bg, tile.fg]}>
+			{#if data.user.image}
+				<img src={data.user.image} alt="" class="size-full object-cover" />
 			{:else}
-				<Identicon seed={data.user.id} class="size-12" />
+				<Identicon seed={data.user.id} class="size-10" />
 			{/if}
 		</span>
-		<div class="flex min-w-0 flex-1 flex-col gap-3">
-			<form
-				method="post"
-				action="?/setPicture"
-				enctype="multipart/form-data"
-				onsubmit={submitPicture}
-				class="flex flex-col gap-3"
+		<form
+			method="post"
+			action="?/setPicture"
+			enctype="multipart/form-data"
+			class="flex items-center gap-2"
+		>
+			<label
+				class={[
+					'inline-flex h-8 cursor-pointer items-center bg-foreground px-3 font-mono text-[13px] font-semibold tracking-wide whitespace-nowrap text-background uppercase transition-colors duration-150 ease-quint focus-within:outline-2 focus-within:outline-offset-2 hover:bg-primary hover:text-primary-foreground',
+					uploadingPicture && 'pointer-events-none opacity-40'
+				]}
 			>
-				<Field
-					label="Profile picture"
-					for="profile-picture"
-					hint="JPEG, PNG or WebP. We crop it to a square. Anyone with its link can see it."
-					error={pictureError}
-				>
-					<input
-						id="profile-picture"
-						name="picture"
-						type="file"
-						accept="image/jpeg,image/png,image/webp"
-						required
-						onchange={previewPicture}
-						class="w-full min-w-0 text-[15px] file:mr-3 file:h-8 file:cursor-pointer file:border file:border-foreground file:bg-transparent file:px-3 file:font-mono file:text-[13px] file:font-semibold file:uppercase"
-					/>
-				</Field>
-				<Button type="submit" size="sm" disabled={uploadingPicture}>Upload picture</Button>
+				<input
+					bind:this={pictureInput}
+					id="profile-picture"
+					name="picture"
+					type="file"
+					autocomplete="off"
+					accept="image/jpeg,image/png,image/webp"
+					onchange={uploadPicture}
+					class="sr-only"
+				/>
+				{data.user.image ? 'Change picture' : 'Add picture'}
+			</label>
+			<noscript><Button type="submit" size="sm">Upload</Button></noscript>
+		</form>
+		{#if data.user.image}
+			<form method="post" action="?/removePicture">
+				<Button type="submit" variant="ghost" size="sm" icon="trash" aria-label="Remove picture" />
 			</form>
-			{#if data.user.image}
-				<form method="post" action="?/removePicture">
-					<LinkButton>Remove picture</LinkButton>
-				</form>
-			{/if}
-		</div>
+		{/if}
 	</div>
+	{#if pictureError}<Notice>{pictureError}</Notice>{/if}
 
 	<form method="post" action="?/updateProfile" class="flex flex-col gap-7">
 		<div class="grid gap-7 sm:grid-cols-2">
