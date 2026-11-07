@@ -10,7 +10,6 @@
 		tone?: 'light' | 'dark';
 		cols?: number;
 		rows?: number;
-		pixelColors?: string[];
 		children?: Snippet;
 	};
 
@@ -20,7 +19,6 @@
 		tone,
 		cols = 10,
 		rows = 5,
-		pixelColors,
 		class: className,
 		style,
 		children,
@@ -41,11 +39,7 @@
 >
 	<span class="ph-dither-btn__pixels" aria-hidden="true">
 		{#each order as i, index (index)}
-			<span
-				class="ph-dither-btn__pixel"
-				style="--i: {i}"
-				style:--pixel-hover={pixelColors?.[i % pixelColors.length]}
-			></span>
+			<span class="ph-dither-btn__pixel" style="--i: {i}"></span>
 		{/each}
 	</span>
 	<span class="ph-dither-btn__label">{@render children?.()}</span>

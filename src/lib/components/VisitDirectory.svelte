@@ -1,79 +1,126 @@
 <script lang="ts">
-	import DitherButton from '$lib/components/ph/DitherButton.svelte';
+	import { onMount } from 'svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
 
-	const pixelColors = ['pink', 'lime', 'orange', 'teal', 'periwinkle'].flatMap((color) => [
-		`var(--ph-${color})`,
-		'var(--ph-yellow)'
-	]);
+	const PIXEL = 3;
+	const SHADES_PER_HUE = 6;
+	const SLOW_STEP = 90;
+	const FAST_STEP = 35;
+	const HUES = ['orange', 'pink', 'purple', 'periwinkle', 'blue', 'teal', 'lime'];
+	const WHITE = [255, 255, 255];
+	const BLACK = [0, 0, 0];
+
+	let link = $state<HTMLAnchorElement>();
+	let canvas = $state<HTMLCanvasElement>();
+
+	const mix = (from: number[], to: number[], amount: number) =>
+		from.map((value, i) => value + (to[i] - value) * amount);
+
+	function buildPalette(styles: CSSStyleDeclaration, shadow: number): string[] {
+		const hues = HUES.map((name) => {
+			const hex = styles.getPropertyValue(`--ph-${name}`).trim();
+			return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+		});
+		return Array.from({ length: hues.length * SHADES_PER_HUE }, (_, band) => {
+			const position = band / SHADES_PER_HUE;
+			const hue = Math.floor(position);
+			const blend = position - hue;
+			const color = mix(hues[hue], hues[(hue + 1) % hues.length], blend);
+			const shade = Math.sin(blend * Math.PI * 2) * 0.28;
+			const shaded = mix(mix(color, shade > 0 ? WHITE : BLACK, Math.abs(shade)), BLACK, shadow);
+			return `rgb(${shaded.map(Math.round).join(' ')})`;
+		});
+	}
+
+	function ringCells(cols: number, rows: number, inset: number): [number, number][] {
+		const right = cols - inset - 1;
+		const bottom = rows - inset - 1;
+		const cells: [number, number][] = [];
+		for (let x = inset; x < right; x++) cells.push([x, inset]);
+		for (let y = inset; y < bottom; y++) cells.push([right, y]);
+		for (let x = right; x > inset; x--) cells.push([x, bottom]);
+		for (let y = bottom; y > inset; y--) cells.push([inset, y]);
+		return cells;
+	}
+
+	onMount(() => {
+		const button = link;
+		const target = canvas;
+		const context = target?.getContext('2d');
+		if (!button || !target || !context) return;
+
+		const styles = getComputedStyle(target);
+		const palettes = [buildPalette(styles, 0), buildPalette(styles, 0.35)];
+		const bands = palettes[0].length;
+		let rings: [number, number][][] = [];
+		let step = 0;
+
+		const draw = () => {
+			const cols = Math.round(button.offsetWidth / PIXEL);
+			const rows = Math.round(button.offsetHeight / PIXEL);
+			if (target.width !== cols || target.height !== rows) {
+				target.width = cols;
+				target.height = rows;
+				rings = [ringCells(cols, rows, 0), ringCells(cols, rows, 1)];
+			}
+			rings.forEach((cells, ring) => {
+				cells.forEach(([x, y], index) => {
+					const dither = (x + y) % 2 ? 0.5 : 0;
+					const band = Math.floor((index / cells.length) * bands + dither);
+					context.fillStyle = palettes[ring][(band - (step % bands) + bands) % bands];
+					context.fillRect(x, y, 1, 1);
+				});
+			});
+		};
+
+		draw();
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+		let last = 0;
+		let frame = 0;
+		const tick = (now: number) => {
+			const wait = button.matches(':hover, :focus-visible') ? FAST_STEP : SLOW_STEP;
+			if (now - last >= wait) {
+				last = now;
+				step++;
+				draw();
+			}
+			frame = requestAnimationFrame(tick);
+		};
+		frame = requestAnimationFrame(tick);
+		return () => cancelAnimationFrame(frame);
+	});
 </script>
 
-<DitherButton
+<a
+	bind:this={link}
 	href="https://directory.purduehackers.com"
 	target="_blank"
 	rel="noopener noreferrer"
-	cols={12}
-	rows={3}
-	{pixelColors}
-	class="visit-directory active:scale-[0.97]"
-	style="--btn-bg: var(--ph-yellow); --pixel: var(--ph-yellow); --label: var(--ph-black); --label-hover: var(--ph-black)"
+	class="visit relative inline-flex h-10 w-fit shrink-0 items-center justify-center gap-2 bg-ph-yellow px-4 font-mono text-[15px] font-semibold tracking-wide whitespace-nowrap text-ph-black uppercase no-underline transition-transform duration-150 ease-quint active:scale-[0.97]"
 >
-	<span class="label">
+	<canvas bind:this={canvas} aria-hidden="true" class="absolute inset-0 size-full"></canvas>
+	<span class="relative inline-flex items-center gap-2">
 		Visit directory
 		<Icon name="external-link" />
 	</span>
-</DitherButton>
+</a>
 
 <style>
-	:global(.ph-dither-btn.visit-directory) {
-		height: 2.5rem;
-		padding: 0 1rem;
-		font-size: 15px;
-		font-weight: 600;
-		white-space: nowrap;
-	}
-
-	:global(.ph-dither-btn.visit-directory::after) {
-		--width: 3px;
-		--period: 42px;
-		--stops:
-			var(--ph-orange) 0 6px, var(--ph-pink) 6px 12px, var(--ph-purple) 12px 18px,
-			var(--ph-periwinkle) 18px 24px, var(--ph-blue) 24px 30px, var(--ph-teal) 30px 36px,
-			var(--ph-lime) 36px 42px;
-		content: '';
-		position: absolute;
-		inset: 0;
+	canvas {
+		image-rendering: pixelated;
 		pointer-events: none;
-		background:
-			linear-gradient(90deg, var(--stops)) 0 0 / var(--period) var(--width) repeat-x,
-			linear-gradient(180deg, var(--stops)) 100% 0 / var(--width) var(--period) repeat-y,
-			linear-gradient(270deg, var(--stops)) 0 100% / var(--period) var(--width) repeat-x,
-			linear-gradient(0deg, var(--stops)) 0 0 / var(--width) var(--period) repeat-y;
-	}
-
-	.label {
-		display: inline-flex;
-		align-items: center;
-		gap: 0.5rem;
 	}
 
 	@media (prefers-reduced-motion: no-preference) {
-		:global(.ph-dither-btn:focus-visible) .label :global(polygon:last-child) {
+		.visit:focus-visible :global(polygon:last-child) {
 			animation: visit-directory-arrow 500ms steps(4);
-		}
-
-		:global(.ph-dither-btn.visit-directory:focus-visible::after) {
-			animation: visit-directory-border 700ms steps(7) infinite;
 		}
 	}
 
 	@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-		:global(.ph-dither-btn:hover) .label :global(polygon:last-child) {
+		.visit:hover :global(polygon:last-child) {
 			animation: visit-directory-arrow 500ms steps(4);
-		}
-
-		:global(.ph-dither-btn.visit-directory:hover::after) {
-			animation: visit-directory-border 700ms steps(7) infinite;
 		}
 	}
 
@@ -83,16 +130,6 @@
 		}
 		50.01% {
 			transform: translate(-14px, 14px);
-		}
-	}
-
-	@keyframes visit-directory-border {
-		to {
-			background-position:
-				42px 0,
-				100% 42px,
-				-42px 100%,
-				0 -42px;
 		}
 	}
 </style>
