@@ -12,7 +12,7 @@ function isAllowedImage(bytes: Uint8Array) {
 	return jpeg || png || webp;
 }
 
-export async function renderAvatar(bytes: Uint8Array): Promise<Uint8Array<ArrayBuffer>> {
+export async function renderAvatar(bytes: Uint8Array): Promise<Buffer> {
 	if (bytes.length > AVATAR_MAX_BYTES) {
 		throw new ProfileError('That picture is too large. Use one under 4 MB.');
 	}
@@ -20,12 +20,11 @@ export async function renderAvatar(bytes: Uint8Array): Promise<Uint8Array<ArrayB
 		throw new ProfileError('Use a JPEG, PNG or WebP picture.');
 	}
 	try {
-		const output = await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
+		return await sharp(bytes, { limitInputPixels: MAX_INPUT_PIXELS, failOn: 'error' })
 			.rotate()
 			.resize(AVATAR_SIZE, AVATAR_SIZE, { fit: 'cover' })
 			.webp({ quality: 82 })
 			.toBuffer();
-		return new Uint8Array(output);
 	} catch {
 		throw new ProfileError('We could not read that picture. Try a different one.');
 	}

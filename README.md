@@ -16,13 +16,12 @@ deno task dev
 
 ### Profile pictures
 
-Profile pictures are in a Cloudflare R2 bucket. To upload pictures, do these steps:
+Profile pictures are in a public Vercel Blob store. To upload pictures, do these steps:
 
-1. Create an R2 bucket and give it public access through a custom domain.
-2. Create an R2 API token with read and write permission for this bucket.
-3. Set `CLOUDFLARE_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` and `R2_PUBLIC_URL`. `R2_PUBLIC_URL` is the public URL of the bucket.
+1. Create a public Blob store and connect it to the Vercel project.
+2. For local development, set `BLOB_READ_WRITE_TOKEN` to the read-write token of the store.
 
-If these values are not set, the upload shows an error. All other functions continue to operate.
+If there are no credentials, the upload shows an error. All other functions continue to operate.
 
 ## Usage
 
