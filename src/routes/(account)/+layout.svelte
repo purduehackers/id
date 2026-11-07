@@ -67,7 +67,7 @@
 				{@render avatar('size-5')}
 			</span>
 			<form method="post" action="/?/signOut" class="-ml-2 lg:hidden">
-				<Button type="submit" variant="ghost" size="sm" icon="logout" aria-label="Sign out" />
+				<Button type="submit" variant="danger" size="sm" icon="logout" aria-label="Sign out" />
 			</form>
 		</div>
 
@@ -108,7 +108,7 @@
 				</div>
 			</div>
 			<form method="post" action="/?/signOut">
-				<Button type="submit" variant="ghost" size="sm" icon="logout" class="-ml-3">
+				<Button type="submit" variant="danger" size="sm" icon="logout">
 					Sign out
 				</Button>
 			</form>

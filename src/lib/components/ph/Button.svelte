@@ -7,7 +7,7 @@
 	type Props = Omit<HTMLAnchorAttributes & HTMLButtonAttributes, 'type'> & {
 		href?: string;
 		type?: 'button' | 'submit' | 'reset';
-		variant?: 'solid' | 'outline' | 'ghost' | 'plain';
+		variant?: 'solid' | 'outline' | 'ghost' | 'plain' | 'danger';
 		size?: 'sm' | 'md' | 'lg';
 		icon?: IconName;
 		iconEnd?: IconName;
@@ -27,6 +27,7 @@
 	}: Props = $props();
 
 	const variants = {
+		danger: 'bg-red-600 text-white hover:bg-red-700',
 		solid: 'bg-foreground text-background hover:bg-primary hover:text-primary-foreground',
 		outline: 'border border-foreground text-foreground hover:bg-foreground hover:text-background',
 		ghost: 'text-foreground hover:bg-foreground/[0.08]',
