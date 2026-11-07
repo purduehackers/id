@@ -29,6 +29,7 @@ import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
 import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
+import { isDevicePollFrom } from '$lib/server/rate-limit';
 import { describeUserAgent } from '$lib/server/user-agent';
 import {
 	alertConsent,
@@ -126,6 +127,15 @@ export const auth = betterAuth({
 	},
 
 	disabledPaths: ['/update-user', ...ADMIN_PLUGIN_PATHS],
+
+	rateLimit: {
+		customRules: {
+			'/oauth2/token': async (request, current) =>
+				env.PHACK_SH_CLIENT_ID && (await isDevicePollFrom(request, env.PHACK_SH_CLIENT_ID))
+					? false
+					: current
+		}
+	},
 
 	hooks: {
 		before: createAuthMiddleware(async (ctx) => {

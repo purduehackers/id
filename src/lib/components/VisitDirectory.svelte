@@ -3,6 +3,8 @@
 	import Icon from '$lib/components/ph/Icon.svelte';
 
 	const PIXEL = 1;
+	const WAVE = 2;
+	const WAVE_TAPER = 6;
 	const SHADES_PER_HUE = 6;
 	const SLOW_STEP = 90;
 	const FAST_STEP = 35;
@@ -32,15 +34,25 @@
 		});
 	}
 
-	function ringCells(cols: number, rows: number): [number, number][] {
+	function ringCells(cols: number, rows: number) {
 		const right = cols - 1;
 		const bottom = rows - 1;
-		const cells: [number, number][] = [];
-		for (let x = 0; x < right; x++) cells.push([x, 0]);
-		for (let y = 0; y < bottom; y++) cells.push([right, y]);
-		for (let x = right; x > 0; x--) cells.push([x, bottom]);
-		for (let y = bottom; y > 0; y--) cells.push([0, y]);
-		return cells;
+		const side = (
+			length: number,
+			position: (i: number) => [number, number],
+			normal: [number, number]
+		) =>
+			Array.from({ length }, (_, i) => ({
+				position: position(i),
+				normal,
+				taper: Math.min(1, i / WAVE_TAPER, (length - i) / WAVE_TAPER)
+			}));
+		return [
+			...side(right, (i) => [i, 0], [0, -1]),
+			...side(bottom, (i) => [right, i], [1, 0]),
+			...side(right, (i) => [right - i, bottom], [0, 1]),
+			...side(bottom, (i) => [0, bottom - i], [-1, 0])
+		];
 	}
 
 	onMount(() => {
@@ -49,29 +61,39 @@
 		const context = target?.getContext('2d');
 		if (!button || !target || !context) return;
 
-		const palette = buildPalette(getComputedStyle(target));
+		const styles = getComputedStyle(target);
+		const palette = buildPalette(styles);
+		const fill = styles.getPropertyValue('--ph-yellow');
 		const bands = palette.length;
-		let cells: [number, number][] = [];
+		let cells: ReturnType<typeof ringCells> = [];
 		let step = 0;
 
 		const draw = () => {
 			const cols = Math.round(button.offsetWidth / PIXEL);
 			const rows = Math.round(button.offsetHeight / PIXEL);
-			if (target.width !== cols || target.height !== rows) {
-				target.width = cols;
-				target.height = rows;
+			if (target.width !== cols + WAVE * 2 || target.height !== rows + WAVE * 2) {
+				target.width = cols + WAVE * 2;
+				target.height = rows + WAVE * 2;
 				cells = ringCells(cols, rows);
 			}
-			cells.forEach(([x, y], index) => {
+			context.clearRect(0, 0, target.width, target.height);
+			cells.forEach(({ position: [x, y], normal: [nx, ny], taper }, index) => {
+				const wave =
+					0.5 + 0.3 * Math.sin(index / 12 - step * 0.2) + 0.2 * Math.sin(index / 5 + step * 0.13);
+				const offset = Math.round(WAVE * taper * wave);
 				const dither = (x + y) % 2 ? 0.5 : 0;
 				const band = Math.floor((index / cells.length) * bands + dither);
-				context.fillStyle = palette[(band - (step % bands) + bands) % bands];
-				context.fillRect(x, y, 1, 1);
+				for (let distance = 0; distance <= offset; distance++) {
+					context.fillStyle =
+						distance === offset ? palette[(band - (step % bands) + bands) % bands] : fill;
+					context.fillRect(x + nx * distance + WAVE, y + ny * distance + WAVE, 1, 1);
+				}
 			});
 		};
 
 		draw();
-		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		const resize = new ResizeObserver(draw);
+		resize.observe(button);
 
 		let last = 0;
 		let frame = 0;
@@ -84,8 +106,13 @@
 			}
 			frame = requestAnimationFrame(tick);
 		};
-		frame = requestAnimationFrame(tick);
-		return () => cancelAnimationFrame(frame);
+		if (!matchMedia('(prefers-reduced-motion: reduce)').matches) {
+			frame = requestAnimationFrame(tick);
+		}
+		return () => {
+			resize.disconnect();
+			cancelAnimationFrame(frame);
+		};
 	});
 </script>
 
@@ -96,7 +123,7 @@
 	rel="noopener noreferrer"
 	class="visit relative inline-flex h-10 w-fit shrink-0 items-center justify-center gap-2 bg-ph-yellow px-4 font-mono text-[15px] font-semibold tracking-wide whitespace-nowrap text-ph-black uppercase no-underline transition-transform duration-150 ease-quint active:scale-[0.97]"
 >
-	<canvas bind:this={canvas} aria-hidden="true" class="absolute inset-0 size-full"></canvas>
+	<canvas bind:this={canvas} aria-hidden="true" style="--margin: {WAVE * PIXEL}px"></canvas>
 	<span class="relative inline-flex items-center gap-2">
 		Visit directory
 		<Icon name="external-link" />
@@ -105,6 +132,10 @@
 
 <style>
 	canvas {
+		position: absolute;
+		inset: calc(var(--margin) * -1);
+		width: calc(100% + var(--margin) * 2);
+		height: calc(100% + var(--margin) * 2);
 		image-rendering: pixelated;
 		pointer-events: none;
 	}
