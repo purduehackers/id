@@ -6,6 +6,7 @@
 	import Identicon from '$lib/components/Identicon.svelte';
 	import Row from '$lib/components/Row.svelte';
 	import Section from '$lib/components/Section.svelte';
+	import VisitDirectory from '$lib/components/VisitDirectory.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
 	import Field from '$lib/components/ph/Field.svelte';
@@ -244,8 +245,9 @@
 			</Field>
 		</div>
 
-		<div>
+		<div class="flex flex-wrap items-center gap-3">
 			<Button type="submit">Save profile</Button>
+			<VisitDirectory />
 		</div>
 	</form>
 </Section>
