@@ -7,7 +7,8 @@ import { user as userTable } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/guard';
 import { APIError } from 'better-auth/api';
 import { passportsOf } from '$lib/server/passport';
-import { ProfileError, updateProfile } from '$lib/server/profile';
+import { ProfileError, removePicture, setPicture, updateProfile } from '$lib/server/profile';
+import { R2Error } from '$lib/server/r2';
 import { DEFAULT_PHONE_COUNTRY } from '$lib/profile';
 import { PROVIDERS, type Provider } from '$lib/providers';
 import {
@@ -122,6 +123,33 @@ export const actions: Actions = {
 			}
 			throw error;
 		}
+	},
+
+	setPicture: async (event) => {
+		const user = requireUser(event);
+		const picture = (await event.request.formData()).get('picture');
+		if (!(picture instanceof File) || picture.size === 0) {
+			return fail(400, { message: 'Pick a picture first.' });
+		}
+		try {
+			const image = await setPicture(user, new Uint8Array(await picture.arrayBuffer()));
+			event.locals.user = { ...user, image };
+			return { notice: 'Picture saved.' };
+		} catch (error) {
+			if (error instanceof ProfileError) return fail(400, { message: error.message });
+			if (error instanceof R2Error) {
+				console.error('[profile] could not store picture', error);
+				return fail(503, { message: 'Could not save your picture. Try again soon.' });
+			}
+			throw error;
+		}
+	},
+
+	removePicture: async (event) => {
+		const user = requireUser(event);
+		await removePicture(user);
+		event.locals.user = { ...user, image: null };
+		return { notice: 'Picture removed.' };
 	},
 
 	link: async (event) => {

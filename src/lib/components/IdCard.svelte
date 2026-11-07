@@ -12,6 +12,7 @@
 		givenName?: string | null;
 		familyName?: string | null;
 		username: string;
+		image?: string | null;
 		email: string;
 		phone?: string | null;
 		role?: string | null;
@@ -27,6 +28,7 @@
 		givenName,
 		familyName,
 		username,
+		image,
 		email,
 		phone,
 		role,
@@ -113,8 +115,14 @@
 				</div>
 
 				<div class="flex items-end gap-4 sm:gap-6">
-					<div class="grid size-20 shrink-0 place-items-center bg-ph-black/10 sm:size-28">
-						<Identicon seed={id} accent={theme.accent} class="size-12 sm:size-16" />
+					<div
+						class="grid size-20 shrink-0 place-items-center overflow-hidden bg-ph-black/10 sm:size-28"
+					>
+						{#if image}
+							<img src={image} alt="" class="size-full object-cover" />
+						{:else}
+							<Identicon seed={id} accent={theme.accent} class="size-12 sm:size-16" />
+						{/if}
 					</div>
 					<div class="flex min-w-0 flex-col gap-1.5 sm:gap-2">
 						<span

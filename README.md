@@ -14,6 +14,16 @@ deno task db:push
 deno task dev
 ```
 
+### Profile pictures
+
+Profile pictures are in a Cloudflare R2 bucket. To upload pictures, do these steps:
+
+1. Create an R2 bucket and give it public access through a custom domain.
+2. Create an R2 API token with read and write permission for this bucket.
+3. Set `CLOUDFLARE_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` and `R2_PUBLIC_URL`. `R2_PUBLIC_URL` is the public URL of the bucket.
+
+If these values are not set, the upload shows an error. All other functions continue to operate.
+
 ## Usage
 
 To create a client that uses ID as a way of logging in, first go to ID's dashboard and create an application. There, you will input your application's name, scopes and redirect url.
@@ -54,6 +64,7 @@ There's another example in `examples/demo-client` that doesn't rely on external 
 
 - **Profile Scopes**:
   - `profile`: returns `name`, `given_name`, `family_name`, `picture`, and `graduation_year`.
+  - `picture` is the URL of the picture that the user uploaded, or of a generated pixel avatar. When the user changes or removes the picture, the old URL stops working in one day or less. Do not keep this URL for a long time.
   - `phone`: returns `phone_number` in E.164 format, like `+17655550123`.
 - **Directory API**:
   - Query team members via `GET /api/directory/users?role=organizer,alumni`.

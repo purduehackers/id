@@ -3,6 +3,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import type { ActionData, PageData } from './$types';
 	import IdCard from '$lib/components/IdCard.svelte';
+	import Identicon from '$lib/components/Identicon.svelte';
 	import Row from '$lib/components/Row.svelte';
 	import Section from '$lib/components/Section.svelte';
 	import Badge from '$lib/components/ph/Badge.svelte';
@@ -14,7 +15,8 @@
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 	import PhoneInput from '$lib/components/ph/PhoneInput.svelte';
-	import { PART_NAME_MAX_LENGTH, splitPhone } from '$lib/profile';
+	import { swatch } from '$lib/components/pixel';
+	import { AVATAR_MAX_BYTES, PART_NAME_MAX_LENGTH, splitPhone } from '$lib/profile';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -30,6 +32,11 @@
 	let phoneCountry = $derived(profileValue('phoneCountry', initialPhone.country));
 	let phoneNational = $derived(profileValue('phone', initialPhone.national));
 
+	const tile = $derived(swatch(data.user.id));
+	let picturePreview = $state<string | null>(null);
+	let pictureError = $state('');
+	let uploadingPicture = $state(false);
+
 	let passkeysSupported = $state<boolean | null>(null);
 	let addingPasskey = $state(false);
 	let passkeyAdded = $state(false);
@@ -39,6 +46,46 @@
 	onMount(() => {
 		passkeysSupported = 'PublicKeyCredential' in window;
 	});
+
+	function previewPicture(event: Event) {
+		const file = (event.currentTarget as HTMLInputElement).files?.[0];
+		if (picturePreview) URL.revokeObjectURL(picturePreview);
+		picturePreview = file ? URL.createObjectURL(file) : null;
+		pictureError = '';
+	}
+
+	async function shrinkPicture(file: File): Promise<File | null> {
+		const bitmap = await createImageBitmap(file).catch(() => null);
+		if (!bitmap) return null;
+		const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
+		const canvas = document.createElement('canvas');
+		canvas.width = Math.round(bitmap.width * scale);
+		canvas.height = Math.round(bitmap.height * scale);
+		canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+		bitmap.close();
+		const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, 'image/webp', 0.9));
+		return blob && new File([blob], 'picture', { type: blob.type });
+	}
+
+	async function submitPicture(event: SubmitEvent) {
+		const form = event.currentTarget as HTMLFormElement;
+		const input = form.elements.namedItem('picture') as HTMLInputElement;
+		const file = input.files?.[0];
+		if (!file || file.size <= AVATAR_MAX_BYTES) return;
+
+		event.preventDefault();
+		uploadingPicture = true;
+		const smaller = await shrinkPicture(file);
+		if (!smaller) {
+			pictureError = 'We could not read that picture. Try a different one.';
+			uploadingPicture = false;
+			return;
+		}
+		const files = new DataTransfer();
+		files.items.add(smaller);
+		input.files = files.files;
+		form.submit();
+	}
 
 	async function addPasskey() {
 		addingPasskey = true;
@@ -76,6 +123,7 @@
 	givenName={data.user.givenName}
 	familyName={data.user.familyName}
 	username={data.user.username ?? ''}
+	image={data.user.image}
 	email={data.user.email}
 	phone={data.user.phone}
 	role={data.user.role}
@@ -96,6 +144,48 @@
 		Keep your details up to date. Apps you authorize and the Purdue Hackers directory only see what
 		they have permission for.
 	{/snippet}
+
+	<div class="flex items-start gap-5">
+		<span class={['grid size-20 shrink-0 place-items-center overflow-hidden', tile.bg, tile.fg]}>
+			{#if picturePreview ?? data.user.image}
+				<img src={picturePreview ?? data.user.image} alt="" class="size-full object-cover" />
+			{:else}
+				<Identicon seed={data.user.id} class="size-12" />
+			{/if}
+		</span>
+		<div class="flex min-w-0 flex-1 flex-col gap-3">
+			<form
+				method="post"
+				action="?/setPicture"
+				enctype="multipart/form-data"
+				onsubmit={submitPicture}
+				class="flex flex-col gap-3"
+			>
+				<Field
+					label="Profile picture"
+					for="profile-picture"
+					hint="JPEG, PNG or WebP. We crop it to a square. Anyone with its link can see it."
+					error={pictureError}
+				>
+					<input
+						id="profile-picture"
+						name="picture"
+						type="file"
+						accept="image/jpeg,image/png,image/webp"
+						required
+						onchange={previewPicture}
+						class="w-full min-w-0 text-[15px] file:mr-3 file:h-8 file:cursor-pointer file:border file:border-foreground file:bg-transparent file:px-3 file:font-mono file:text-[13px] file:font-semibold file:uppercase"
+					/>
+				</Field>
+				<Button type="submit" size="sm" disabled={uploadingPicture}>Upload picture</Button>
+			</form>
+			{#if data.user.image}
+				<form method="post" action="?/removePicture">
+					<LinkButton>Remove picture</LinkButton>
+				</form>
+			{/if}
+		</div>
+	</div>
 
 	<form method="post" action="?/updateProfile" class="flex flex-col gap-7">
 		<div class="grid gap-7 sm:grid-cols-2">

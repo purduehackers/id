@@ -37,6 +37,14 @@
 
 <svelte:head><link rel="icon" type="image/svg+xml" href={favicon} /></svelte:head>
 
+{#snippet avatar(iconClass: string)}
+	{#if data.user.image}
+		<img src={data.user.image} alt="" class="size-full object-cover" />
+	{:else}
+		<Identicon seed={data.user.id} class={iconClass} />
+	{/if}
+{/snippet}
+
 <div class="min-h-dvh lg:grid lg:grid-cols-[264px_minmax(0,1fr)]">
 	<aside
 		class="flex flex-col gap-4 bg-card px-4 pt-5 pb-2 lg:sticky lg:top-0 lg:h-dvh lg:gap-10 lg:px-5 lg:py-8"
@@ -49,8 +57,14 @@
 				<Glider class="size-5 shrink-0" />
 				<span class="ph-headline text-xl">Purdue Hackers ID</span>
 			</a>
-			<span class={['ml-auto grid size-8 shrink-0 place-items-center lg:hidden', tile.bg, tile.fg]}>
-				<Identicon seed={data.user.id} class="size-5" />
+			<span
+				class={[
+					'ml-auto grid size-8 shrink-0 place-items-center overflow-hidden lg:hidden',
+					tile.bg,
+					tile.fg
+				]}
+			>
+				{@render avatar('size-5')}
 			</span>
 			<form method="post" action="/?/signOut" class="-ml-2 lg:hidden">
 				<Button type="submit" variant="ghost" size="sm" icon="logout" aria-label="Sign out" />
@@ -83,8 +97,10 @@
 
 		<div class="mt-auto hidden flex-col gap-4 px-2 lg:flex">
 			<div class="flex items-center gap-3">
-				<span class={['grid size-11 shrink-0 place-items-center', tile.bg, tile.fg]}>
-					<Identicon seed={data.user.id} class="size-6" />
+				<span
+					class={['grid size-11 shrink-0 place-items-center overflow-hidden', tile.bg, tile.fg]}
+				>
+					{@render avatar('size-6')}
 				</span>
 				<div class="flex min-w-0 flex-col gap-0.5">
 					<span class="truncate font-medium">{data.user.name}</span>

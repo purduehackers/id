@@ -13,6 +13,8 @@ export const PART_NAME_MAX_LENGTH = 60;
 export const GRADUATION_YEAR_MIN = 1950;
 export const GRADUATION_YEAR_MAX = 2050;
 
+// Constrained by Vercel Functions
+export const AVATAR_MAX_BYTES = 4 * 1024 * 1024;
 export const DEFAULT_PHONE_COUNTRY: CountryCode = 'US';
 
 export function primaryPhoneCountry(callingCode: string): CountryCode | undefined {
