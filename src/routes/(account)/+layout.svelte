@@ -10,6 +10,7 @@
 	import type { IconName } from '$lib/components/ph/icons';
 	import Identicon from '$lib/components/Identicon.svelte';
 	import { identiconSvg, swatch } from '$lib/components/pixel';
+	import { hasRole } from '$lib/roles';
 
 	let { data, children }: { data: LayoutData; children: Snippet } = $props();
 
@@ -18,7 +19,7 @@
 		{ href: resolve('/authorized'), label: 'Authorized apps', icon: 'lock' },
 		{ href: resolve('/sessions'), label: 'Sessions', icon: 'laptop-code' },
 		{ href: resolve('/applications'), label: 'Your apps', icon: 'code' },
-		...(data.user.role === 'admin'
+		...(hasRole(data.user.role, 'admin')
 			? ([
 					{ href: resolve('/users'), label: 'Users', icon: 'users' },
 					{ href: resolve('/access'), label: 'App access', icon: 'globe' }

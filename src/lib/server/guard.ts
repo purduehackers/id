@@ -1,4 +1,5 @@
 import { error, redirect, type RequestEvent } from '@sveltejs/kit';
+import { hasRole } from '$lib/roles';
 
 export function requireUser(event: RequestEvent) {
 	const user = event.locals.user;
@@ -10,6 +11,6 @@ export function requireUser(event: RequestEvent) {
 
 export function requireAdmin(event: RequestEvent) {
 	const user = requireUser(event);
-	if (user.role !== 'admin') error(404, 'Not Found');
+	if (!hasRole(user.role, 'admin')) error(404, 'Not Found');
 	return user;
 }

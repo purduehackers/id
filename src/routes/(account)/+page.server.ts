@@ -108,6 +108,7 @@ export const actions: Actions = {
 		const lastName = formData.get('lastName')?.toString() ?? '';
 		const phoneCountry = formData.get('phoneCountry')?.toString() ?? DEFAULT_PHONE_COUNTRY;
 		const phone = formData.get('phone')?.toString() ?? '';
+		const graduationSemester = formData.get('graduationSemester')?.toString() ?? '';
 		const graduationYear = formData.get('graduationYear')?.toString() ?? '';
 		try {
 			const updated = await updateProfile(user.id, {
@@ -115,6 +116,7 @@ export const actions: Actions = {
 				lastName,
 				phoneCountry,
 				phone,
+				graduationSemester,
 				graduationYear
 			});
 			event.locals.user = { ...user, ...updated };
@@ -122,7 +124,7 @@ export const actions: Actions = {
 		} catch (error) {
 			if (error instanceof ProfileError) {
 				return fail(400, {
-					profile: { firstName, lastName, phoneCountry, phone, graduationYear },
+					profile: { firstName, lastName, phoneCountry, phone, graduationSemester, graduationYear },
 					message: error.message
 				});
 			}

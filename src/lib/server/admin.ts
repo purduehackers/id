@@ -11,7 +11,7 @@ import {
 	user
 } from '$lib/server/db/schema';
 import { uuidv7 } from '$lib/server/uuid';
-import { isRole, losesRoles } from '$lib/roles';
+import { isAssignedRole, losesRoles, rolesOf, serializeRoles, toRoles } from '$lib/roles';
 import { banChanged, deliverSoon, enqueueForUser, rolesChanged } from '$lib/server/webhooks';
 
 type Actor = { id: string; username: string };
@@ -53,7 +53,7 @@ export async function listUsers(query: string, filter: UserFilter | null) {
 			email: user.email,
 			emailVerified: user.emailVerified,
 			phone: user.phone,
-			graduationYear: user.graduationYear,
+			graduationTerm: user.graduationTerm,
 			role: user.role,
 			banned: user.banned,
 			banReason: user.banReason,
@@ -121,7 +121,13 @@ async function findTarget(tx: Tx, actor: Actor, targetId: string) {
 	if (targetId === actor.id) throw new AdminError('You cannot change your own account here.');
 
 	const [target] = await tx
-		.select({ id: user.id, username: user.username, role: user.role, banned: user.banned })
+		.select({
+			id: user.id,
+			username: user.username,
+			role: user.role,
+			banned: user.banned,
+			graduationTerm: user.graduationTerm
+		})
 		.from(user)
 		.where(eq(user.id, targetId))
 		.limit(1);
@@ -141,19 +147,21 @@ function audit(tx: Tx, actor: Actor, target: { id: string; username: string }) {
 		});
 }
 
-export async function setRole(actor: Actor, targetId: string, value: string) {
-	const role = value || null;
-	if (role !== null && !isRole(role)) throw new AdminError('That is not a role.');
+export async function setRoles(actor: Actor, targetId: string, values: string[]) {
+	if (!values.every(isAssignedRole)) throw new AdminError('That is not a role you can assign.');
+	const role = serializeRoles(toRoles(values));
 
 	const username = await db.transaction(async (tx) => {
 		const target = await findTarget(tx, actor, targetId);
-		const from = isRole(target.role) ? target.role : null;
+		const from = target.role;
 		if (from === role) return target.username;
+		const previous = rolesOf(target);
+		const roles = rolesOf({ ...target, role });
 
 		await tx.update(user).set({ role }).where(eq(user.id, target.id));
 		await audit(tx, actor, target)({ action: 'role', from, to: role });
-		await enqueueForUser(tx, target, 'user.roles.changed', rolesChanged(from, role));
-		if (losesRoles(from, role)) await revokeOAuthTokens(tx, target.id);
+		await enqueueForUser(tx, target, 'user.roles.changed', rolesChanged(previous, roles));
+		if (losesRoles(previous, roles)) await revokeOAuthTokens(tx, target.id);
 
 		return target.username;
 	});

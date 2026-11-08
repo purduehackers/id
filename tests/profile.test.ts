@@ -12,7 +12,8 @@ import {
 	validateProfile
 } from '../src/lib/profile.ts';
 import { user } from '../src/lib/server/db/auth.schema.ts';
-import { rolesGranting } from '../src/lib/roles.ts';
+import { parseRoles, rolesOf, serializeRoles, toRoles } from '../src/lib/roles.ts';
+import { termSemester, termYear, toTerm } from '../src/lib/graduation.ts';
 
 test('validateProfile normalizes first/last name, phone with country code, and graduation year', () => {
 	assert.deepEqual(
@@ -21,6 +22,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 			lastName: ' Pete  ',
 			phoneCountry: 'US',
 			phone: '',
+			graduationSemester: '',
 			graduationYear: ''
 		}),
 		{
@@ -28,7 +30,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 			givenName: 'Purdue',
 			familyName: 'Pete',
 			phone: null,
-			graduationYear: null
+			graduationTerm: null
 		}
 	);
 
@@ -38,6 +40,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 			lastName: 'Lovelace',
 			phoneCountry: 'US',
 			phone: '7655550123',
+			graduationSemester: 'spring',
 			graduationYear: ' 2026 '
 		}),
 		{
@@ -45,7 +48,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 			givenName: 'Ada',
 			familyName: 'Lovelace',
 			phone: '+17655550123',
-			graduationYear: 2026
+			graduationTerm: 4052
 		}
 	);
 
@@ -55,6 +58,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 			lastName: 'Turing',
 			phoneCountry: 'GB',
 			phone: '7400123456',
+			graduationSemester: 'fall',
 			graduationYear: '2027'
 		}),
 		{
@@ -62,7 +66,7 @@ test('validateProfile normalizes first/last name, phone with country code, and g
 			givenName: 'Alan',
 			familyName: 'Turing',
 			phone: '+447400123456',
-			graduationYear: 2027
+			graduationTerm: 4055
 		}
 	);
 });
@@ -75,6 +79,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 				lastName: 'Pete',
 				phoneCountry: 'US',
 				phone: '',
+				graduationSemester: '',
 				graduationYear: ''
 			}),
 		ProfileError
@@ -86,6 +91,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 				lastName: '   ',
 				phoneCountry: 'US',
 				phone: '',
+				graduationSemester: '',
 				graduationYear: ''
 			}),
 		ProfileError
@@ -97,6 +103,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 				lastName: 'Lovelace',
 				phoneCountry: 'US',
 				phone: '123',
+				graduationSemester: '',
 				graduationYear: ''
 			}),
 		ProfileError
@@ -108,6 +115,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 				lastName: 'Lovelace',
 				phoneCountry: 'ZZ',
 				phone: '7655550123',
+				graduationSemester: '',
 				graduationYear: ''
 			}),
 		ProfileError
@@ -119,6 +127,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 				lastName: 'Lovelace',
 				phoneCountry: 'US',
 				phone: '',
+				graduationSemester: 'spring',
 				graduationYear: '26'
 			}),
 		ProfileError
@@ -130,6 +139,7 @@ test('validateProfile rejects invalid first/last name, phone, and graduation yea
 				lastName: 'Lovelace',
 				phoneCountry: 'US',
 				phone: '',
+				graduationSemester: 'spring',
 				graduationYear: '1800'
 			}),
 		ProfileError
@@ -220,11 +230,59 @@ test('user.name stays a generated column', () => {
 	assert.equal(user.name.generated?.type, 'always');
 });
 
-test('rolesGranting expands roles for directory filtering', () => {
-	assert.deepEqual(rolesGranting(['organizer']), ['organizer', 'admin']);
-	assert.deepEqual(rolesGranting(['alumni']), ['alumni']);
-	assert.deepEqual(rolesGranting(['organizer', 'alumni']), ['alumni', 'organizer', 'admin']);
-	assert.deepEqual(rolesGranting(['admin']), ['admin']);
+test('roles are a list where admin implies organizer', () => {
+	assert.deepEqual(toRoles(['admin']), ['admin', 'organizer']);
+	assert.deepEqual(toRoles(['organizer', 'admin']), ['admin', 'organizer']);
+	assert.deepEqual(toRoles(['alumni', 'nope']), []);
+	assert.deepEqual(parseRoles('organizer,alumni'), ['organizer']);
+	assert.deepEqual(parseRoles(null), []);
+	assert.equal(serializeRoles(toRoles(['admin'])), 'admin,organizer');
+	assert.equal(serializeRoles([]), null);
+});
+
+test('alumni comes from the graduation term once it has ended', () => {
+	const grad = (semester: 'spring' | 'fall', year: number, role: string | null = null) => ({
+		role,
+		graduationTerm: toTerm(year, semester)
+	});
+	const may = new Date('2027-05-31T12:00:00Z');
+	const june = new Date('2027-06-01T12:00:00Z');
+	const newYear = new Date('2028-01-01T12:00:00Z');
+
+	assert.deepEqual(rolesOf(grad('spring', 2027), may), []);
+	assert.deepEqual(rolesOf(grad('spring', 2027), june), ['alumni']);
+	assert.deepEqual(rolesOf(grad('fall', 2027), june), []);
+	assert.deepEqual(rolesOf(grad('fall', 2027), newYear), ['alumni']);
+	assert.deepEqual(rolesOf(grad('fall', 2020, 'admin,organizer'), may), [
+		'admin',
+		'organizer',
+		'alumni'
+	]);
+	assert.deepEqual(rolesOf({ role: null, graduationTerm: null }, may), []);
+});
+
+test('a graduation term round-trips its semester and year', () => {
+	assert.equal(toTerm(2027, 'spring'), 4054);
+	assert.equal(toTerm(2027, 'fall'), 4055);
+	assert.equal(termYear(4055), 2027);
+	assert.equal(termSemester(4055), 'fall');
+	assert.equal(termSemester(4054), 'spring');
+});
+
+test('graduation needs both a semester and a year, or neither', () => {
+	const base = { firstName: 'Ada', lastName: 'Lovelace', phoneCountry: 'US', phone: '' };
+	assert.throws(
+		() => validateProfile({ ...base, graduationSemester: 'spring', graduationYear: '' }),
+		ProfileError
+	);
+	assert.throws(
+		() => validateProfile({ ...base, graduationSemester: '', graduationYear: '2027' }),
+		ProfileError
+	);
+	assert.throws(
+		() => validateProfile({ ...base, graduationSemester: 'summer', graduationYear: '2027' }),
+		ProfileError
+	);
 });
 
 test('capitalizeName raises the start of each name without touching the rest', () => {

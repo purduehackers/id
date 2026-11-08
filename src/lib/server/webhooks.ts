@@ -20,7 +20,8 @@ import {
 import { readList } from '$lib/server/db/json';
 import { isDirectoryScope } from '$lib/server/scopes';
 import { uuidv7 } from '$lib/server/uuid';
-import { grantedRoles } from '$lib/roles';
+import { termYear } from '$lib/graduation';
+import type { Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
 export const WEBHOOK_EVENTS = {
@@ -229,11 +230,9 @@ async function linkedDiscord(tx: Tx | Db, userId: string) {
 	return row?.id ?? null;
 }
 
-export function rolesChanged(previous: string | null, next: string | null): Build {
+export function rolesChanged(previous: Role[], next: Role[]): Build {
 	return (scopes, ref) =>
-		scopes.has('roles')
-			? { user: ref, previous_roles: grantedRoles(previous), roles: grantedRoles(next) }
-			: null;
+		scopes.has('roles') ? { user: ref, previous_roles: previous, roles: next } : null;
 }
 
 export const banChanged: Build = (_scopes, ref) => ({ user: ref });
@@ -248,7 +247,7 @@ type Profile = {
 	email: string;
 	emailVerified: boolean;
 	phone?: string | null;
-	graduationYear?: number | null;
+	graduationTerm?: number | null;
 };
 
 const PROFILE_CLAIMS = [
@@ -260,7 +259,7 @@ const PROFILE_CLAIMS = [
 	{
 		claim: 'graduation_year',
 		scope: 'profile',
-		read: (u: Profile) => u.graduationYear ?? null
+		read: (u: Profile) => (typeof u.graduationTerm === 'number' ? termYear(u.graduationTerm) : null)
 	},
 	{ claim: 'email', scope: 'email', read: (u: Profile) => u.email },
 	{ claim: 'email_verified', scope: 'email', read: (u: Profile) => u.emailVerified },

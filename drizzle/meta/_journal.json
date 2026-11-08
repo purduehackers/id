@@ -36,6 +36,13 @@
       "when": 1793857400000,
       "tag": "0004_update_directory_resource_scopes",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1794179305040,
+      "tag": "0005_roles_and_graduation_term",
+      "breakpoints": true
     }
   ]
 }

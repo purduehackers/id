@@ -7,6 +7,7 @@ import { requireUser } from '$lib/server/guard';
 import { uuidv7 } from '$lib/server/uuid';
 import { readList } from '$lib/server/db/json';
 import { DirectoryError, accessFor, decide, requestAccess } from '$lib/server/directory';
+import { hasRole } from '$lib/roles';
 import { DIRECTORY_RESOURCE, DIRECTORY_SCOPES, SCOPE_DESCRIPTIONS } from '$lib/server/scopes';
 import {
 	WEBHOOK_EVENTS,
@@ -171,7 +172,7 @@ export const actions: Actions = {
 		const scopes = (await event.request.formData()).getAll('scope').map(String);
 		try {
 			await requestAccess(user.id, event.params.clientId, scopes);
-			if (user.role === 'admin') {
+			if (hasRole(user.role, 'admin')) {
 				await decide({ id: user.id, username: user.username! }, event.params.clientId, scopes);
 			}
 		} catch (error) {

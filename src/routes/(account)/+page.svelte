@@ -12,19 +12,23 @@
 	import Field from '$lib/components/ph/Field.svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
 	import Input from '$lib/components/ph/Input.svelte';
+	import Select from '$lib/components/ph/Select.svelte';
 	import NameInput from '$lib/components/ph/NameInput.svelte';
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 	import PhoneInput from '$lib/components/ph/PhoneInput.svelte';
 	import { swatch } from '$lib/components/pixel';
 	import { AVATAR_MAX_BYTES, PART_NAME_MAX_LENGTH, splitPhone } from '$lib/profile';
+	import { SEMESTERS, SEMESTER_LABELS, termSemester, termYear } from '$lib/graduation';
+	import { rolesOf } from '$lib/roles';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	const when = (value: string | Date | null) => (value ? new Date(value).toLocaleDateString() : '');
 	const notice = $derived((form && 'notice' in form && form.notice) || data.notice);
 	const profileValue = (
-		field: 'firstName' | 'lastName' | 'phoneCountry' | 'phone' | 'graduationYear',
+		field:
+			'firstName' | 'lastName' | 'phoneCountry' | 'phone' | 'graduationSemester' | 'graduationYear',
 		fallback: string
 	) => (form && 'profile' in form && form.profile ? form.profile[field] : fallback);
 
@@ -131,8 +135,8 @@
 	image={data.user.image}
 	email={data.user.email}
 	phone={data.user.phone}
-	role={data.user.role}
-	graduationYear={data.user.graduationYear}
+	roles={rolesOf(data.user)}
+	graduationYear={data.user.graduationTerm === null ? null : termYear(data.user.graduationTerm)}
 	since={data.user.createdAt}
 	passports={data.passports}
 	linked={data.connections.filter((c) => c.accountId).map((c) => c.label)}
@@ -228,20 +232,37 @@
 				/>
 			</Field>
 
-			<Field label="Graduation year" for="profile-graduation-year" optional>
-				<Input
-					id="profile-graduation-year"
-					name="graduationYear"
-					inputmode="numeric"
-					pattern="[0-9][0-9][0-9][0-9]"
-					maxlength={4}
-					placeholder="2026"
-					value={profileValue(
-						'graduationYear',
-						data.user.graduationYear ? String(data.user.graduationYear) : ''
-					)}
-					class="font-mono"
-				/>
+			<Field label="Graduation" for="profile-graduation-semester" optional>
+				<div class="flex items-end gap-3">
+					<Select
+						id="profile-graduation-semester"
+						name="graduationSemester"
+						aria-label="Graduation semester"
+						value={profileValue(
+							'graduationSemester',
+							data.user.graduationTerm === null ? '' : termSemester(data.user.graduationTerm)
+						)}
+						class="w-32"
+					>
+						<option value="">Semester</option>
+						{#each SEMESTERS as semester (semester)}
+							<option value={semester}>{SEMESTER_LABELS[semester]}</option>
+						{/each}
+					</Select>
+					<Input
+						name="graduationYear"
+						aria-label="Graduation year"
+						inputmode="numeric"
+						pattern="[0-9][0-9][0-9][0-9]"
+						maxlength={4}
+						placeholder="2027"
+						value={profileValue(
+							'graduationYear',
+							data.user.graduationTerm === null ? '' : String(termYear(data.user.graduationTerm))
+						)}
+						class="font-mono"
+					/>
+				</div>
 			</Field>
 		</div>
 

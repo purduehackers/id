@@ -8,10 +8,10 @@ import {
 	isUserFilter,
 	listUsers,
 	recentEvents,
-	setRole,
+	setRoles,
 	unban
 } from '$lib/server/admin';
-import { ROLES, ROLE_LABELS } from '$lib/roles';
+import { ASSIGNED_ROLES, ROLE_LABELS } from '$lib/roles';
 import { PassportError, assignPassport, passportsOf } from '$lib/server/passport';
 
 export const load: PageServerLoad = async (event) => {
@@ -31,7 +31,7 @@ export const load: PageServerLoad = async (event) => {
 		filter,
 		counts,
 		me: admin.id,
-		roles: ROLES.map((role) => ({ role, label: ROLE_LABELS[role] })),
+		roles: ASSIGNED_ROLES.map((role) => ({ role, label: ROLE_LABELS[role] })),
 		users: await Promise.all(
 			people.map(async (person) => {
 				const passports = (await passportsOf(person.id)).map(({ id, activated }) => ({
@@ -48,15 +48,20 @@ export const load: PageServerLoad = async (event) => {
 	};
 };
 
-async function run(event: Parameters<Actions[string]>[0], change: typeof setRole) {
+type Change = (
+	actor: { id: string; username: string },
+	userId: string,
+	formData: FormData
+) => Promise<string>;
+
+async function run(event: Parameters<Actions[string]>[0], change: Change) {
 	const admin = requireAdmin(event);
 	const formData = await event.request.formData();
 	const userId = formData.get('userId')?.toString() ?? '';
-	const value = formData.get('value')?.toString().trim() ?? '';
 
 	try {
 		const actor = { id: admin.id, username: admin.username! };
-		const username = await change(actor, userId, value);
+		const username = await change(actor, userId, formData);
 		return { notice: `Updated @${username}.`, opened: userId };
 	} catch (error) {
 		if (error instanceof AdminError) return fail(400, { message: error.message, opened: userId });
@@ -65,8 +70,14 @@ async function run(event: Parameters<Actions[string]>[0], change: typeof setRole
 }
 
 export const actions: Actions = {
-	role: (event) => run(event, setRole),
-	ban: (event) => run(event, ban),
+	roles: (event) =>
+		run(event, (admin, userId, formData) =>
+			setRoles(admin, userId, formData.getAll('role').map(String))
+		),
+	ban: (event) =>
+		run(event, (admin, userId, formData) =>
+			ban(admin, userId, formData.get('value')?.toString().trim() ?? '')
+		),
 	unban: (event) => run(event, (admin, userId) => unban(admin, userId)),
 
 	passport: async (event) => {

@@ -1,10 +1,11 @@
 import { json } from '@sveltejs/kit';
-import { and, asc, eq, gt, inArray } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, or, sql } from 'drizzle-orm';
 import type { RequestHandler } from './$types';
 import { db } from '$lib/server/db';
 import { account, user, userEmail } from '$lib/server/db/schema';
 import { authorizeDirectoryRequest } from '$lib/server/directory';
-import { ROLES, grantedRoles, isRole, rolesGranting, type Role } from '$lib/roles';
+import { lastEndedTerm, termYear } from '$lib/graduation';
+import { ROLES, isRole, rolesOf, type Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
 export const GET: RequestHandler = async ({ request, url }) => {
@@ -46,7 +47,11 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			{ status: 400 }
 		);
 	}
-	const matchingRoles = rawRoles.length ? rolesGranting(rawRoles as Role[]) : null;
+	const hasRole = (role: Role) =>
+		role === 'alumni'
+			? sql`${user.graduationTerm} <= ${lastEndedTerm()}`
+			: sql`instr(',' || ${user.role} || ',', ${`,${role},`}) > 0`;
+	const hasAnyRole = rawRoles.length ? or(...(rawRoles as Role[]).map(hasRole)) : undefined;
 
 	const discord = db
 		.select({ userId: account.userId, discordId: account.accountId })
@@ -64,7 +69,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			email: user.email,
 			emailVerified: user.emailVerified,
 			phone: user.phone,
-			graduationYear: user.graduationYear,
+			graduationTerm: user.graduationTerm,
 			image: user.image,
 			role: user.role,
 			banned: user.banned,
@@ -76,7 +81,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 			and(
 				cursor ? gt(user.id, cursor) : undefined,
 				discordId ? eq(discord.discordId, discordId) : undefined,
-				matchingRoles ? inArray(user.role, matchingRoles) : undefined
+				hasAnyRole
 			)
 		)
 		.orderBy(asc(user.id))
@@ -111,8 +116,8 @@ export const GET: RequestHandler = async ({ request, url }) => {
 				given_name: row.givenName,
 				family_name: row.familyName,
 				picture: pictureFor(row),
-				roles: grantedRoles(row.role),
-				graduation_year: row.graduationYear,
+				roles: rolesOf(row),
+				graduation_year: row.graduationTerm === null ? null : termYear(row.graduationTerm),
 				banned: row.banned,
 				...(withContact && {
 					email: row.email,

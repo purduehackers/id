@@ -21,7 +21,7 @@ export async function updateProfile(
 		givenName: validated.givenName,
 		familyName: validated.familyName,
 		phone: validated.phone,
-		graduationYear: validated.graduationYear
+		graduationTerm: validated.graduationTerm
 	});
 	return validated;
 }

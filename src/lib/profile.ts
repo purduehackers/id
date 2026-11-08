@@ -6,6 +6,7 @@ import {
 	type CountryCode
 } from 'libphonenumber-js';
 import metadata from 'libphonenumber-js/min/metadata';
+import { isSemester, toTerm } from './graduation';
 
 export class ProfileError extends Error {}
 
@@ -115,6 +116,7 @@ export type ProfileInput = {
 	lastName: string;
 	phoneCountry: string;
 	phone: string;
+	graduationSemester: string;
 	graduationYear: string;
 };
 
@@ -123,7 +125,7 @@ export type ValidatedProfile = {
 	givenName: string;
 	familyName: string;
 	phone: string | null;
-	graduationYear: number | null;
+	graduationTerm: number | null;
 };
 
 export function validateGraduationYear(raw: string): number | null {
@@ -141,6 +143,15 @@ export function validateGraduationYear(raw: string): number | null {
 	return year;
 }
 
+export function validateGraduationTerm(rawSemester: string, rawYear: string): number | null {
+	const year = validateGraduationYear(rawYear);
+	const semester = rawSemester.trim();
+	if (semester && !isSemester(semester)) throw new ProfileError('Pick Spring or Fall.');
+	if (year !== null && !semester) throw new ProfileError('Pick the semester you graduate in.');
+	if (year === null && semester) throw new ProfileError('Enter the year you graduate in.');
+	return year === null ? null : toTerm(year, semester as 'spring' | 'fall');
+}
+
 export function validateProfile(input: ProfileInput): ValidatedProfile {
 	const givenName = normalizeNamePart(input.firstName);
 	const familyName = normalizeNamePart(input.lastName);
@@ -156,7 +167,7 @@ export function validateProfile(input: ProfileInput): ValidatedProfile {
 
 	const phone = validatePhone(input.phone, input.phoneCountry);
 
-	const graduationYear = validateGraduationYear(input.graduationYear);
+	const graduationTerm = validateGraduationTerm(input.graduationSemester, input.graduationYear);
 
-	return { name, givenName, familyName, phone, graduationYear };
+	return { name, givenName, familyName, phone, graduationTerm };
 }

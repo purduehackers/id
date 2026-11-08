@@ -4,7 +4,7 @@
 	import Identicon from './Identicon.svelte';
 	import { hash } from './pixel';
 	import { formatPhone } from '$lib/profile';
-	import { ROLE_LABELS, isRole } from '$lib/roles';
+	import { ROLE_LABELS, type Role } from '$lib/roles';
 
 	type Props = {
 		id: string;
@@ -15,7 +15,7 @@
 		image?: string | null;
 		email: string;
 		phone?: string | null;
-		role?: string | null;
+		roles: Role[];
 		graduationYear?: number | null;
 		since: Date | string;
 		passports: number[];
@@ -31,7 +31,7 @@
 		image,
 		email,
 		phone,
-		role,
+		roles,
 		graduationYear,
 		since,
 		passports,
@@ -44,8 +44,8 @@
 		alumni: { card: 'bg-ph-teal text-ph-black', accent: 'var(--ph-cream)' },
 		member: { card: 'bg-ph-yellow text-ph-black', accent: 'var(--ph-purple)' }
 	};
-	const theme = $derived(themes[isRole(role) ? role : 'member']);
-	const label = $derived(isRole(role) ? ROLE_LABELS[role] : 'Member');
+	const theme = $derived(themes[roles[0] ?? 'member']);
+	const label = $derived(roles[0] ? ROLE_LABELS[roles[0]] : 'Member');
 	const serial = $derived(String(passports[0] ?? hash(id) % 10000).padStart(4, '0'));
 	const registered = $derived(new Date(since));
 	const longestWord = $derived(Math.max(...name.split(/\s+/).map((word) => word.length)));

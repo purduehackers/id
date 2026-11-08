@@ -1,4 +1,5 @@
-import { grantedRoles } from '$lib/roles';
+import { termYear } from '$lib/graduation';
+import { rolesOf } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
 type ClaimUser = Record<string, unknown>;
@@ -10,10 +11,12 @@ export function identityClaims({ user, scopes }: ClaimInfo) {
 			preferred_username: user.username,
 			...(user.givenName ? { given_name: user.givenName } : {}),
 			...(user.familyName ? { family_name: user.familyName } : {}),
-			...(user.graduationYear ? { graduation_year: user.graduationYear } : {})
+			...(typeof user.graduationTerm === 'number'
+				? { graduation_year: termYear(user.graduationTerm) }
+				: {})
 		}),
 		...(scopes.includes('phone') && user.phone ? { phone_number: user.phone } : {}),
-		...(scopes.includes('roles') && { roles: grantedRoles(user.role as string) })
+		...(scopes.includes('roles') && { roles: rolesOf(user) })
 	};
 }
 
@@ -30,7 +33,7 @@ export function userInfoClaims(info: ClaimInfo) {
 }
 
 export function accessTokenClaims({ user, scopes }: { user?: ClaimUser | null; scopes: string[] }) {
-	return user && scopes.includes('roles') ? { roles: grantedRoles(user.role as string) } : {};
+	return user && scopes.includes('roles') ? { roles: rolesOf(user) } : {};
 }
 
 function standardClaims(user: PreviewUser, scopes: string[]) {

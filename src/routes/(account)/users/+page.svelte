@@ -3,17 +3,18 @@
 	import type { ActionData, PageData } from './$types';
 	import { formatPhone } from '$lib/profile';
 	import { PROVIDERS, type Provider } from '$lib/providers';
-	import { ROLE_LABELS, isRole } from '$lib/roles';
+	import { SEMESTER_LABELS, termSemester, termYear } from '$lib/graduation';
+	import { ROLE_LABELS, hasRole, parseRoles, rolesOf } from '$lib/roles';
 	import Identicon from '$lib/components/Identicon.svelte';
 	import PageTitle from '$lib/components/PageTitle.svelte';
 	import Section from '$lib/components/Section.svelte';
 	import { hash, swatch } from '$lib/components/pixel';
 	import Badge from '$lib/components/ph/Badge.svelte';
 	import Button from '$lib/components/ph/Button.svelte';
+	import Checkbox from '$lib/components/ph/Checkbox.svelte';
 	import Icon from '$lib/components/ph/Icon.svelte';
 	import Input from '$lib/components/ph/Input.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
-	import Select from '$lib/components/ph/Select.svelte';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
@@ -47,13 +48,28 @@
 	let managing = $derived(form && 'opened' in form ? (form.opened ?? null) : null);
 
 	const when = (value: string | Date) => new Date(value).toLocaleDateString();
-	const roleLabel = (role: string | null) => (isRole(role) ? ROLE_LABELS[role] : 'no role');
+	const rolesLabel = (value: string | null) =>
+		parseRoles(value)
+			.map((role) => ROLE_LABELS[role])
+			.join(', ') || 'no role';
 
-	function confirmRole(event: SubmitEvent & { currentTarget: HTMLFormElement }, username: string) {
-		const role = new FormData(event.currentTarget).get('value');
+	function lockOrganizer(event: Event & { currentTarget: HTMLFormElement }) {
+		const box = (role: string) =>
+			event.currentTarget.querySelector<HTMLInputElement>(`input[name="role"][value="${role}"]`)!;
+		const organizer = box('organizer');
+		organizer.disabled = box('admin').checked;
+		if (organizer.disabled) organizer.checked = true;
+	}
+
+	function confirmRoles(
+		event: SubmitEvent & { currentTarget: HTMLFormElement },
+		person: { username: string; role: string | null }
+	) {
+		const roles = new FormData(event.currentTarget).getAll('role');
 		if (
-			role === 'admin' &&
-			!confirm(`Make @${username} an admin? They will be able to manage everyone.`)
+			roles.includes('admin') &&
+			!hasRole(person.role, 'admin') &&
+			!confirm(`Make @${person.username} an admin? They will be able to manage everyone.`)
 		) {
 			event.preventDefault();
 		}
@@ -155,15 +171,16 @@
 											<Icon name="question-circle" class="size-3!" />Unverified
 										</Badge>
 									{/if}
-									{#if isRole(person.role)}
-										<Badge color={ROLE_COLORS[person.role]}>{ROLE_LABELS[person.role]}</Badge>
-									{/if}
+									{#each rolesOf(person) as role (role)}
+										<Badge color={ROLE_COLORS[role]}>{ROLE_LABELS[role]}</Badge>
+									{/each}
 									{#if person.id === data.me}<Badge color="yellow">That's you!</Badge>{/if}
 								</span>
 								<span class="font-mono text-[13px] break-all">
 									@{person.username}
-									{#if person.graduationYear}
-										· Class of {person.graduationYear}
+									{#if person.graduationTerm !== null}
+										· Class of {SEMESTER_LABELS[termSemester(person.graduationTerm)]}
+										{termYear(person.graduationTerm)}
 									{/if}
 								</span>
 								<span class="text-[14px] break-all">
@@ -273,27 +290,28 @@
 
 						{#if person.id !== data.me}
 							<div class="flex flex-col gap-2">
-								<h3 class="ph-subheadline text-[12px]">Role and ban</h3>
+								<h3 class="ph-subheadline text-[12px]">Roles and ban</h3>
 								<div class="flex flex-wrap items-center gap-x-6 gap-y-3">
 									<form
 										method="post"
-										action={action('role')}
-										class="flex items-center gap-2"
-										onsubmit={(event) => confirmRole(event, person.username)}
+										action={action('roles')}
+										class="flex flex-wrap items-center gap-x-4 gap-y-2"
+										aria-label="Roles for @{person.username}"
+										onchange={lockOrganizer}
+										onsubmit={(event) => confirmRoles(event, person)}
 									>
 										<input type="hidden" name="userId" value={person.id} />
-										<Select
-											name="value"
-											size="sm"
-											aria-label="Role for @{person.username}"
-											class="w-36"
-										>
-											<option value="" selected={!isRole(person.role)}>No role</option>
-											{#each data.roles as { role, label } (role)}
-												<option value={role} selected={role === person.role}>{label}</option>
-											{/each}
-										</Select>
-										<Button type="submit" variant="ghost" size="sm">Set role</Button>
+										{#each data.roles as { role, label } (role)}
+											<Checkbox
+												name="role"
+												value={role}
+												checked={hasRole(person.role, role)}
+												disabled={role === 'organizer' && hasRole(person.role, 'admin')}
+											>
+												{label}
+											</Checkbox>
+										{/each}
+										<Button type="submit" variant="ghost" size="sm">Set roles</Button>
 									</form>
 
 									{#if person.banned}
@@ -353,7 +371,9 @@
 					<span class="font-sans text-[15px]">
 						<span class="font-mono font-semibold">@{event.actorUsername}</span>
 						{#if event.action === 'role'}
-							changed @{event.targetUsername} from {roleLabel(event.from)} to {roleLabel(event.to)}
+							changed @{event.targetUsername} from {rolesLabel(event.from)} to {rolesLabel(
+								event.to
+							)}
 						{:else if event.action === 'ban'}
 							banned @{event.targetUsername}{event.to ? `: ${event.to}` : ''}
 						{:else if event.action === 'passport'}

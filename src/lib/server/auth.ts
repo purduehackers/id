@@ -30,6 +30,7 @@ import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
 import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
 import { isDevicePollFrom } from '$lib/server/rate-limit';
+import { hasRole } from '$lib/roles';
 import { describeUserAgent } from '$lib/server/user-agent';
 import {
 	alertConsent,
@@ -107,7 +108,7 @@ export const auth = betterAuth({
 			givenName: { type: 'string', required: false, input: true },
 			familyName: { type: 'string', required: false, input: true },
 			phone: { type: 'string', required: false, input: false },
-			graduationYear: { type: 'number', required: false, input: false }
+			graduationTerm: { type: 'number', required: false, input: false }
 		}
 	},
 
@@ -337,7 +338,8 @@ export const auth = betterAuth({
 				}
 			],
 			clientPrivileges: ({ action, user }) =>
-				action !== 'configure-client-credentials-scopes' || user?.role === 'admin',
+				action !== 'configure-client-credentials-scopes' ||
+				hasRole(user?.role as string | undefined, 'admin'),
 			accessTokenExpiresIn: 60 * 60,
 			refreshTokenExpiresIn: 60 * 60 * 24 * 30,
 			prefix: {
