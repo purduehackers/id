@@ -17,8 +17,9 @@
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 	import PhoneInput from '$lib/components/ph/PhoneInput.svelte';
+	import PictureCropper from '$lib/components/PictureCropper.svelte';
 	import { swatch } from '$lib/components/pixel';
-	import { AVATAR_MAX_BYTES, PART_NAME_MAX_LENGTH, splitPhone } from '$lib/profile';
+	import { PART_NAME_MAX_LENGTH, splitPhone } from '$lib/profile';
 	import { SEMESTERS, SEMESTER_LABELS, termSemester, termYear } from '$lib/graduation';
 	import { rolesOf } from '$lib/roles';
 
@@ -37,10 +38,19 @@
 	let phoneCountry = $derived(profileValue('phoneCountry', initialPhone.country));
 	let phoneNational = $derived(profileValue('phone', initialPhone.national));
 
+	const savedTerm = $derived(data.user.graduationTerm);
+	let graduationSemester = $derived(
+		profileValue('graduationSemester', savedTerm === null ? '' : termSemester(savedTerm))
+	);
+	let graduationYear = $derived(
+		profileValue('graduationYear', savedTerm === null ? '' : String(termYear(savedTerm)))
+	);
+
 	const tile = $derived(swatch(data.user.id));
 	let pictureError = $state('');
 	let uploadingPicture = $state(false);
 	let pictureInput = $state<HTMLInputElement>();
+	let cropping = $state<File | null>(null);
 
 	let passkeysSupported = $state<boolean | null>(null);
 	let addingPasskey = $state(false);
@@ -50,43 +60,35 @@
 
 	onMount(() => {
 		passkeysSupported = 'PublicKeyCredential' in window;
-		// The change event is lost if the file was chosen before hydration.
-		if (pictureInput?.files?.length) uploadPicture();
+		if (pictureInput?.files?.length) cropPicture();
 	});
 
-	async function shrinkPicture(file: File): Promise<File | null> {
-		const bitmap = await createImageBitmap(file).catch(() => null);
-		if (!bitmap) return null;
-		const scale = Math.min(1, 1024 / Math.max(bitmap.width, bitmap.height));
-		const canvas = document.createElement('canvas');
-		canvas.width = Math.round(bitmap.width * scale);
-		canvas.height = Math.round(bitmap.height * scale);
-		canvas.getContext('2d')?.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-		bitmap.close();
-		const blob = await new Promise<Blob | null>((done) => canvas.toBlob(done, 'image/webp', 0.9));
-		return blob && new File([blob], 'picture', { type: blob.type });
+	function cropPicture() {
+		const file = pictureInput?.files?.[0];
+		if (!file) return;
+		pictureError = '';
+		cropping = file;
 	}
 
-	async function uploadPicture() {
+	function uploadPicture(picture: File) {
+		cropping = null;
 		const input = pictureInput;
-		const file = input?.files?.[0];
-		if (!input || !file) return;
-
-		pictureError = '';
+		if (!input) return;
+		const files = new DataTransfer();
+		files.items.add(picture);
+		input.files = files.files;
 		uploadingPicture = true;
-		if (file.size > AVATAR_MAX_BYTES) {
-			const smaller = await shrinkPicture(file);
-			if (!smaller) {
-				pictureError = 'We could not read that picture. Try a different one.';
-				uploadingPicture = false;
-				input.value = '';
-				return;
-			}
-			const files = new DataTransfer();
-			files.items.add(smaller);
-			input.files = files.files;
-		}
 		input.form?.submit();
+	}
+
+	function discardPicture() {
+		cropping = null;
+		if (pictureInput) pictureInput.value = '';
+	}
+
+	function unreadablePicture() {
+		discardPicture();
+		pictureError = 'We could not read that picture. Try a different one.';
 	}
 
 	function restorePicture(event: PageTransitionEvent) {
@@ -181,7 +183,7 @@
 					type="file"
 					autocomplete="off"
 					accept="image/jpeg,image/png,image/webp"
-					onchange={uploadPicture}
+					onchange={cropPicture}
 					class="sr-only"
 				/>
 				{data.user.image ? 'Change picture' : 'Add picture'}
@@ -195,6 +197,12 @@
 		{/if}
 	</div>
 	{#if pictureError}<Notice>{pictureError}</Notice>{/if}
+	<PictureCropper
+		file={cropping}
+		onsave={uploadPicture}
+		oncancel={discardPicture}
+		onerror={unreadablePicture}
+	/>
 
 	<form method="post" action="?/updateProfile" class="flex flex-col gap-7">
 		<div class="grid gap-7 sm:grid-cols-2">
@@ -238,16 +246,19 @@
 						id="profile-graduation-semester"
 						name="graduationSemester"
 						aria-label="Graduation semester"
-						value={profileValue(
-							'graduationSemester',
-							data.user.graduationTerm === null ? '' : termSemester(data.user.graduationTerm)
-						)}
+						bind:value={graduationSemester}
+						onchange={(event) => {
+							if (event.currentTarget.value === '') graduationYear = '';
+						}}
 						class="w-32"
 					>
-						<option value="">Semester</option>
+						<option value="" disabled hidden>Semester</option>
 						{#each SEMESTERS as semester (semester)}
 							<option value={semester}>{SEMESTER_LABELS[semester]}</option>
 						{/each}
+						{#if graduationSemester}
+							<option value="">None</option>
+						{/if}
 					</Select>
 					<Input
 						name="graduationYear"
@@ -256,10 +267,7 @@
 						pattern="[0-9][0-9][0-9][0-9]"
 						maxlength={4}
 						placeholder="2027"
-						value={profileValue(
-							'graduationYear',
-							data.user.graduationTerm === null ? '' : String(termYear(data.user.graduationTerm))
-						)}
+						bind:value={graduationYear}
 						class="font-mono"
 					/>
 				</div>
