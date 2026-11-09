@@ -44,6 +44,7 @@
 	let inside: HTMLDivElement;
 	let shade: HTMLDivElement;
 	let header: HTMLAnchorElement;
+	let coverArt: PassportCover;
 	let inspecting = $state(false);
 	let opened = $state(untrack(() => !animate));
 	let waiting = $state(untrack(() => animate));
@@ -54,9 +55,12 @@
 		let finished = false;
 		let disposed = false;
 		let started = false;
+		let reflectionFrame = 0;
 		const finish = () => {
 			if (finished) return;
 			finished = true;
+			cancelAnimationFrame(reflectionFrame);
+			coverArt?.setPose(inspecting ? 0 : 140, 0);
 			opened = !inspecting;
 			waiting = false;
 			animations.forEach((animation) => animation.cancel());
@@ -280,6 +284,17 @@
 					{ duration, fill: 'both' }
 				)
 			];
+			const reflectCover = () => {
+				if (disposed || finished) return;
+				// Sample the actual eased WAAPI pose; there is no separate shine timeline.
+				const matrix = new DOMMatrix(getComputedStyle(cover).transform);
+				const arrival = new DOMMatrix(getComputedStyle(booklet).transform);
+				const pitch = (Math.atan2(matrix.m23, matrix.m22) * 180) / Math.PI;
+				const roll = (Math.atan2(arrival.m12, arrival.m11) * 180) / Math.PI;
+				coverArt.setPose(pitch, roll);
+				reflectionFrame = requestAnimationFrame(reflectCover);
+			};
+			reflectCover();
 			waiting = false;
 			void Promise.all(animations.map((animation) => animation.finished))
 				.then(finish)
@@ -314,6 +329,7 @@
 		})();
 		return () => {
 			disposed = true;
+			cancelAnimationFrame(reflectionFrame);
 			if (started) animations.forEach((animation) => animation.cancel());
 			window.removeEventListener('resize', resize);
 			window.removeEventListener('keydown', handleSpace, true);
@@ -369,7 +385,7 @@
 		</div>
 		<div class="passport-cover" bind:this={cover}>
 			<div class="cover-outside" bind:this={outside} aria-hidden="true">
-				<PassportCover title={coverTitle} country={coverCountry} />
+				<PassportCover bind:this={coverArt} title={coverTitle} country={coverCountry} />
 			</div>
 			<div class="cover-inside" bind:this={inside} aria-hidden="true"></div>
 		</div>

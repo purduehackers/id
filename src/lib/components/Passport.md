@@ -42,8 +42,10 @@ the primary fonts declared by the existing theme; font URLs are unchanged.
 container, and masks its foil with `static/passport-seal.svg`: the exact supplied
 Figma paths and outlined lettering, with only the solid black background removed
 so the reflection stays inside the gold. No reference photograph is used.
-The complete seal is rotated 90° clockwise. A subtle continuous reflection has
-no opening delay and becomes static with reduced motion.
+The complete seal is rotated 90° clockwise. The gold reflection samples the actual eased cover pose during opening, and
+responds to pointer/touch movement or available device orientation events. There
+is no autonomous shine animation or timer; a stationary cover/view stays still.
+Devices that require sensor permission use pointer/touch without prompting.
 
 ## Purdue Hackers UI skill check
 

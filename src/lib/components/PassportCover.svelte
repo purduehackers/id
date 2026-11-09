@@ -1,12 +1,53 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	/** Exact Figma vector artwork, with a reflection clipped to its gold foil. */
 	let {
 		title = 'PASSPORT',
 		country = 'REPUBLIC OF HACKERLAND'
 	}: { title?: string; country?: string } = $props();
+	let artwork: HTMLDivElement;
+	let pitch = 0;
+	let roll = 0;
+	let viewX = 0;
+	let viewY = 0;
+	function reflect() {
+		if (!artwork) return;
+		// A fixed virtual light reflected by the moving cover. Coordinates are
+		// counter-rotated because the Figma seal itself is rotated clockwise.
+		artwork.style.setProperty('--foil-x', `${44 + pitch * 0.85 + viewY * 32}%`);
+		artwork.style.setProperty('--foil-y', `${38 - roll * 0.8 - viewX * 32}%`);
+		artwork.style.setProperty('--foil-angle', `${115 + roll * 0.6 + viewX * 18}deg`);
+	}
+	export function setPose(nextPitch: number, nextRoll: number) {
+		pitch = nextPitch;
+		roll = nextRoll;
+		reflect();
+	}
+	onMount(() => {
+		const pointer = (event: PointerEvent) => {
+			const bounds = artwork.getBoundingClientRect();
+			viewX = Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1));
+			viewY = Math.max(-1, Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1));
+			reflect();
+		};
+		const tilt = (event: DeviceOrientationEvent) => {
+			// Browsers that already permit orientation events need no permission prompt.
+			if (event.gamma === null || event.beta === null) return;
+			viewX = Math.max(-1, Math.min(1, event.gamma / 35));
+			viewY = Math.max(-1, Math.min(1, (event.beta - 45) / 35));
+			reflect();
+		};
+		window.addEventListener('pointermove', pointer, { passive: true });
+		window.addEventListener('deviceorientation', tilt);
+		reflect();
+		return () => {
+			window.removeEventListener('pointermove', pointer);
+			window.removeEventListener('deviceorientation', tilt);
+		};
+	});
 </script>
 
-<div class="passport-cover-art">
+<div class="passport-cover-art" bind:this={artwork}>
 	<div class="seal" role="img" aria-label={`${title} — ${country}`}></div>
 </div>
 
@@ -44,38 +85,25 @@
 	}
 	.seal {
 		/* The mask uses the exact outlined Figma lettering and emblem. */
-		background: #ffc000;
+		background:
+			radial-gradient(
+				ellipse 24% 65% at var(--foil-x, 44%) var(--foil-y, 38%),
+				#ffffed 0%,
+				#fff1b5 13%,
+				#ffe083 30%,
+				transparent 70%
+			),
+			linear-gradient(
+				var(--foil-angle, 115deg),
+				#80500c 0%,
+				#d49a24 23%,
+				#ffc000 43%,
+				#efbe56 61%,
+				#9b6010 80%,
+				#e4b34c 100%
+			);
 		-webkit-mask: url('/passport-seal.svg') center / contain no-repeat;
 		mask: url('/passport-seal.svg') center / contain no-repeat;
 		overflow: hidden;
-	}
-	.seal::after {
-		content: '';
-		position: absolute;
-		inset: -50%;
-		background: linear-gradient(
-			115deg,
-			transparent 28%,
-			rgb(116 65 8 / 0.25) 40%,
-			rgb(255 243 192 / 0.85) 49%,
-			rgb(255 255 235 / 0.95) 51%,
-			rgb(255 228 143 / 0.55) 55%,
-			transparent 68%
-		);
-		animation: foil-reflection 7s ease-in-out infinite alternate;
-		pointer-events: none;
-	}
-	@keyframes foil-reflection {
-		from {
-			transform: translateX(-35%) rotate(-8deg);
-		}
-		to {
-			transform: translateX(35%) rotate(8deg);
-		}
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.seal::after {
-			animation: none;
-		}
 	}
 </style>
