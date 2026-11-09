@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { untrack } from 'svelte';
-	import PassportEntrance from '$lib/components/PassportEntrance.svelte';
+	import Passport from '$lib/components/Passport.svelte';
 	import { resolve } from '$app/paths';
 	import type { ActionData, PageData } from './$types';
 	import AuthShell from '$lib/components/AuthShell.svelte';
@@ -46,7 +46,7 @@
 <div class="scan-page" bind:this={page}>
 	<AuthShell booklet={!!data.tap && !form}>
 		{#if data.tap && !form}
-			<PassportEntrance
+			<Passport
 				profile={data.tap.card}
 				passportId={data.tap.passportId}
 				name={data.tap.owner?.name ?? data.tap.returning?.name ?? `Passport ${data.tap.passportId}`}

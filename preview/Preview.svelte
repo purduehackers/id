@@ -1,11 +1,24 @@
 <script lang="ts">
+	import PassportCover from '../src/lib/components/PassportCover.svelte';
+	import Button from '../src/lib/components/ph/Button.svelte';
+	import Notice from '../src/lib/components/ph/Notice.svelte';
 	import Scan from '../src/routes/scan/+page.svelte';
 	const key = 'passport-flip-9907-a6e81d3b';
-	const allowed = new URLSearchParams(location.search).get('secret') === key;
+	const params = new URLSearchParams(location.search);
+	const allowed = params.get('secret') === key;
+	const coverOnly = params.get('view') === 'cover';
 	let message = $state('');
 </script>
 
-{#if allowed}
+{#if allowed && coverOnly}
+	<main
+		class="mx-auto flex min-h-dvh w-full max-w-[640px] flex-col justify-center gap-8 px-6 py-12"
+	>
+		<h1 class="ph-headline text-3xl">Passport cover</h1>
+		<div class="aspect-[85.6/53.98] w-full"><PassportCover /></div>
+		<Button href={`/?secret=${key}`} variant="outline" class="self-start">Play the opening</Button>
+	</main>
+{:else if allowed}
 	<div
 		onsubmitcapture={(event) => {
 			event.preventDefault();
@@ -42,10 +55,9 @@
 		/>
 	</div>
 	{#if message}<div
-			class="rounded-lg fixed inset-x-4 bottom-4 z-[70] bg-ph-black p-4 text-center text-ph-cream"
-			role="status"
+			class="fixed inset-x-4 bottom-4 z-[70] bg-ph-black p-4 text-center text-ph-cream"
 		>
-			{message}
+			<Notice tone="info">{message}</Notice>
 		</div>{/if}
 {:else}
 	<main class="grid min-h-dvh place-content-center gap-4 p-8">

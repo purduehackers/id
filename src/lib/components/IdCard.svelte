@@ -101,7 +101,7 @@
 						>
 					</div>
 					<span class="id-serial flex items-center font-mono font-semibold"
-						>Nº {serial}<Icon name="refresh" class="id-refresh" /></span
+						>Nº {serial}{#if !embedded}<Icon name="refresh" class="id-refresh" />{/if}</span
 					>
 				</div>
 				<div class="id-person flex items-end">

@@ -17,3 +17,8 @@ The square cover hinges upward and rests 40 degrees above fully open. The ID
 page uses the same component and fields as the account dashboard. On iOS, use
 Add to Home Screen for a standalone view; Safari itself clips off-viewport
 content. Safe-area padding and a black toolbar theme soften that boundary.
+
+For a stationary cover review, append `&view=cover` to the same preview URL.
+This uses `PassportCover.svelte` independently of the animation. The animated scan
+page uses the reusable `Passport.svelte`; its props and Purdue Hackers UI audit
+are documented in `src/lib/components/Passport.md`.
