@@ -30,6 +30,8 @@
 	let shade: HTMLDivElement;
 	let safeArea: HTMLDivElement;
 	let header: HTMLAnchorElement;
+	let restingHeader: HTMLAnchorElement;
+	let opened = $state(untrack(() => !animate));
 	let waiting = $state(untrack(() => animate));
 
 	onMount(() => {
@@ -39,24 +41,30 @@
 		const finish = () => {
 			if (finished) return;
 			finished = true;
+			opened = true;
 			waiting = false;
 			animations.forEach((animation) => animation.cancel());
 			onfinish();
 		};
 		const fitHeader = () => {
-			const text = header.querySelector('span')!;
-			text.style.setProperty(
-				'--cover-header-text-scale',
-				String(Math.min(1, text.clientWidth / text.scrollWidth))
-			);
+			for (const link of [header, restingHeader]) {
+				const text = link?.querySelector('span');
+				if (text && text.clientWidth > 0 && text.scrollWidth > 0) {
+					text.style.setProperty(
+						'--cover-header-text-scale',
+						String(Math.min(1, text.clientWidth / text.scrollWidth))
+					);
+				}
+			}
 		};
 		const alignHeader = () => {
 			fitHeader();
 			// Center in the visible cover strip, accounting for its 40° projection.
 			const visibleHeight = Math.max(
 				0,
-				card.getBoundingClientRect().top - safeArea.getBoundingClientRect().height
+				card.getBoundingClientRect().top + window.scrollY - safeArea.getBoundingClientRect().height
 			);
+			card.style.setProperty('--cover-strip-height', `${visibleHeight}px`);
 			const distance = visibleHeight / 2;
 			const angle = (40 * Math.PI) / 180;
 			let center = distance / (Math.cos(angle) + (distance * Math.sin(angle)) / 2400);
@@ -75,7 +83,7 @@
 		window.addEventListener('resize', resize);
 		document.fonts.addEventListener('loadingdone', fitHeader);
 		void document.fonts.ready.then(() => {
-			if (header.isConnected) fitHeader();
+			if (header?.isConnected || restingHeader?.isConnected) fitHeader();
 		});
 		if (!animate || reduced.matches) {
 			finish();
@@ -100,9 +108,9 @@
 				offset: opening(0),
 				easing: 'cubic-bezier(0.25, 0.5, 0.35, 1)'
 			},
-			{ transform: 'rotateX(9deg)', offset: opening(0.18), easing: easeOut },
+			{ transform: 'rotateX(6deg)', offset: opening(0.18), easing: easeOut },
 			{
-				transform: 'rotateX(28deg)',
+				transform: 'rotateX(20deg)',
 				offset: opening(0.43),
 				easing: 'cubic-bezier(0.5, 0, 0.75, 0.6)'
 			},
@@ -150,12 +158,12 @@
 			paperShadow.animate(
 				pageFrames.map((frame) => ({
 					...frame,
-					transform: `translate3d(8px, 14px, -16px) ${frame.transform}`,
-					filter: frame.offset === opening(0.43) ? 'blur(14px)' : 'blur(9px)',
+					transform: `translate3d(6px, 10px, -16px) ${frame.transform}`,
+					filter: frame.offset === opening(0.43) ? 'blur(7px)' : 'blur(4px)',
 					boxShadow:
 						frame.offset === opening(0.43)
-							? '0 30px 44px 9px rgb(0 0 0 / .24)'
-							: '0 14px 28px 5px rgb(0 0 0 / .28)'
+							? '0 16px 24px 4px rgb(0 0 0 / .3)'
+							: '0 8px 16px 2px rgb(0 0 0 / .34)'
 				})),
 				{ duration, fill: 'both' }
 			),
@@ -166,9 +174,9 @@
 						Math.max(0, Math.sin((angle * Math.PI) / 180)) / Math.sin((140 * Math.PI) / 180);
 					return {
 						...frame,
-						transform: `translate3d(${8 + 8 * elevation}px, ${14 + 14 * elevation}px, -24px) ${frame.transform}`,
-						filter: `blur(${8 + 8 * elevation}px)`,
-						boxShadow: `0 ${10 + 8 * elevation}px ${22 + 14 * elevation}px ${4 + 3 * elevation}px rgb(0 0 0 / .24)`
+						transform: `translate3d(${6 + 8 * elevation}px, ${8 + 12 * elevation}px, -24px) ${frame.transform}`,
+						filter: `blur(${4 + 4 * elevation}px)`,
+						boxShadow: `0 ${6 + 6 * elevation}px ${14 + 10 * elevation}px ${2 + 2 * elevation}px rgb(0 0 0 / .3)`
 					};
 				}),
 				{ duration, fill: 'both' }
@@ -221,7 +229,7 @@
 
 <div class="cover-safe-area" bind:this={safeArea} aria-hidden="true"></div>
 
-<div class="passport-stage" class:waiting bind:this={card}>
+<div class="passport-stage" class:waiting class:opened bind:this={card}>
 	<div class="ground-shadow shadow-paper" bind:this={paperShadow} aria-hidden="true"></div>
 	<div class="ground-shadow shadow-cover" bind:this={coverShadow} aria-hidden="true"></div>
 	<div class="passport-page-clip">
@@ -259,13 +267,30 @@
 			<Glider class="cover-logo" />
 			<span class="cover-caption font-mono">PURDUE HACKERS<br />PASSPORT</span>
 		</div>
-		<div class="cover-inside" bind:this={inside}>
-			<a class="cover-header" bind:this={header} href="/" aria-label="Purdue Hackers ID home">
+		<div class="cover-inside" bind:this={inside} aria-hidden={opened}>
+			<a
+				class="cover-header"
+				bind:this={header}
+				href="/"
+				tabindex={opened ? -1 : 0}
+				aria-label="Purdue Hackers ID home"
+			>
 				<Glider class="size-4" />
 				<span class="ph-headline">Purdue Hackers ID</span>
 			</a>
 		</div>
 	</div>
+	<a
+		class="cover-header cover-resting-header"
+		bind:this={restingHeader}
+		href="/"
+		tabindex={opened ? 0 : -1}
+		aria-hidden={!opened}
+		aria-label="Purdue Hackers ID home"
+	>
+		<Glider class="size-4" />
+		<span class="ph-headline">Purdue Hackers ID</span>
+	</a>
 </div>
 
 <style>
@@ -297,18 +322,18 @@
 		inset: 0;
 		z-index: -1;
 		pointer-events: none;
-		background: rgb(0 0 0 / 0.15);
-		filter: blur(9px);
+		background: rgb(0 0 0 / 0.2);
+		filter: blur(4px);
 		transform-origin: center top;
 	}
 	.shadow-paper {
-		transform: translate3d(8px, 14px, -16px);
-		box-shadow: 0 14px 28px 5px rgb(0 0 0 / 0.28);
+		transform: translate3d(6px, 10px, -16px);
+		box-shadow: 0 8px 16px 2px rgb(0 0 0 / 0.34);
 	}
 	.shadow-cover {
-		filter: blur(16px);
-		transform: translate3d(16px, 28px, -24px) rotateX(140deg);
-		box-shadow: 0 18px 36px 7px rgb(0 0 0 / 0.24);
+		filter: blur(8px);
+		transform: translate3d(14px, 20px, -24px) rotateX(140deg);
+		box-shadow: 0 12px 24px 4px rgb(0 0 0 / 0.3);
 	}
 	.passport-page-clip {
 		position: absolute;
@@ -487,6 +512,27 @@
 	.cover-header :global(svg) {
 		width: 1em;
 		height: 1em;
+	}
+	/* Keep the settled label outside Safari's nested 3D/back-face layers. */
+	.cover-resting-header {
+		bottom: 100%;
+		height: var(--cover-strip-height, 56px);
+		transform: none;
+		z-index: 3;
+		visibility: hidden;
+	}
+	.opened .cover-resting-header {
+		visibility: visible;
+	}
+	.opened .cover-inside > .cover-header {
+		visibility: hidden;
+		pointer-events: none;
+	}
+	.cover-resting-header > span {
+		transform: scale(var(--cover-header-text-scale, 1), 0.766044);
+	}
+	.cover-resting-header :global(svg) {
+		height: 0.766044em;
 	}
 	.document-mark {
 		color: #7d3bff;

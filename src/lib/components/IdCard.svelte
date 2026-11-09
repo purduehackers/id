@@ -83,9 +83,13 @@
 	>
 		<button
 			type="button"
-			onclick={() => (flipped = !flipped)}
-			aria-pressed={flipped}
-			aria-label="Purdue Hackers ID for {name}, @{username}, {label}. Flip the card"
+			disabled={embedded}
+			class:readonly-card={embedded}
+			onclick={() => {
+				if (!embedded) flipped = !flipped;
+			}}
+			aria-pressed={embedded ? undefined : flipped}
+			aria-label={`Purdue Hackers ID for ${name}, @${username}, ${label}${embedded ? '' : '. Flip the card'}`}
 			class="id-flip grid w-full cursor-pointer grid-cols-1 text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none"
 			style="transform: rotateY({flipped ? 180 : 0}deg)"
 		>
@@ -184,6 +188,9 @@
 </div>
 
 <style>
+	.id-flip.readonly-card {
+		cursor: default;
+	}
 	.id-card {
 		position: relative;
 		width: 100%;
