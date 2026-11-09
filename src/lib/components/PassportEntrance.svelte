@@ -37,29 +37,64 @@
 		}
 
 		const rect = card.getBoundingClientRect();
-		const x = innerWidth / 2 - (rect.left + rect.width / 2);
-		const y = innerHeight / 2 - (rect.top + rect.height / 2);
 		const above = -rect.bottom - 40;
-		const at = (dy: number) => `translate3d(${x}px, ${dy}px, 0)`;
+		const duration = 2400;
+		const glide = 'cubic-bezier(0.16, 1, 0.3, 1)';
+		const lift = 'cubic-bezier(0.2, 0.75, 0.25, 1)';
+		const gravity = 'cubic-bezier(0.55, 0, 0.9, 0.45)';
+		const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
+		// Dock the logo face first. The lift and flip begin only after arrival.
+		const raised = Math.max(16 - rect.top, -52);
+		const pose = (y: number) => `translate3d(0, ${y}px, 0)`;
+		const turn = (x: number, y: number, z: number, depth: number) =>
+			`translateZ(${depth}px) rotateX(${x}deg) rotateY(${y}deg) rotateZ(${z}deg)`;
 		animations = [
 			card.animate(
 				[
-					{ transform: at(above), offset: 0 },
-					{ transform: at(above), offset: 0.08 },
-					{ transform: at(y), offset: 0.36, easing: 'ease-in-out' },
-					{ transform: at(y), offset: 0.72, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' },
-					{ transform: 'translate3d(0, 0, 0)', offset: 1 }
+					{ transform: pose(above), offset: 0, easing: glide },
+					{ transform: pose(0), offset: 0.29, easing: 'linear' },
+					{ transform: pose(0), offset: 0.34, easing: lift },
+					{ transform: pose(raised), offset: 0.54, easing: 'ease-in-out' },
+					{ transform: pose(raised + 6), offset: 0.69, easing: gravity },
+					{ transform: pose(6), offset: 0.85, easing: settle },
+					{ transform: pose(-3), offset: 0.91, easing: settle },
+					{ transform: pose(0), offset: 1 }
 				],
-				{ duration: 2200, easing: 'cubic-bezier(0.22, 1, 0.36, 1)', fill: 'both' }
+				{ duration, fill: 'both' }
 			),
 			faces.animate(
 				[
-					{ transform: 'rotateY(180deg)', offset: 0 },
-					{ transform: 'rotateY(180deg)', offset: 0.38 },
-					{ transform: 'rotateY(0deg)', offset: 0.7 },
-					{ transform: 'rotateY(0deg)', offset: 1 }
+					{ transform: turn(0, 180, 0, 0), offset: 0 },
+					{ transform: turn(0, 180, 0, 0), offset: 0.34, easing: lift },
+					{
+						transform: turn(24, 180, -7, 100),
+						offset: 0.45,
+						easing: 'cubic-bezier(0.65, 0, 0.35, 1)'
+					},
+					{
+						transform: turn(30, 90, -10, 145),
+						offset: 0.56,
+						easing: 'cubic-bezier(0.2, 0.65, 0.35, 1)'
+					},
+					{ transform: turn(-12, 0, 3, 90), offset: 0.69, easing: gravity },
+					{ transform: turn(3, 0, -0.5, 0), offset: 0.85, easing: settle },
+					{ transform: turn(-1, 0, 0, 8), offset: 0.91, easing: settle },
+					{ transform: turn(0, 0, 0, 0), offset: 1 }
 				],
-				{ duration: 2200, easing: 'ease-in-out', fill: 'both' }
+				{ duration, fill: 'both' }
+			),
+			...Array.from(faces.children).map((face) =>
+				face.animate(
+					[
+						{ boxShadow: '0 16px 45px rgb(0 0 0 / 0.16)', offset: 0 },
+						{ boxShadow: '0 16px 45px rgb(0 0 0 / 0.16)', offset: 0.34, easing: lift },
+						{ boxShadow: '0 48px 70px rgb(0 0 0 / 0.28)', offset: 0.54 },
+						{ boxShadow: '0 40px 60px rgb(0 0 0 / 0.24)', offset: 0.69, easing: gravity },
+						{ boxShadow: '0 5px 12px rgb(0 0 0 / 0.24)', offset: 0.85, easing: settle },
+						{ boxShadow: '0 16px 45px rgb(0 0 0 / 0.16)', offset: 1 }
+					],
+					{ duration, fill: 'both' }
+				)
 			)
 		];
 		waiting = false;

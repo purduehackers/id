@@ -135,7 +135,7 @@
 		z-index: 50;
 		background: var(--background);
 		pointer-events: none;
-		animation: reveal-page 650ms 1550ms ease-out both;
+		animation: reveal-page 700ms 1650ms ease-out both;
 	}
 	@keyframes reveal-page {
 		from {
