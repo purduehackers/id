@@ -28,15 +28,20 @@ export const load: PageServerLoad = async (event) => {
 	if (id && secret) {
 		try {
 			event.cookies.set(TAP_COOKIE, await recordTap(id, secret), cookie);
+			event.cookies.set('passport_entrance', '1', { ...cookie, maxAge: 60 });
 		} catch (error) {
-			if (error instanceof PassportError) return { tap: null, error: error.message };
+			if (error instanceof PassportError)
+				return { tap: null, entrance: false, error: error.message };
 			throw error;
 		}
 		redirect(303, '/scan');
 	}
 
 	const tap = await tapState(event.cookies.get(TAP_COOKIE));
+	const entrance = event.cookies.get('passport_entrance') === '1';
+	event.cookies.delete('passport_entrance', { path: '/scan' });
 	return {
+		entrance: !!tap && entrance,
 		tap: tap && {
 			passportId: tap.passportId,
 			owner: tap.owner && { username: tap.owner.username, name: tap.owner.name },
