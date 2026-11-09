@@ -45,7 +45,11 @@
 		const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
 		// Dock the logo face first. The lift and flip begin only after arrival.
 		const raised = Math.max(16 - rect.top, -52);
-		const pose = (y: number) => `translate3d(0, ${y}px, 0)`;
+		// Reserve horizontal room for perspective and roll on narrow viewports.
+		const center = rect.left + rect.width / 2;
+		const room = 2 * Math.min(center, innerWidth - center) - 24;
+		const liftScale = Math.min(1, room / (rect.width * 1.24));
+		const pose = (y: number, scale = 1) => `translate3d(0, ${y}px, 0) scale(${scale})`;
 		const turn = (x: number, y: number, z: number, depth: number) =>
 			`translateZ(${depth}px) rotateX(${x}deg) rotateY(${y}deg) rotateZ(${z}deg)`;
 		animations = [
@@ -54,8 +58,8 @@
 					{ transform: pose(above), offset: 0, easing: glide },
 					{ transform: pose(0), offset: 0.29, easing: 'linear' },
 					{ transform: pose(0), offset: 0.34, easing: lift },
-					{ transform: pose(raised), offset: 0.54, easing: 'ease-in-out' },
-					{ transform: pose(raised + 6), offset: 0.69, easing: gravity },
+					{ transform: pose(raised, liftScale), offset: 0.54, easing: 'ease-in-out' },
+					{ transform: pose(raised + 6, liftScale), offset: 0.69, easing: gravity },
 					{ transform: pose(6), offset: 0.85, easing: settle },
 					{ transform: pose(-3), offset: 0.91, easing: settle },
 					{ transform: pose(0), offset: 1 }
@@ -115,12 +119,12 @@
 	<div class="passport-faces" bind:this={faces}>
 		<div class="passport-face passport-front">
 			<div
-				class="flex items-center justify-between gap-3 font-mono text-[10px] font-semibold tracking-wider uppercase"
+				class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 font-mono text-[10px] font-semibold tracking-wider uppercase"
 			>
 				<span class="flex items-center gap-2"
 					><Glider class="size-4" /> Purdue Hackers · Identity</span
 				>
-				<span>Nº {String(passportId).padStart(4, '0')}</span>
+				<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
 			</div>
 			<div class="flex flex-col gap-2">
 				<span class="ph-headline text-3xl break-words sm:text-4xl">{name}</span>
@@ -145,6 +149,7 @@
 		position: relative;
 		z-index: 60;
 		width: 100%;
+		min-width: 0;
 		perspective: 1200px;
 	}
 	.waiting {
@@ -152,10 +157,18 @@
 	}
 	.passport-faces {
 		display: grid;
+		grid-template-columns: minmax(0, 1fr);
+		width: 100%;
+		min-width: 0;
 		transform-style: preserve-3d;
 	}
 	.passport-face {
 		grid-area: 1 / 1;
+		/* Keep aspect-ratio/min-height from imposing an intrinsic minimum width.
+		   Firefox otherwise lets a face exceed its grid track on narrow phones. */
+		width: 100%;
+		min-width: 0;
+		overflow-wrap: anywhere;
 		min-height: 220px;
 		aspect-ratio: 1.586;
 		border-radius: 16px;
