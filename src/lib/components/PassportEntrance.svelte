@@ -22,6 +22,8 @@
 
 	let card: HTMLDivElement;
 	let cover: HTMLDivElement;
+	let sheen: HTMLDivElement;
+	let shade: HTMLDivElement;
 	let waiting = $state(untrack(() => animate));
 
 	onMount(() => {
@@ -40,27 +42,53 @@
 			return;
 		}
 		const above = -card.getBoundingClientRect().bottom - 24;
-		const duration = 2300;
+		const duration = 2700;
+		const easeOut = 'cubic-bezier(0.16, 1, 0.3, 1)';
+		const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
 		animations = [
 			card.animate(
 				[
 					{
-						transform: `translateY(${above}px)`,
+						transform: `translateY(${above}px) rotateZ(-2deg) scale(0.98)`,
 						offset: 0,
-						easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
+						easing: easeOut
 					},
-					{ transform: 'translateY(0)', offset: 0.3 },
-					{ transform: 'translateY(0)', offset: 1 }
+					{ transform: 'translateY(4px) rotateZ(0.4deg) scale(1)', offset: 0.25, easing: settle },
+					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 0.31 },
+					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 1 }
 				],
 				{ duration, fill: 'both' }
 			),
 			cover.animate(
 				[
 					{ transform: 'rotateX(0deg)', offset: 0 },
-					{ transform: 'rotateX(0deg)', offset: 0.35, easing: 'cubic-bezier(0.45, 0, 0.2, 1)' },
-					{ transform: 'rotateX(126deg)', offset: 0.83, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' },
-					{ transform: 'rotateX(142deg)', offset: 0.94, easing: 'ease-out' },
+					{ transform: 'rotateX(0deg)', offset: 0.35, easing: 'cubic-bezier(0.4, 0, 0.7, 1)' },
+					{ transform: 'rotateX(-6deg)', offset: 0.42, easing: 'cubic-bezier(0.55, 0, 0.7, 0.45)' },
+					{ transform: 'rotateX(60deg)', offset: 0.56, easing: 'cubic-bezier(0.16, 0.7, 0.25, 1)' },
+					{ transform: 'rotateX(134deg)', offset: 0.76, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
+					{ transform: 'rotateX(140deg)', offset: 0.86 },
 					{ transform: 'rotateX(140deg)', offset: 1 }
+				],
+				{ duration, fill: 'both' }
+			),
+			sheen.animate(
+				[
+					{ transform: 'translateX(-130%)', opacity: 0, offset: 0 },
+					{ transform: 'translateX(-90%)', opacity: 0.15, offset: 0.18, easing: 'ease-in-out' },
+					{ transform: 'translateX(70%)', opacity: 0.55, offset: 0.48 },
+					{ transform: 'translateX(130%)', opacity: 0, offset: 0.63 },
+					{ transform: 'translateX(130%)', opacity: 0, offset: 1 }
+				],
+				{ duration, fill: 'both' }
+			),
+			shade.animate(
+				[
+					{ opacity: 0.5, offset: 0 },
+					{ opacity: 0.5, offset: 0.42 },
+					{ opacity: 0.32, offset: 0.56, easing: 'ease-out' },
+					{ opacity: 0.04, offset: 0.72 },
+					{ opacity: 0, offset: 0.84 },
+					{ opacity: 0, offset: 1 }
 				],
 				{ duration, fill: 'both' }
 			)
@@ -107,8 +135,10 @@
 			</div>
 		{/if}
 	</div>
+	<div class="page-shade" bind:this={shade} aria-hidden="true"></div>
 	<div class="passport-cover" bind:this={cover}>
 		<div class="cover-outside" aria-hidden="true">
+			<div class="cover-sheen" bind:this={sheen}></div>
 			<Glider class="cover-logo" />
 			<span class="cover-caption font-mono">PURDUE HACKERS<br />PASSPORT</span>
 		</div>
@@ -154,6 +184,7 @@
 		height: 100%;
 		min-width: 0;
 		transform-style: preserve-3d;
+		box-shadow: 0 14px 35px rgb(0 0 0 / 0.14);
 	}
 	.passport-face {
 		grid-area: 1 / 1;
@@ -218,6 +249,14 @@
 		justify-content: space-between;
 		font-size: clamp(7px, 2.25cqw, 10px);
 	}
+	.page-shade {
+		position: absolute;
+		inset: 0;
+		z-index: 1;
+		pointer-events: none;
+		opacity: 0;
+		background: linear-gradient(180deg, #000 0%, rgb(0 0 0 / 0.35) 45%, transparent 100%);
+	}
 	.passport-cover {
 		position: absolute;
 		inset: 0;
@@ -241,12 +280,40 @@
 		align-items: center;
 		justify-content: center;
 		gap: 5cqw;
-		border: 1px solid #303030;
+		border: 1px solid #353535;
+		overflow: hidden;
+		background:
+			repeating-linear-gradient(110deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 4px),
+			linear-gradient(145deg, #202020, #060606 65%);
+		box-shadow:
+			inset 0 1px 0 rgb(255 255 255 / 0.16),
+			0 12px 30px rgb(0 0 0 / 0.22);
+	}
+	.cover-outside::before {
+		content: '';
+		position: absolute;
+		inset: 3cqw;
+		border: 1px solid rgb(252 210 2 / 0.22);
+		pointer-events: none;
+	}
+	.cover-sheen {
+		position: absolute;
+		inset: 0;
+		opacity: 0;
+		pointer-events: none;
+		background: linear-gradient(
+			110deg,
+			transparent 25%,
+			rgb(255 255 255 / 0.34) 48%,
+			rgb(252 210 2 / 0.08) 56%,
+			transparent 75%
+		);
 	}
 	.cover-outside :global(.cover-logo) {
 		width: 17cqw;
 		height: 17cqw;
 		color: #fcd202;
+		filter: drop-shadow(0 1px 0 #625000) drop-shadow(0 -1px 0 #ffffa0);
 	}
 	.cover-caption {
 		font-size: clamp(8px, 2.5cqw, 11px);
@@ -260,15 +327,19 @@
 	}
 	.cover-header {
 		position: absolute;
-		bottom: 14px;
+		bottom: clamp(38px, 10cqw, 44px);
 		inset-inline: clamp(16px, 6cqw, 24px);
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: clamp(14px, 4.5cqw, 20px);
+		font-size: clamp(20px, 6cqw, 28px);
 		line-height: 1;
 		text-decoration: none;
 		color: #fbf7ec;
+	}
+	.cover-header :global(svg) {
+		width: clamp(20px, 6cqw, 26px);
+		height: clamp(20px, 6cqw, 26px);
 	}
 	.document-mark {
 		color: #7d3bff;
