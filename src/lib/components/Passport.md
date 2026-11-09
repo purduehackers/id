@@ -24,7 +24,8 @@ Reload without Space to return to the normal opening. The small
 `/passport-inspection.js` head script captures held-key state before hydration
 and carries it across a reload. Consumers can set `inspectOnSpace={false}`.
 
-`coverTitle` and `coverCountry` customize the curved artwork labels. `class`
+`coverTitle` and `coverCountry` supply accessible artwork labels; the exact Figma
+lettering is outlined in the SVG asset. `class`
 customizes the outer wrapper.
 
 Reserve space above the component for the visible cover strip. `headerStripHeight`
@@ -38,8 +39,11 @@ the primary fonts declared by the existing theme; font URLs are unchanged.
 
 `PassportEntrance.svelte` is a compatibility alias. New consumers should import
 `Passport.svelte`. `PassportCover.svelte` is independently reusable, fills its
-container, and uses instance-scoped SVG IDs. Its gold isometric mark (including the recessed notch), uniformly gold lettering,
-and leather grain are vector/procedural artwork; no reference photograph is used. The complete seal is rotated 90° clockwise.
+container, and masks its foil with `static/passport-seal.svg`: the exact supplied
+Figma paths and outlined lettering, with only the solid black background removed
+so the reflection stays inside the gold. No reference photograph is used.
+The complete seal is rotated 90° clockwise. A subtle continuous reflection has
+no opening delay and becomes static with reduced motion.
 
 ## Purdue Hackers UI skill check
 
