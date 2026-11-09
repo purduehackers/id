@@ -1,15 +1,19 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import IdCard from './IdCard.svelte';
+	import type { IdCardData } from '$lib/id-card';
 	import Glider from './ph/Glider.svelte';
 
 	let {
 		passportId,
+		profile = null,
 		name,
 		username,
 		animate = false,
 		onfinish
 	}: {
 		passportId: number;
+		profile?: IdCardData | null;
 		name: string;
 		username?: string | null;
 		animate?: boolean;
@@ -17,7 +21,7 @@
 	} = $props();
 
 	let card: HTMLDivElement;
-	let faces: HTMLDivElement;
+	let cover: HTMLDivElement;
 	let waiting = $state(untrack(() => animate));
 
 	onMount(() => {
@@ -35,70 +39,30 @@
 			finish();
 			return;
 		}
-
-		const rect = card.getBoundingClientRect();
-		const above = -rect.bottom - 40;
-		const duration = 2400;
-		const glide = 'cubic-bezier(0.16, 1, 0.3, 1)';
-		const lift = 'cubic-bezier(0.2, 0.75, 0.25, 1)';
-		const gravity = 'cubic-bezier(0.55, 0, 0.9, 0.45)';
-		const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
-		// Dock the logo face first. The lift and flip begin only after arrival.
-		const raised = Math.max(16 - rect.top, -52);
-		// Reserve horizontal room for perspective and roll on narrow viewports.
-		const center = rect.left + rect.width / 2;
-		const room = 2 * Math.min(center, innerWidth - center) - 24;
-		const liftScale = Math.min(1, room / (rect.width * 1.24));
-		const pose = (y: number, scale = 1) => `translate3d(0, ${y}px, 0) scale(${scale})`;
-		const turn = (x: number, y: number, z: number, depth: number) =>
-			`translateZ(${depth}px) rotateX(${x}deg) rotateY(${y}deg) rotateZ(${z}deg)`;
+		const above = -card.getBoundingClientRect().bottom - 24;
+		const duration = 2300;
 		animations = [
 			card.animate(
 				[
-					{ transform: pose(above), offset: 0, easing: glide },
-					{ transform: pose(0), offset: 0.29, easing: 'linear' },
-					{ transform: pose(0), offset: 0.34, easing: lift },
-					{ transform: pose(raised, liftScale), offset: 0.54, easing: 'ease-in-out' },
-					{ transform: pose(raised + 6, liftScale), offset: 0.69, easing: gravity },
-					{ transform: pose(6), offset: 0.85, easing: settle },
-					{ transform: pose(-3), offset: 0.91, easing: settle },
-					{ transform: pose(0), offset: 1 }
+					{
+						transform: `translateY(${above}px)`,
+						offset: 0,
+						easing: 'cubic-bezier(0.16, 1, 0.3, 1)'
+					},
+					{ transform: 'translateY(0)', offset: 0.3 },
+					{ transform: 'translateY(0)', offset: 1 }
 				],
 				{ duration, fill: 'both' }
 			),
-			faces.animate(
+			cover.animate(
 				[
-					{ transform: turn(0, 180, 0, 0), offset: 0 },
-					{ transform: turn(0, 180, 0, 0), offset: 0.34, easing: lift },
-					{
-						transform: turn(24, 180, -7, 100),
-						offset: 0.45,
-						easing: 'cubic-bezier(0.65, 0, 0.35, 1)'
-					},
-					{
-						transform: turn(30, 90, -10, 145),
-						offset: 0.56,
-						easing: 'cubic-bezier(0.2, 0.65, 0.35, 1)'
-					},
-					{ transform: turn(-12, 0, 3, 90), offset: 0.69, easing: gravity },
-					{ transform: turn(3, 0, -0.5, 0), offset: 0.85, easing: settle },
-					{ transform: turn(-1, 0, 0, 8), offset: 0.91, easing: settle },
-					{ transform: turn(0, 0, 0, 0), offset: 1 }
+					{ transform: 'rotateX(0deg)', offset: 0 },
+					{ transform: 'rotateX(0deg)', offset: 0.35, easing: 'cubic-bezier(0.45, 0, 0.2, 1)' },
+					{ transform: 'rotateX(126deg)', offset: 0.83, easing: 'cubic-bezier(0.2, 0.7, 0.3, 1)' },
+					{ transform: 'rotateX(142deg)', offset: 0.94, easing: 'ease-out' },
+					{ transform: 'rotateX(140deg)', offset: 1 }
 				],
 				{ duration, fill: 'both' }
-			),
-			...Array.from(faces.children).map((face) =>
-				face.animate(
-					[
-						{ boxShadow: '0 16px 45px rgb(0 0 0 / 0.16)', offset: 0 },
-						{ boxShadow: '0 16px 45px rgb(0 0 0 / 0.16)', offset: 0.34, easing: lift },
-						{ boxShadow: '0 48px 70px rgb(0 0 0 / 0.28)', offset: 0.54 },
-						{ boxShadow: '0 40px 60px rgb(0 0 0 / 0.24)', offset: 0.69, easing: gravity },
-						{ boxShadow: '0 5px 12px rgb(0 0 0 / 0.24)', offset: 0.85, easing: settle },
-						{ boxShadow: '0 16px 45px rgb(0 0 0 / 0.16)', offset: 1 }
-					],
-					{ duration, fill: 'both' }
-				)
 			)
 		];
 		waiting = false;
@@ -115,34 +79,57 @@
 	});
 </script>
 
+<div class="cover-safe-area" aria-hidden="true"></div>
+
 <div class="passport-stage" class:waiting bind:this={card}>
-	<div class="passport-faces" bind:this={faces}>
-		<div class="passport-face passport-front">
-			<div
-				class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
-			>
-				<span class="passport-brand flex items-center"
-					><Glider class="size-4" /> Purdue Hackers · Identity</span
+	<div class="passport-faces">
+		{#if profile}
+			<IdCard {...profile} embedded />
+		{:else}
+			<div class="passport-face passport-front">
+				<div
+					class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
 				>
-				<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
+					<span class="passport-brand flex items-center">Identity document</span>
+					<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
+				</div>
+				<div class="passport-holder flex flex-col">
+					<span class="passport-name ph-headline">{name}</span>
+					<span class="passport-username font-mono"
+						>{username ? `@${username}` : 'Your next chapter starts here'}</span
+					>
+				</div>
+				<div class="passport-footer font-mono tracking-[0.2em] uppercase">
+					Purdue Hackers Passport <span class="document-mark" aria-hidden="true"
+						>|||| ||| || ||||</span
+					>
+				</div>
 			</div>
-			<div class="passport-holder flex flex-col">
-				<span class="passport-name ph-headline">{name}</span>
-				<span class="passport-username font-mono"
-					>{username ? `@${username}` : 'Your next chapter starts here'}</span
-				>
-			</div>
-			<div class="passport-footer border-t border-ph-black/20 font-mono tracking-[0.2em] uppercase">
-				Purdue Hackers Passport
-			</div>
+		{/if}
+	</div>
+	<div class="passport-cover" bind:this={cover}>
+		<div class="cover-outside" aria-hidden="true">
+			<Glider class="cover-logo" />
+			<span class="cover-caption font-mono">PURDUE HACKERS<br />PASSPORT</span>
 		</div>
-		<div class="passport-face passport-back" aria-hidden="true">
-			<Glider class="size-20" />
+		<div class="cover-inside">
+			<a class="cover-header" href="/" aria-label="Purdue Hackers ID home">
+				<Glider class="size-4" />
+				<span class="ph-headline">Purdue Hackers ID</span>
+			</a>
 		</div>
 	</div>
 </div>
 
 <style>
+	.cover-safe-area {
+		position: fixed;
+		inset: 0 0 auto;
+		height: env(safe-area-inset-top, 0px);
+		background: #000;
+		z-index: 61;
+		pointer-events: none;
+	}
 	.passport-stage {
 		position: relative;
 		z-index: 60;
@@ -152,7 +139,8 @@
 		margin-inline: auto;
 		aspect-ratio: 85.6 / 53.98;
 		container-type: inline-size;
-		perspective: 1200px;
+		perspective: 2400px;
+		perspective-origin: center top;
 	}
 	.waiting {
 		visibility: hidden;
@@ -175,7 +163,7 @@
 		min-height: 0;
 		overflow: hidden;
 		overflow-wrap: anywhere;
-		border-radius: clamp(10px, 4cqw, 16px);
+		border-radius: 0;
 		padding: clamp(16px, 6cqw, 24px);
 		backface-visibility: hidden;
 		box-shadow: 0 16px 45px rgb(0 0 0 / 0.16);
@@ -185,11 +173,15 @@
 		flex-direction: column;
 		justify-content: space-between;
 		gap: 3cqw;
-		background: var(--ph-yellow);
-		color: var(--ph-black);
+		background: #fbf7ec;
+		color: #000;
+		border: 1px solid #000;
+		border-top: 5px solid #000;
 	}
 	.passport-header {
 		gap: 2cqw;
+		border-bottom: 1px solid #000;
+		padding-bottom: 2cqw;
 		font-size: clamp(7px, 2.25cqw, 10px);
 	}
 	.passport-brand {
@@ -221,18 +213,66 @@
 	}
 	.passport-footer {
 		padding-top: 2cqw;
+		border-top: 1px solid #000;
+		display: flex;
+		justify-content: space-between;
 		font-size: clamp(7px, 2.25cqw, 10px);
 	}
-	.passport-back {
-		display: grid;
-		place-items: center;
-		background: var(--ph-black);
-		color: var(--ph-yellow);
-		transform: rotateY(180deg);
+	.passport-cover {
+		position: absolute;
+		inset: 0;
+		z-index: 2;
+		transform-style: preserve-3d;
+		transform-origin: center top;
+		transform: rotateX(140deg);
 	}
-	.passport-back :global(svg) {
-		width: 20cqw;
-		height: 20cqw;
+	.cover-outside,
+	.cover-inside {
+		position: absolute;
+		inset: 0;
+		background: #000;
+		color: #fbf7ec;
+		backface-visibility: hidden;
+		-webkit-backface-visibility: hidden;
+	}
+	.cover-outside {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		gap: 5cqw;
+		border: 1px solid #303030;
+	}
+	.cover-outside :global(.cover-logo) {
+		width: 17cqw;
+		height: 17cqw;
+		color: #fcd202;
+	}
+	.cover-caption {
+		font-size: clamp(8px, 2.5cqw, 11px);
+		line-height: 1.5;
+		letter-spacing: 0.25em;
+		text-align: center;
+	}
+	.cover-inside {
+		transform: rotateX(180deg);
+		border-bottom: 1px solid #555;
+	}
+	.cover-header {
+		position: absolute;
+		bottom: 14px;
+		inset-inline: clamp(16px, 6cqw, 24px);
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		font-size: clamp(14px, 4.5cqw, 20px);
+		line-height: 1;
+		text-decoration: none;
+		color: #fbf7ec;
+	}
+	.document-mark {
+		color: #7d3bff;
+		letter-spacing: -0.1em;
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.waiting {

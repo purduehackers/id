@@ -18,7 +18,22 @@
 				tap: {
 					passportId: 9907,
 					owner: { name: 'Purdue Hacker', username: 'hacker' },
-					returning: null
+					returning: null,
+					card: {
+						id: 'preview-holder',
+						name: 'Purdue Hacker',
+						givenName: 'Purdue',
+						familyName: 'Hacker',
+						username: 'hacker',
+						email: 'hacker@example.invalid',
+						image: null,
+						phone: '+17655550107',
+						roles: [],
+						graduationYear: 2028,
+						since: '2024-08-23T12:00:00Z',
+						passports: [9907],
+						linked: ['Discord', 'GitHub']
+					}
 				},
 				me: null,
 				error: null

@@ -27,7 +27,11 @@
 </script>
 
 <svelte:head
-	><title>Passport - Purdue Hackers ID</title><noscript
+	><title>Passport - Purdue Hackers ID</title>
+	{#if data.tap && !form}<meta name="theme-color" content="#000000" />
+		<meta name="apple-mobile-web-app-capable" content="yes" />
+		<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+		<meta name="mobile-web-app-capable" content="yes" />{/if}<noscript
 		><style>
 			.entrance-curtain {
 				display: none !important;
@@ -40,9 +44,10 @@
 >
 
 <div class="scan-page" bind:this={page}>
-	<AuthShell>
+	<AuthShell booklet={!!data.tap && !form}>
 		{#if data.tap && !form}
 			<PassportEntrance
+				profile={data.tap.card}
 				passportId={data.tap.passportId}
 				name={data.tap.owner?.name ?? data.tap.returning?.name ?? `Passport ${data.tap.passportId}`}
 				username={data.tap.owner?.username}
@@ -135,7 +140,7 @@
 		z-index: 50;
 		background: var(--background);
 		pointer-events: none;
-		animation: reveal-page 700ms 1650ms ease-out both;
+		animation: reveal-page 700ms 1550ms ease-out both;
 	}
 	@keyframes reveal-page {
 		from {

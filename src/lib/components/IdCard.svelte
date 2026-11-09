@@ -1,26 +1,13 @@
 <script lang="ts">
+	import type { IdCardData } from '$lib/id-card';
 	import Glider from './ph/Glider.svelte';
 	import Icon from './ph/Icon.svelte';
 	import Identicon from './Identicon.svelte';
 	import { hash } from './pixel';
 	import { formatPhone } from '$lib/profile';
-	import { ROLE_LABELS, type Role } from '$lib/roles';
+	import { ROLE_LABELS } from '$lib/roles';
 
-	type Props = {
-		id: string;
-		name: string;
-		givenName?: string | null;
-		familyName?: string | null;
-		username: string;
-		image?: string | null;
-		email: string;
-		phone?: string | null;
-		roles: Role[];
-		graduationYear?: number | null;
-		since: Date | string;
-		passports: number[];
-		linked: string[];
-	};
+	type Props = IdCardData & { embedded?: boolean };
 
 	let {
 		id,
@@ -35,7 +22,8 @@
 		graduationYear,
 		since,
 		passports,
-		linked
+		linked,
+		embedded = false
 	}: Props = $props();
 
 	const themes = {
@@ -72,7 +60,7 @@
 	let flipped = $state(false);
 
 	function move(event: PointerEvent) {
-		if (event.pointerType !== 'mouse') return;
+		if (embedded || event.pointerType !== 'mouse') return;
 		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 		const r = card.getBoundingClientRect();
 		tilt = {
@@ -81,15 +69,15 @@
 		};
 	}
 
-	const face = 'col-start-1 row-start-1 flex flex-col p-5 backface-hidden sm:aspect-[1.586] sm:p-7';
+	const face = 'id-face col-start-1 row-start-1 flex flex-col backface-hidden';
 </script>
 
-<div class="w-full max-w-[560px] enter perspective-[1200px]" style="--i: 1">
+<div class="id-card" class:enter={!embedded} style="--i: 1">
 	<div
 		bind:this={card}
 		onpointermove={move}
 		onpointerleave={() => (tilt = { x: 0, y: 0 })}
-		class="transition-transform duration-300 ease-out transform-3d"
+		class="id-tilt transition-transform duration-300 ease-out transform-3d"
 		style="transform: rotateX({tilt.x}deg) rotateY({tilt.y}deg)"
 		role="presentation"
 	>
@@ -98,100 +86,77 @@
 			onclick={() => (flipped = !flipped)}
 			aria-pressed={flipped}
 			aria-label="Purdue Hackers ID for {name}, @{username}, {label}. Flip the card"
-			class="grid w-full cursor-pointer grid-cols-1 text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none"
+			class="id-flip grid w-full cursor-pointer grid-cols-1 text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none"
 			style="transform: rotateY({flipped ? 180 : 0}deg)"
 		>
-			<!-- Front -->
-			<div class={[face, 'justify-between gap-6', theme.card]} aria-hidden="true">
-				<div class="flex items-start justify-between gap-4">
-					<div class="flex items-center gap-2">
-						<Glider class="size-5" />
-						<span class="ph-subheadline text-[11px] sm:text-[12px]">Purdue Hackers · Identity</span>
+			<div class={[face, 'id-front justify-between', theme.card]} aria-hidden="true">
+				<div class="id-heading flex items-start justify-between">
+					<div class="id-brand flex items-center">
+						<Glider class="id-brand-logo" /><span class="ph-subheadline"
+							>Purdue Hackers · Identity</span
+						>
 					</div>
-					<span class="flex items-center gap-2 font-mono text-[12px] font-semibold sm:text-[13px]">
-						Nº {serial}
-						<Icon name="refresh" class="size-3.5" />
-					</span>
-				</div>
-
-				<div class="flex items-end gap-4 sm:gap-6">
-					<div
-						class="grid size-20 shrink-0 place-items-center overflow-hidden bg-ph-black/10 sm:size-28"
+					<span class="id-serial flex items-center font-mono font-semibold"
+						>Nº {serial}<Icon name="refresh" class="id-refresh" /></span
 					>
-						{#if image}
-							<img src={image} alt="" class="size-full object-cover" />
-						{:else}
-							<Identicon seed={id} accent={theme.accent} class="size-12 sm:size-16" />
-						{/if}
+				</div>
+				<div class="id-person flex items-end">
+					<div class="id-picture grid shrink-0 place-items-center overflow-hidden bg-ph-black/10">
+						{#if image}<img src={image} alt="" class="size-full object-cover" />{:else}<Identicon
+								seed={id}
+								accent={theme.accent}
+								class="id-identicon"
+							/>{/if}
 					</div>
-					<div class="flex min-w-0 flex-col gap-1.5 sm:gap-2">
+					<div class="id-details flex min-w-0 flex-col">
 						<span
-							class={[
-								'ph-headline break-words',
-								longestWord > 10 ? 'text-2xl' : 'text-4xl',
-								name.length > 16 ? 'sm:text-5xl' : 'sm:text-6xl'
-							]}
+							class="id-name ph-headline"
+							class:long-name={name.length > 12}
+							class:long-word={longestWord > 10}>{name}</span
 						>
-							{name}
-						</span>
-						<span
-							class="flex flex-wrap gap-x-3 font-mono text-[12px] font-semibold uppercase sm:text-[13px]"
+						<span class="id-meta flex flex-wrap font-mono font-semibold uppercase"
+							><span>@{username}</span><span>{label}</span><span
+								>Since {registered.getFullYear()}</span
+							>{#if graduationYear}<span>Class of {graduationYear}</span>{/if}</span
 						>
-							<span>@{username}</span>
-							<span>{label}</span>
-							<span>Since {registered.getFullYear()}</span>
-							{#if graduationYear}<span>Class of {graduationYear}</span>{/if}
-						</span>
-						<span class="truncate text-[13px] sm:text-[14px]">{email}</span>
+						<span class="id-email truncate">{email}</span>
 					</div>
 				</div>
-
-				<div
-					class="-mx-5 -mb-5 bg-ph-black/[0.07] px-5 py-2 font-mono text-[10px] leading-[1.35] tracking-[0.18em] sm:-mx-7 sm:-mb-7 sm:px-7 sm:text-[12px]"
-				>
+				<div class="id-mrz bg-ph-black/[0.07] font-mono">
 					{#each mrz as line, i (i)}<div class="truncate">{line}</div>{/each}
 				</div>
 			</div>
-
-			<!-- Back -->
-			<div class={[face, 'rotate-y-180 gap-4', theme.card]} aria-hidden="true">
-				<div class="-mx-5 -mt-1 h-10 shrink-0 bg-ph-black sm:-mx-7 sm:h-11"></div>
-
-				<div class="flex items-stretch gap-3">
+			<div class={[face, 'id-back rotate-y-180', theme.card]} aria-hidden="true">
+				<div class="id-stripe shrink-0 bg-ph-black"></div>
+				<div class="id-signature flex items-stretch">
 					<div
-						class="flex min-w-0 flex-1 flex-col justify-center bg-ph-cream px-3 py-2 text-ph-black"
+						class="id-signature-box flex min-w-0 flex-1 flex-col justify-center bg-ph-cream text-ph-black"
 					>
-						<span class="ph-subheadline text-[9px]">Authorized signature</span>
-						<span class="-rotate-2 truncate ph-headline text-2xl">{name}</span>
+						<span class="id-signature-label ph-subheadline">Authorized signature</span><span
+							class="id-signature-name -rotate-2 truncate ph-headline">{name}</span
+						>
 					</div>
-					<span class="grid w-14 shrink-0 place-items-center bg-ph-black/10">
-						<Identicon seed={id} accent={theme.accent} class="size-8" />
-					</span>
+					<span class="id-seal grid shrink-0 place-items-center bg-ph-black/10"
+						><Identicon seed={id} accent={theme.accent} class="id-seal-icon" /></span
+					>
 				</div>
-
-				<dl
-					class="grid flex-1 grid-cols-2 content-start gap-x-5 gap-y-2 text-[13px] sm:text-[14px]"
-				>
+				<dl class="id-data grid flex-1 grid-cols-2 content-start">
 					<div class="min-w-0">
-						<dt class="ph-subheadline text-[10px] sm:text-[11px]">Given names</dt>
-						<dd class="break-words">{givenName || name}</dd>
+						<dt class="ph-subheadline">Given names</dt>
+						<dd>{givenName || name}</dd>
 					</div>
-					{#if familyName}
-						<div class="min-w-0">
-							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Surname</dt>
-							<dd class="break-words">{familyName}</dd>
-						</div>
-					{/if}
+					{#if familyName}<div class="min-w-0">
+							<dt class="ph-subheadline">Surname</dt>
+							<dd>{familyName}</dd>
+						</div>{/if}
 					<div class="min-w-0">
-						<dt class="ph-subheadline text-[10px] sm:text-[11px]">
-							Passport ID<span class="normal-case">s</span>
-						</dt>
-						<dd class="font-mono font-semibold break-words">
+						<dt class="ph-subheadline">Passport ID<span class="normal-case">s</span></dt>
+						<dd class="font-mono font-semibold">
 							{passports.length ? passports.map((p) => `#${p}`).join('  ') : 'None yet'}
 						</dd>
 					</div>
 					<div class="min-w-0">
-						<dt class="ph-subheadline text-[10px] sm:text-[11px]">Registered</dt>
+						<dt class="ph-subheadline">Registered</dt>
 						<dd>
 							{registered.toLocaleDateString(undefined, {
 								year: 'numeric',
@@ -200,23 +165,160 @@
 							})}
 						</dd>
 					</div>
-					{#if phone}
-						<div class="min-w-0">
-							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Phone</dt>
-							<dd class="font-mono break-words">{formatPhone(phone)}</dd>
-						</div>
-					{/if}
+					{#if phone}<div class="min-w-0">
+							<dt class="ph-subheadline">Phone</dt>
+							<dd class="font-mono">{formatPhone(phone)}</dd>
+						</div>{/if}
 					<div class="min-w-0">
-						<dt class="ph-subheadline text-[10px] sm:text-[11px]">Linked</dt>
-						<dd class="break-words">{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
+						<dt class="ph-subheadline">Linked</dt>
+						<dd>{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
 					</div>
 				</dl>
-
-				<p class="flex items-center gap-2 font-mono text-[10px] uppercase sm:text-[11px]">
-					<Glider class="size-3.5" />
-					Property of Purdue Hackers. If found, return to purduehackers.com
+				<p class="id-property flex items-center font-mono uppercase">
+					<Glider class="id-property-icon" />Property of Purdue Hackers. If found, return to
+					purduehackers.com
 				</p>
 			</div>
 		</button>
 	</div>
 </div>
+
+<style>
+	.id-card {
+		position: relative;
+		width: 100%;
+		max-width: 560px;
+		min-width: 0;
+		aspect-ratio: 85.6 / 53.98;
+		container-type: inline-size;
+		perspective: 1200px;
+	}
+	.id-tilt {
+		position: absolute;
+		inset: 0;
+	}
+	.id-flip {
+		height: 100%;
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.id-face {
+		width: 100%;
+		height: 100%;
+		min-width: 0;
+		min-height: 0;
+		padding: 5cqw;
+		overflow: hidden;
+		overflow-wrap: anywhere;
+	}
+	.id-heading {
+		gap: 2.8cqw;
+		font-size: 2.14cqw;
+		line-height: 1.2;
+	}
+	.id-brand {
+		gap: 1.4cqw;
+	}
+	.id-brand :global(.id-brand-logo) {
+		width: 3.57cqw;
+		height: 3.57cqw;
+	}
+	.id-serial {
+		gap: 1.4cqw;
+		font-size: 2.32cqw;
+		white-space: nowrap;
+	}
+	.id-serial :global(.id-refresh) {
+		width: 2.5cqw;
+		height: 2.5cqw;
+	}
+	.id-person {
+		gap: 4.28cqw;
+	}
+	.id-picture {
+		width: 20cqw;
+		height: 20cqw;
+	}
+	.id-picture :global(.id-identicon) {
+		width: 11.42cqw;
+		height: 11.42cqw;
+	}
+	.id-details {
+		gap: 1.4cqw;
+	}
+	.id-name {
+		font-size: 10.7cqw;
+		line-height: 1;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		overflow: hidden;
+		overflow-wrap: anywhere;
+	}
+	.id-name.long-name {
+		font-size: 8.57cqw;
+	}
+	.id-name.long-word {
+		font-size: 4.28cqw;
+	}
+	.id-meta {
+		gap: 0 2.14cqw;
+		font-size: 2.32cqw;
+		line-height: 1.3;
+	}
+	.id-email {
+		font-size: 2.5cqw;
+	}
+	.id-mrz {
+		margin: 0 -5cqw -5cqw;
+		padding: 1.4cqw 5cqw;
+		font-size: 2.14cqw;
+		line-height: 1.35;
+		letter-spacing: 0.18em;
+	}
+	.id-back {
+		gap: 2.5cqw;
+	}
+	.id-stripe {
+		margin: -0.7cqw -5cqw 0;
+		height: 7.85cqw;
+	}
+	.id-signature {
+		gap: 2.14cqw;
+	}
+	.id-signature-box {
+		padding: 1.4cqw 2.14cqw;
+	}
+	.id-signature-label {
+		font-size: 1.6cqw;
+	}
+	.id-signature-name {
+		font-size: 4.28cqw;
+	}
+	.id-seal {
+		width: 10cqw;
+	}
+	.id-seal :global(.id-seal-icon) {
+		width: 5.7cqw;
+		height: 5.7cqw;
+	}
+	.id-data {
+		gap: 1.4cqw 3.57cqw;
+		font-size: 2.5cqw;
+		line-height: 1.25;
+	}
+	.id-data dt {
+		font-size: 1.96cqw;
+	}
+	.id-data dd {
+		overflow-wrap: anywhere;
+	}
+	.id-property {
+		gap: 1.4cqw;
+		font-size: 1.96cqw;
+	}
+	.id-property :global(.id-property-icon) {
+		width: 2.5cqw;
+		height: 2.5cqw;
+	}
+</style>

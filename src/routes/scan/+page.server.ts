@@ -1,6 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { dev } from '$app/environment';
+import { idCardForUser } from '$lib/server/id-card';
 import { auth } from '$lib/server/auth';
 import { APIError } from 'better-auth/api';
 import {
@@ -45,7 +46,8 @@ export const load: PageServerLoad = async (event) => {
 		tap: tap && {
 			passportId: tap.passportId,
 			owner: tap.owner && { username: tap.owner.username, name: tap.owner.name },
-			returning: tap.returning
+			returning: tap.returning,
+			card: tap.owner ? await idCardForUser(tap.owner.id) : null
 		},
 		me: event.locals.user ? { username: event.locals.user.username } : null,
 		error: null
