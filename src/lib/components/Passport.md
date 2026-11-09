@@ -38,8 +38,8 @@ the primary fonts declared by the existing theme; font URLs are unchanged.
 
 `PassportEntrance.svelte` is a compatibility alias. New consumers should import
 `Passport.svelte`. `PassportCover.svelte` is independently reusable, fills its
-container, and uses instance-scoped SVG IDs. Its gold isometric mark, lettering,
-and leather grain are vector/procedural artwork; no reference photograph is used.
+container, and uses instance-scoped SVG IDs. Its gold isometric mark (including the recessed notch), uniformly gold lettering,
+and leather grain are vector/procedural artwork; no reference photograph is used. The complete seal is rotated 90° clockwise.
 
 ## Purdue Hackers UI skill check
 
@@ -57,7 +57,7 @@ at <https://components.purduehackers.com/r/index.json>.
   `IdCard` remains shared with the logged-in dashboard. Routes provide data.
 - The modified UI has square corners, no pill or glass treatments, and no gray
   secondary text on cream. The preview status message now uses `Notice`.
-- Foil face shading, navy leather, and curved lettering are confined to the cover
+- Foil face shading, black leather, and curved lettering are confined to the cover
   artwork requested in the reference. They are not new application theme tokens
   or gradient UI controls. Header typography still uses `ph-headline`.
 - Motion retains reduced-motion behavior. The explicitly requested arrival,

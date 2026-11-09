@@ -24,9 +24,9 @@
 				<stop offset="1" stop-color="#efd199" />
 			</linearGradient>
 			<linearGradient id={`${uid}-front`} x1="0" y1="0" x2="0.45" y2="1">
-				<stop stop-color="#ebc878" />
-				<stop offset="0.58" stop-color="#d7a553" />
-				<stop offset="1" stop-color="#b77933" />
+				<stop stop-color="#efd38e" />
+				<stop offset="0.58" stop-color="#e4bd6c" />
+				<stop offset="1" stop-color="#c28a42" />
 			</linearGradient>
 			<linearGradient id={`${uid}-side`} x1="0" y1="0" x2="1" y2="0.8">
 				<stop stop-color="#a96c2b" />
@@ -37,7 +37,7 @@
 			<path id={`${uid}-bottom`} d="M 517 261 A 224 224 0 1 1 83 261" />
 		</defs>
 
-		<g class="foil-type" fill={`url(#${uid}-foil)`} stroke="#f7dda5" stroke-width="0.35">
+		<g class="foil-type" fill="#e4bd6c">
 			<text font-size="42" letter-spacing="7.5" text-anchor="middle">
 				<textPath href={`#${uid}-top`} startOffset="50%">{title}</textPath>
 			</text>
@@ -46,38 +46,46 @@
 			</text>
 		</g>
 
-		<!-- Hand-drawn isometric glider. Dark seams separate the gold foil faces. -->
+		<!-- Vector tracing of the reference geometry: cap, tapered seam,
+		     recessed triangular notch, and the two lower extruded faces. -->
 		<g
-			transform="translate(300 311) scale(0.72) translate(-305 -330)"
+			transform="translate(300 311) scale(0.56) translate(-204.5 -235)"
 			stroke-linejoin="round"
 			stroke-linecap="round"
 		>
 			<path
-				d="M 300 190 L 350 218 L 410 252 L 414 378 L 365 406 L 358 343 L 309 373 L 310 437 L 253 470 L 198 440 L 196 379 L 251 340 L 250 218 Z"
+				d="M 198 49 L 264 86 L 338 130 L 348 297 L 284 336 L 275 250 L 207 293 L 207 382 L 137 421 L 67 375 L 61 311 L 126 269 L 125 94 Z"
 				fill={`url(#${uid}-front)`}
-				stroke="#e6c385"
-				stroke-width="3"
+				stroke="#e7c786"
+				stroke-width="2.5"
 			/>
 			<path
-				d="M 350 218 L 410 252 L 414 378 L 365 406 L 358 343 L 354 280 Z"
+				d="M 264 86 L 338 130 L 348 297 L 284 336 L 275 250 L 268 202 Z"
 				fill={`url(#${uid}-side)`}
 			/>
-			<path d="M 196 379 L 253 411 L 253 470 L 198 440 Z" fill={`url(#${uid}-side)`} />
-			<path d="M 253 411 L 309 373 L 310 437 L 253 470 Z" fill={`url(#${uid}-foil)`} />
+			<path d="M 61 311 L 130 350 L 137 421 L 67 375 Z" fill={`url(#${uid}-side)`} />
+			<path d="M 130 350 L 207 293 L 207 382 L 137 421 Z" fill={`url(#${uid}-foil)`} />
 			<path
-				d="M 250 218 L 300 190 L 350 218 L 301 248 Z"
-				fill="#efce83"
-				stroke="#13202d"
-				stroke-width="4"
+				d="M 207 293 L 275 250 L 284 336 Z"
+				fill={`url(#${uid}-side)`}
+				stroke="#151515"
+				stroke-width="3.5"
 			/>
 			<path
-				d="M 350 218 L 354 280 M 196 379 L 247 407 M 309 373 L 358 343 L 365 406"
+				d="M 125 94 L 198 49 L 264 86 L 193 130 Z"
+				fill="#efd183"
+				stroke="#151515"
+				stroke-width="4"
+			/>
+			<path d="M 260 88 L 267 84 L 269 204 L 266 185 Z" fill="#151515" />
+			<path
+				d="M 61 311 L 124 345 M 207 293 L 207 382"
 				fill="none"
-				stroke="#17212b"
-				stroke-width="4"
+				stroke="#151515"
+				stroke-width="3.5"
 			/>
 			<path
-				d="M 198 440 L 253 470 L 310 437 M 365 406 L 414 378"
+				d="M 67 375 L 137 421 L 207 382 M 284 336 L 348 297"
 				fill="none"
 				stroke="#f0d391"
 				stroke-width="2"
@@ -94,7 +102,7 @@
 		width: 100%;
 		height: 100%;
 		overflow: hidden;
-		background: #081321;
+		background: var(--ph-black);
 		box-shadow:
 			inset 10px 0 18px rgb(0 0 0 / 0.25),
 			inset 0 1px 0 rgb(255 255 255 / 0.08);
@@ -103,10 +111,10 @@
 		content: '';
 		position: absolute;
 		inset: 0;
-		opacity: 0.46;
+		opacity: 0.16;
 		pointer-events: none;
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.68 .93' numOctaves='3' stitchTiles='stitch'/%3E%3CfeDiffuseLighting surfaceScale='1.6' diffuseConstant='.8' lighting-color='%23c5cfdd'%3E%3CfeDistantLight azimuth='225' elevation='48'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23grain)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
-		mix-blend-mode: soft-light;
+		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='grain'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.68 .93' numOctaves='3' stitchTiles='stitch'/%3E%3CfeDiffuseLighting surfaceScale='1.6' diffuseConstant='.8' lighting-color='%23b8b8b8'%3E%3CfeDistantLight azimuth='225' elevation='48'/%3E%3C/feDiffuseLighting%3E%3C/filter%3E%3Cpath fill='%23fff' filter='url(%23grain)' d='M0 0h160v160H0z'/%3E%3C/svg%3E");
+		mix-blend-mode: screen;
 	}
 	.seal {
 		position: relative;
@@ -115,6 +123,8 @@
 		height: 96%;
 		max-width: 94%;
 		aspect-ratio: 1;
+		transform: rotate(90deg);
+		transform-origin: center;
 	}
 	.foil-type {
 		font-family: var(--ph-font-sans);
