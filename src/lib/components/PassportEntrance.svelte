@@ -466,10 +466,11 @@
 		bottom: var(--cover-header-center, 36px);
 		height: 1em;
 		transform: translateY(50%);
-		inset-inline: clamp(22px, 8cqw, 34px);
+		left: clamp(14px, 4cqw, 20px);
+		right: clamp(22px, 8cqw, 34px);
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: clamp(14px, 4cqw, 20px);
 		font-size: clamp(22px, 7.8cqw, 35px);
 		line-height: 1;
 		text-decoration: none;
