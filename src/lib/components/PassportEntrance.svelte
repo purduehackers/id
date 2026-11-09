@@ -27,7 +27,6 @@
 	let coverShadow: HTMLDivElement;
 	let outside: HTMLDivElement;
 	let inside: HTMLDivElement;
-	let sheen: HTMLDivElement;
 	let shade: HTMLDivElement;
 	let safeArea: HTMLDivElement;
 	let header: HTMLAnchorElement;
@@ -86,35 +85,50 @@
 			};
 		}
 		const above = -card.getBoundingClientRect().bottom - 24;
-		const duration = 2700;
-		const pageLift = Math.min(14, card.getBoundingClientRect().height * 0.06);
+		const arrivalDuration = 600;
+		const openingStart = arrivalDuration * 0.9;
+		const openingDuration = 1100;
+		const duration = openingStart + openingDuration + 80;
+		const opening = (progress: number) => (openingStart + progress * openingDuration) / duration;
+		const faceSwitch = opening(0.45);
 		const easeOut = 'cubic-bezier(0.16, 1, 0.3, 1)';
 		const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
 		const pageFrames: Keyframe[] = [
-			{ transform: 'translateY(0) rotateX(0deg)', offset: 0 },
+			{ transform: 'rotateX(0deg)', offset: 0 },
 			{
-				transform: 'translateY(0) rotateX(0deg)',
-				offset: 0.42,
+				transform: 'rotateX(0deg)',
+				offset: opening(0),
 				easing: 'cubic-bezier(0.25, 0.5, 0.35, 1)'
 			},
-			{ transform: `translateY(${-pageLift * 0.3}px) rotateX(3deg)`, offset: 0.5, easing: easeOut },
+			{ transform: 'rotateX(9deg)', offset: opening(0.18), easing: easeOut },
 			{
-				transform: `translateY(${-pageLift}px) rotateX(10deg)`,
-				offset: 0.62,
+				transform: 'rotateX(28deg)',
+				offset: opening(0.43),
 				easing: 'cubic-bezier(0.5, 0, 0.75, 0.6)'
 			},
-			{ transform: 'translateY(-1px) rotateX(1deg)', offset: 0.78, easing: settle },
-			{ transform: 'translateY(0) rotateX(0deg)', offset: 0.86 },
-			{ transform: 'translateY(0) rotateX(0deg)', offset: 1 }
+			{ transform: 'rotateX(3deg)', offset: opening(0.78), easing: settle },
+			{ transform: 'rotateX(0deg)', offset: opening(1) },
+			{ transform: 'rotateX(0deg)', offset: 1 }
 		];
 		const coverFrames: Keyframe[] = [
 			{ transform: 'rotateX(0deg)', offset: 0 },
-			{ transform: 'rotateX(0deg)', offset: 0.35, easing: 'cubic-bezier(0.4, 0, 0.7, 1)' },
-			{ transform: 'rotateX(0deg)', offset: 0.42, easing: 'cubic-bezier(0.55, 0, 0.7, 0.45)' },
-			{ transform: 'rotateX(60deg)', offset: 0.56, easing: 'cubic-bezier(0.3, 0.4, 0.6, 0.8)' },
-			{ transform: 'rotateX(90deg)', offset: 0.61, easing: 'cubic-bezier(0.16, 0.7, 0.25, 1)' },
-			{ transform: 'rotateX(134deg)', offset: 0.76, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
-			{ transform: 'rotateX(140deg)', offset: 0.86 },
+			{
+				transform: 'rotateX(0deg)',
+				offset: opening(0),
+				easing: 'cubic-bezier(0.55, 0, 0.7, 0.45)'
+			},
+			{
+				transform: 'rotateX(60deg)',
+				offset: opening(0.33),
+				easing: 'cubic-bezier(0.3, 0.4, 0.6, 0.8)'
+			},
+			{
+				transform: 'rotateX(90deg)',
+				offset: faceSwitch,
+				easing: 'cubic-bezier(0.16, 0.7, 0.25, 1)'
+			},
+			{ transform: 'rotateX(134deg)', offset: opening(0.78), easing: settle },
+			{ transform: 'rotateX(140deg)', offset: opening(1) },
 			{ transform: 'rotateX(140deg)', offset: 1 }
 		];
 
@@ -126,8 +140,7 @@
 						offset: 0,
 						easing: easeOut
 					},
-					{ transform: 'translateY(4px) rotateZ(0.4deg) scale(1)', offset: 0.25, easing: settle },
-					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 0.31 },
+					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: arrivalDuration / duration },
 					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 1 }
 				],
 				{ duration, fill: 'both' }
@@ -138,11 +151,11 @@
 				pageFrames.map((frame) => ({
 					...frame,
 					transform: `translate3d(8px, 14px, -16px) ${frame.transform}`,
-					filter: frame.offset === 0.62 ? 'blur(14px)' : 'blur(9px)',
+					filter: frame.offset === opening(0.43) ? 'blur(14px)' : 'blur(9px)',
 					boxShadow:
-						frame.offset === 0.62
-							? '0 28px 42px 8px rgb(0 0 0 / .14)'
-							: '0 12px 24px 4px rgb(0 0 0 / .18)'
+						frame.offset === opening(0.43)
+							? '0 30px 44px 9px rgb(0 0 0 / .24)'
+							: '0 14px 28px 5px rgb(0 0 0 / .28)'
 				})),
 				{ duration, fill: 'both' }
 			),
@@ -155,7 +168,7 @@
 						...frame,
 						transform: `translate3d(${8 + 8 * elevation}px, ${14 + 14 * elevation}px, -24px) ${frame.transform}`,
 						filter: `blur(${8 + 8 * elevation}px)`,
-						boxShadow: `0 ${10 + 8 * elevation}px ${22 + 14 * elevation}px ${4 + 3 * elevation}px rgb(0 0 0 / .17)`
+						boxShadow: `0 ${10 + 8 * elevation}px ${22 + 14 * elevation}px ${4 + 3 * elevation}px rgb(0 0 0 / .24)`
 					};
 				}),
 				{ duration, fill: 'both' }
@@ -165,8 +178,8 @@
 			outside.animate(
 				[
 					{ opacity: 1, offset: 0 },
-					{ opacity: 1, offset: 0.60999 },
-					{ opacity: 0, offset: 0.61 },
+					{ opacity: 1, offset: faceSwitch - 0.00001 },
+					{ opacity: 0, offset: faceSwitch },
 					{ opacity: 0, offset: 1 }
 				],
 				{ duration, fill: 'both' }
@@ -174,29 +187,19 @@
 			inside.animate(
 				[
 					{ opacity: 0, offset: 0 },
-					{ opacity: 0, offset: 0.60999 },
-					{ opacity: 1, offset: 0.61 },
+					{ opacity: 0, offset: faceSwitch - 0.00001 },
+					{ opacity: 1, offset: faceSwitch },
 					{ opacity: 1, offset: 1 }
-				],
-				{ duration, fill: 'both' }
-			),
-			sheen.animate(
-				[
-					{ transform: 'translateX(-130%)', opacity: 0, offset: 0 },
-					{ transform: 'translateX(-90%)', opacity: 0.15, offset: 0.18, easing: 'ease-in-out' },
-					{ transform: 'translateX(70%)', opacity: 0.55, offset: 0.48 },
-					{ transform: 'translateX(130%)', opacity: 0, offset: 0.63 },
-					{ transform: 'translateX(130%)', opacity: 0, offset: 1 }
 				],
 				{ duration, fill: 'both' }
 			),
 			shade.animate(
 				[
 					{ opacity: 0.5, offset: 0 },
-					{ opacity: 0.5, offset: 0.42 },
-					{ opacity: 0.32, offset: 0.56, easing: 'ease-out' },
-					{ opacity: 0.04, offset: 0.72 },
-					{ opacity: 0, offset: 0.84 },
+					{ opacity: 0.5, offset: opening(0) },
+					{ opacity: 0.32, offset: opening(0.33), easing: 'ease-out' },
+					{ opacity: 0.04, offset: opening(0.7) },
+					{ opacity: 0, offset: opening(1) },
 					{ opacity: 0, offset: 1 }
 				],
 				{ duration, fill: 'both' }
@@ -253,7 +256,6 @@
 	</div>
 	<div class="passport-cover" bind:this={cover}>
 		<div class="cover-outside" bind:this={outside} aria-hidden="true">
-			<div class="cover-sheen" bind:this={sheen}></div>
 			<Glider class="cover-logo" />
 			<span class="cover-caption font-mono">PURDUE HACKERS<br />PASSPORT</span>
 		</div>
@@ -295,18 +297,18 @@
 		inset: 0;
 		z-index: -1;
 		pointer-events: none;
-		background: rgb(0 0 0 / 0.1);
+		background: rgb(0 0 0 / 0.15);
 		filter: blur(9px);
 		transform-origin: center top;
 	}
 	.shadow-paper {
 		transform: translate3d(8px, 14px, -16px);
-		box-shadow: 0 12px 24px 4px rgb(0 0 0 / 0.18);
+		box-shadow: 0 14px 28px 5px rgb(0 0 0 / 0.28);
 	}
 	.shadow-cover {
 		filter: blur(16px);
 		transform: translate3d(16px, 28px, -24px) rotateX(140deg);
-		box-shadow: 0 18px 36px 7px rgb(0 0 0 / 0.17);
+		box-shadow: 0 18px 36px 7px rgb(0 0 0 / 0.24);
 	}
 	.passport-page-clip {
 		position: absolute;
@@ -442,19 +444,6 @@
 		inset: 3cqw;
 		border: 1px solid rgb(252 210 2 / 0.22);
 		pointer-events: none;
-	}
-	.cover-sheen {
-		position: absolute;
-		inset: 0;
-		opacity: 0;
-		pointer-events: none;
-		background: linear-gradient(
-			110deg,
-			transparent 25%,
-			rgb(255 255 255 / 0.34) 48%,
-			rgb(252 210 2 / 0.08) 56%,
-			transparent 75%
-		);
 	}
 	.cover-outside :global(.cover-logo) {
 		width: 17cqw;
