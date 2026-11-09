@@ -42,7 +42,8 @@ the primary fonts declared by the existing theme; font URLs are unchanged.
 container, and masks its foil with `static/passport-seal.svg`: the exact supplied
 Figma paths and outlined lettering, with only the solid black background removed
 so the reflection stays inside the gold. No reference photograph is used.
-The complete seal is rotated 90° clockwise. The gold reflection samples the actual eased cover pose during opening.
+The complete seal is rotated 90° clockwise. The gold reflection samples the actual eased cover pose during opening and the
+normalized slide-in translation, using the same foil material for logo and lettering.
 There are no timers, pointer/touch controls, or device orientation listeners.
 Freezing the cover for debugging also freezes its reflection.
 

@@ -291,7 +291,7 @@
 				const arrival = new DOMMatrix(getComputedStyle(booklet).transform);
 				const pitch = (Math.atan2(matrix.m23, matrix.m22) * 180) / Math.PI;
 				const roll = (Math.atan2(arrival.m12, arrival.m11) * 180) / Math.PI;
-				coverArt.setPose(pitch, roll);
+				coverArt.setPose(pitch, roll, arrival.m42 / card.offsetHeight);
 				reflectionFrame = requestAnimationFrame(reflectCover);
 			};
 			reflectCover();
@@ -578,7 +578,7 @@
 	.cover-inside {
 		transform: rotateX(180deg) translateZ(0.5px);
 		opacity: 1;
-		border-bottom: 1px solid var(--border);
+		/* No light border at the hinge: it reads as a gap against the yellow page. */
 	}
 	.cover-header {
 		position: absolute;
