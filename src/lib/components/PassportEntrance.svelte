@@ -22,8 +22,12 @@
 
 	let card: HTMLDivElement;
 	let cover: HTMLDivElement;
+	let outside: HTMLDivElement;
+	let inside: HTMLDivElement;
 	let sheen: HTMLDivElement;
 	let shade: HTMLDivElement;
+	let safeArea: HTMLDivElement;
+	let header: HTMLAnchorElement;
 	let waiting = $state(untrack(() => animate));
 
 	onMount(() => {
@@ -37,9 +41,31 @@
 			animations.forEach((animation) => animation.cancel());
 			onfinish();
 		};
+		const alignHeader = () => {
+			// Center in the visible cover strip, accounting for its 40° projection.
+			const visibleHeight = Math.max(
+				0,
+				card.getBoundingClientRect().top - safeArea.getBoundingClientRect().height
+			);
+			const distance = visibleHeight / 2;
+			const angle = (40 * Math.PI) / 180;
+			let center = distance / (Math.cos(angle) + (distance * Math.sin(angle)) / 2400);
+			card.style.setProperty('--cover-header-center', `${center}px`);
+			// Refine against the projected bounds, including cover thickness.
+			const bounds = header.getBoundingClientRect();
+			const target = card.getBoundingClientRect().top - distance;
+			center += ((bounds.top + bounds.bottom) / 2 - target) / Math.cos(angle);
+			card.style.setProperty('--cover-header-center', `${center}px`);
+		};
+		const resize = () => {
+			finish();
+			alignHeader();
+		};
+		alignHeader();
+		window.addEventListener('resize', resize);
 		if (!animate || reduced.matches) {
 			finish();
-			return;
+			return () => window.removeEventListener('resize', resize);
 		}
 		const above = -card.getBoundingClientRect().bottom - 24;
 		const duration = 2700;
@@ -64,10 +90,31 @@
 					{ transform: 'rotateX(0deg)', offset: 0 },
 					{ transform: 'rotateX(0deg)', offset: 0.35, easing: 'cubic-bezier(0.4, 0, 0.7, 1)' },
 					{ transform: 'rotateX(-6deg)', offset: 0.42, easing: 'cubic-bezier(0.55, 0, 0.7, 0.45)' },
-					{ transform: 'rotateX(60deg)', offset: 0.56, easing: 'cubic-bezier(0.16, 0.7, 0.25, 1)' },
+					{ transform: 'rotateX(60deg)', offset: 0.56, easing: 'cubic-bezier(0.3, 0.4, 0.6, 0.8)' },
+					{ transform: 'rotateX(90deg)', offset: 0.61, easing: 'cubic-bezier(0.16, 0.7, 0.25, 1)' },
 					{ transform: 'rotateX(134deg)', offset: 0.76, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
 					{ transform: 'rotateX(140deg)', offset: 0.86 },
 					{ transform: 'rotateX(140deg)', offset: 1 }
+				],
+				{ duration, fill: 'both' }
+			),
+			// Explicit face opacity also prevents Safari from compositing the foil
+			// logo through the reverse face. Switch only at the edge-on pose.
+			outside.animate(
+				[
+					{ opacity: 1, offset: 0 },
+					{ opacity: 1, offset: 0.60999 },
+					{ opacity: 0, offset: 0.61 },
+					{ opacity: 0, offset: 1 }
+				],
+				{ duration, fill: 'both' }
+			),
+			inside.animate(
+				[
+					{ opacity: 0, offset: 0 },
+					{ opacity: 0, offset: 0.60999 },
+					{ opacity: 1, offset: 0.61 },
+					{ opacity: 1, offset: 1 }
 				],
 				{ duration, fill: 'both' }
 			),
@@ -97,17 +144,16 @@
 		void Promise.all(animations.map((animation) => animation.finished))
 			.then(finish)
 			.catch(finish);
-		window.addEventListener('resize', finish, { once: true });
 		reduced.addEventListener('change', finish, { once: true });
 		return () => {
 			finish();
-			window.removeEventListener('resize', finish);
+			window.removeEventListener('resize', resize);
 			reduced.removeEventListener('change', finish);
 		};
 	});
 </script>
 
-<div class="cover-safe-area" aria-hidden="true"></div>
+<div class="cover-safe-area" bind:this={safeArea} aria-hidden="true"></div>
 
 <div class="passport-stage" class:waiting bind:this={card}>
 	<div class="passport-faces">
@@ -137,13 +183,13 @@
 	</div>
 	<div class="page-shade" bind:this={shade} aria-hidden="true"></div>
 	<div class="passport-cover" bind:this={cover}>
-		<div class="cover-outside" aria-hidden="true">
+		<div class="cover-outside" bind:this={outside} aria-hidden="true">
 			<div class="cover-sheen" bind:this={sheen}></div>
 			<Glider class="cover-logo" />
 			<span class="cover-caption font-mono">PURDUE HACKERS<br />PASSPORT</span>
 		</div>
-		<div class="cover-inside">
-			<a class="cover-header" href="/" aria-label="Purdue Hackers ID home">
+		<div class="cover-inside" bind:this={inside}>
+			<a class="cover-header" bind:this={header} href="/" aria-label="Purdue Hackers ID home">
 				<Glider class="size-4" />
 				<span class="ph-headline">Purdue Hackers ID</span>
 			</a>
@@ -275,6 +321,8 @@
 		-webkit-backface-visibility: hidden;
 	}
 	.cover-outside {
+		opacity: 0;
+		transform: translateZ(0.5px);
 		display: flex;
 		flex-direction: column;
 		align-items: center;
@@ -313,7 +361,6 @@
 		width: 17cqw;
 		height: 17cqw;
 		color: #fcd202;
-		filter: drop-shadow(0 1px 0 #625000) drop-shadow(0 -1px 0 #ffffa0);
 	}
 	.cover-caption {
 		font-size: clamp(8px, 2.5cqw, 11px);
@@ -322,24 +369,27 @@
 		text-align: center;
 	}
 	.cover-inside {
-		transform: rotateX(180deg);
+		transform: rotateX(180deg) translateZ(0.5px);
+		opacity: 1;
 		border-bottom: 1px solid #555;
 	}
 	.cover-header {
 		position: absolute;
-		bottom: clamp(38px, 10cqw, 44px);
+		bottom: var(--cover-header-center, 36px);
+		height: 1em;
+		transform: translateY(50%);
 		inset-inline: clamp(16px, 6cqw, 24px);
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: clamp(20px, 6cqw, 28px);
+		font-size: clamp(22px, 8.3cqw, 38px);
 		line-height: 1;
 		text-decoration: none;
 		color: #fbf7ec;
 	}
 	.cover-header :global(svg) {
-		width: clamp(20px, 6cqw, 26px);
-		height: clamp(20px, 6cqw, 26px);
+		width: 1em;
+		height: 1em;
 	}
 	.document-mark {
 		color: #7d3bff;
