@@ -22,3 +22,7 @@ For a stationary cover review, append `&view=cover` to the same preview URL.
 This uses `PassportCover.svelte` independently of the animation. The animated scan
 page uses the reusable `Passport.svelte`; its props and Purdue Hackers UI audit
 are documented in `src/lib/components/Passport.md`.
+
+Hold Space while reloading to keep the cover closed for inspection. Release
+Space after loading; the cover stays closed until the next normal reload.
+The `&view=cover` URL also provides a stationary cover view, including on phones.

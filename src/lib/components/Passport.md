@@ -18,6 +18,12 @@ cover, a projected header, and synchronized paper/shadow motion.
 `passportId` is required. `profile` supplies exactly the same fields as the account
 card. Without it, the component renders an unclaimed passport using optional
 `name` and `username` props. `animate` defaults to false; `onfinish` is optional.
+`inspectOnSpace` defaults to true. Hold Space while loading/reloading to latch
+the cover closed for inspection; releasing Space does not start the animation.
+Reload without Space to return to the normal opening. The small
+`/passport-inspection.js` head script captures held-key state before hydration
+and carries it across a reload. Consumers can set `inspectOnSpace={false}`.
+
 `coverTitle` and `coverCountry` customize the curved artwork labels. `class`
 customizes the outer wrapper.
 

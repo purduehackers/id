@@ -13,6 +13,7 @@
 		coverTitle = 'PASSPORT',
 		coverCountry = 'REPUBLIC OF HACKERLAND',
 		headerStripHeight,
+		inspectOnSpace = true,
 		class: className,
 		animate = false,
 		onfinish = () => {}
@@ -25,6 +26,7 @@
 		coverTitle?: string;
 		coverCountry?: string;
 		headerStripHeight?: number;
+		inspectOnSpace?: boolean;
 		class?: string;
 		onfinish?: () => void;
 	} = $props();
@@ -42,6 +44,7 @@
 	let inside: HTMLDivElement;
 	let shade: HTMLDivElement;
 	let header: HTMLAnchorElement;
+	let inspecting = $state(false);
 	let opened = $state(untrack(() => !animate));
 	let waiting = $state(untrack(() => animate));
 
@@ -54,11 +57,32 @@
 		const finish = () => {
 			if (finished) return;
 			finished = true;
-			opened = true;
+			opened = !inspecting;
 			waiting = false;
 			animations.forEach((animation) => animation.cancel());
 			onfinish();
 		};
+		const inspectCover = () => {
+			if (!inspectOnSpace || disposed || inspecting) return;
+			inspecting = true;
+			window.scrollTo(0, 0);
+			finish();
+		};
+		const handleSpace = (event: KeyboardEvent) => {
+			if (event.code !== 'Space' || !inspectOnSpace || (finished && !inspecting)) return;
+			const target = event.target;
+			if (
+				target instanceof Element &&
+				target.closest('input, textarea, select, [contenteditable="true"]')
+			)
+				return;
+			event.preventDefault();
+			inspectCover();
+		};
+		window.addEventListener('keydown', handleSpace, true);
+		if ((window as Window & { __phPassportSpaceHeld?: boolean }).__phPassportSpaceHeld)
+			inspectCover();
+
 		let headerDistance = 36;
 		const headerPose = (coverAngle: number) => {
 			// Flatten the cover's exact perspective onto one front-facing plane.
@@ -104,7 +128,7 @@
 			alignHeader();
 		};
 		const start = () => {
-			if (disposed) return;
+			if (disposed || finished) return;
 			started = true;
 			alignHeader();
 			window.addEventListener('resize', resize);
@@ -292,6 +316,7 @@
 			disposed = true;
 			if (started) animations.forEach((animation) => animation.cancel());
 			window.removeEventListener('resize', resize);
+			window.removeEventListener('keydown', handleSpace, true);
 			document.fonts.removeEventListener('loadingdone', fitHeader);
 			reduced.removeEventListener('change', finish);
 		};
@@ -303,6 +328,7 @@
 <div
 	class={['passport-shell', className]}
 	class:opened
+	class:inspecting
 	bind:this={booklet}
 	style:--cover-strip-height={headerStripHeight === undefined
 		? undefined
@@ -559,7 +585,7 @@
 		flex: 1;
 		min-width: 0;
 		white-space: nowrap;
-		transform: scaleX(var(--cover-header-text-scale, 1));
+		transform: translateY(0.08em) scaleX(var(--cover-header-text-scale, 1));
 		transform-origin: left center;
 	}
 	.cover-header :global(svg) {
@@ -576,6 +602,22 @@
 	}
 	.opened .cover-resting-header {
 		opacity: 1;
+	}
+	.inspecting .passport-cover {
+		transform: rotateX(0deg);
+	}
+	.inspecting .cover-outside {
+		opacity: 1;
+	}
+	.inspecting .cover-inside,
+	.inspecting .cover-header {
+		opacity: 0;
+		pointer-events: none;
+	}
+	.inspecting .shadow-cover {
+		transform: translate3d(6px, 8px, -24px) rotateX(0deg);
+		filter: blur(4px);
+		box-shadow: 0 6px 14px 2px rgb(0 0 0 / 0.3);
 	}
 	.document-mark {
 		color: var(--ph-purple);
