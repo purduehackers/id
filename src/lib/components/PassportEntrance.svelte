@@ -119,22 +119,20 @@
 	<div class="passport-faces" bind:this={faces}>
 		<div class="passport-face passport-front">
 			<div
-				class="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 font-mono text-[10px] font-semibold tracking-wider uppercase"
+				class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
 			>
-				<span class="flex items-center gap-2"
+				<span class="passport-brand flex items-center"
 					><Glider class="size-4" /> Purdue Hackers · Identity</span
 				>
 				<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
 			</div>
-			<div class="flex flex-col gap-2">
-				<span class="ph-headline text-3xl break-words sm:text-4xl">{name}</span>
-				<span class="font-mono text-xs"
+			<div class="passport-holder flex flex-col">
+				<span class="passport-name ph-headline">{name}</span>
+				<span class="passport-username font-mono"
 					>{username ? `@${username}` : 'Your next chapter starts here'}</span
 				>
 			</div>
-			<div
-				class="border-t border-ph-black/20 pt-2 font-mono text-[10px] tracking-[0.2em] uppercase"
-			>
+			<div class="passport-footer border-t border-ph-black/20 font-mono tracking-[0.2em] uppercase">
 				Purdue Hackers Passport
 			</div>
 		</div>
@@ -149,30 +147,36 @@
 		position: relative;
 		z-index: 60;
 		width: 100%;
+		max-width: 440px;
 		min-width: 0;
+		margin-inline: auto;
+		aspect-ratio: 85.6 / 53.98;
+		container-type: inline-size;
 		perspective: 1200px;
 	}
 	.waiting {
 		visibility: hidden;
 	}
 	.passport-faces {
+		position: absolute;
+		inset: 0;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		width: 100%;
+		height: 100%;
 		min-width: 0;
 		transform-style: preserve-3d;
 	}
 	.passport-face {
 		grid-area: 1 / 1;
-		/* Keep aspect-ratio/min-height from imposing an intrinsic minimum width.
-		   Firefox otherwise lets a face exceed its grid track on narrow phones. */
 		width: 100%;
+		height: 100%;
 		min-width: 0;
+		min-height: 0;
+		overflow: hidden;
 		overflow-wrap: anywhere;
-		min-height: 220px;
-		aspect-ratio: 1.586;
-		border-radius: 16px;
-		padding: 24px;
+		border-radius: clamp(10px, 4cqw, 16px);
+		padding: clamp(16px, 6cqw, 24px);
 		backface-visibility: hidden;
 		box-shadow: 0 16px 45px rgb(0 0 0 / 0.16);
 	}
@@ -180,9 +184,44 @@
 		display: flex;
 		flex-direction: column;
 		justify-content: space-between;
-		gap: 20px;
+		gap: 3cqw;
 		background: var(--ph-yellow);
 		color: var(--ph-black);
+	}
+	.passport-header {
+		gap: 2cqw;
+		font-size: clamp(7px, 2.25cqw, 10px);
+	}
+	.passport-brand {
+		gap: 1.8cqw;
+		min-width: 0;
+	}
+	.passport-brand :global(svg) {
+		width: 4cqw;
+		height: 4cqw;
+	}
+	.passport-holder {
+		gap: 1.6cqw;
+		min-height: 0;
+	}
+	.passport-name {
+		font-size: clamp(20px, 8cqw, 36px);
+		line-height: 1.05;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		overflow: hidden;
+	}
+	.passport-username {
+		font-size: clamp(9px, 2.7cqw, 12px);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
+	}
+	.passport-footer {
+		padding-top: 2cqw;
+		font-size: clamp(7px, 2.25cqw, 10px);
 	}
 	.passport-back {
 		display: grid;
@@ -190,6 +229,10 @@
 		background: var(--ph-black);
 		color: var(--ph-yellow);
 		transform: rotateY(180deg);
+	}
+	.passport-back :global(svg) {
+		width: 20cqw;
+		height: 20cqw;
 	}
 	@media (prefers-reduced-motion: reduce) {
 		.waiting {

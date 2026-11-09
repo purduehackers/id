@@ -23,7 +23,7 @@
 
 		<main
 			oninput={() => window.dispatchEvent(new Event('ph:glider'))}
-			class="flex w-full max-w-[440px] flex-1 flex-col gap-8 py-8 lg:justify-center lg:py-16"
+			class="mx-auto flex w-full max-w-[440px] flex-1 flex-col gap-8 py-8 lg:justify-center lg:py-16"
 		>
 			{@render children()}
 		</main>
