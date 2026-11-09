@@ -316,7 +316,7 @@
 		clip-path: inset(0 -64px -64px);
 		perspective: 2400px;
 		perspective-origin: center top;
-		background: #000;
+		background: transparent;
 	}
 	.passport-page {
 		transform-origin: center top;
