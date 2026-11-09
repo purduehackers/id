@@ -49,7 +49,13 @@
 
 <style>
 	main.booklet {
+		--cover-strip-height: 56px;
 		justify-content: flex-start;
 		padding-top: calc(32px + env(safe-area-inset-top, 0px));
+	}
+	@media (min-width: 1024px) {
+		main.booklet {
+			--cover-strip-height: 64px;
+		}
 	}
 </style>
