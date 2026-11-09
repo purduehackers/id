@@ -398,7 +398,7 @@
 		aria-hidden={!opened}
 		aria-label="Purdue Hackers ID home"
 	>
-		<Glider class="size-4" />
+		<Glider solid class="size-4" />
 		<span class="ph-headline">Purdue Hackers ID</span>
 	</a>
 </div>
