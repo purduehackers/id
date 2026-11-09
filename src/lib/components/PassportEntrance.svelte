@@ -22,6 +22,7 @@
 
 	let card: HTMLDivElement;
 	let cover: HTMLDivElement;
+	let paper: HTMLDivElement;
 	let outside: HTMLDivElement;
 	let inside: HTMLDivElement;
 	let sheen: HTMLDivElement;
@@ -84,6 +85,7 @@
 		}
 		const above = -card.getBoundingClientRect().bottom - 24;
 		const duration = 2700;
+		const pageLift = Math.min(14, card.getBoundingClientRect().height * 0.06);
 		const easeOut = 'cubic-bezier(0.16, 1, 0.3, 1)';
 		const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
 		animations = [
@@ -97,6 +99,22 @@
 					{ transform: 'translateY(4px) rotateZ(0.4deg) scale(1)', offset: 0.25, easing: settle },
 					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 0.31 },
 					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 1 }
+				],
+				{ duration, fill: 'both' }
+			),
+			paper.animate(
+				[
+					{ transform: 'translateY(0)', offset: 0 },
+					{ transform: 'translateY(0)', offset: 0.35, easing: 'cubic-bezier(0.25, 0.5, 0.35, 1)' },
+					{ transform: `translateY(${-pageLift * 0.3}px)`, offset: 0.46, easing: easeOut },
+					{
+						transform: `translateY(${-pageLift}px)`,
+						offset: 0.6,
+						easing: 'cubic-bezier(0.5, 0, 0.75, 0.6)'
+					},
+					{ transform: 'translateY(-1px)', offset: 0.78, easing: settle },
+					{ transform: 'translateY(0)', offset: 0.86 },
+					{ transform: 'translateY(0)', offset: 1 }
 				],
 				{ duration, fill: 'both' }
 			),
@@ -172,32 +190,34 @@
 <div class="cover-safe-area" bind:this={safeArea} aria-hidden="true"></div>
 
 <div class="passport-stage" class:waiting bind:this={card}>
-	<div class="passport-faces">
-		{#if profile}
-			<IdCard {...profile} embedded />
-		{:else}
-			<div class="passport-face passport-front">
-				<div
-					class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
-				>
-					<span class="passport-brand flex items-center">Identity document</span>
-					<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
-				</div>
-				<div class="passport-holder flex flex-col">
-					<span class="passport-name ph-headline">{name}</span>
-					<span class="passport-username font-mono"
-						>{username ? `@${username}` : 'Your next chapter starts here'}</span
+	<div class="passport-page" bind:this={paper}>
+		<div class="passport-faces">
+			{#if profile}
+				<IdCard {...profile} embedded />
+			{:else}
+				<div class="passport-face passport-front">
+					<div
+						class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
 					>
+						<span class="passport-brand flex items-center">Identity document</span>
+						<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
+					</div>
+					<div class="passport-holder flex flex-col">
+						<span class="passport-name ph-headline">{name}</span>
+						<span class="passport-username font-mono"
+							>{username ? `@${username}` : 'Your next chapter starts here'}</span
+						>
+					</div>
+					<div class="passport-footer font-mono tracking-[0.2em] uppercase">
+						Purdue Hackers Passport <span class="document-mark" aria-hidden="true"
+							>|||| ||| || ||||</span
+						>
+					</div>
 				</div>
-				<div class="passport-footer font-mono tracking-[0.2em] uppercase">
-					Purdue Hackers Passport <span class="document-mark" aria-hidden="true"
-						>|||| ||| || ||||</span
-					>
-				</div>
-			</div>
-		{/if}
+			{/if}
+		</div>
+		<div class="page-shade" bind:this={shade} aria-hidden="true"></div>
 	</div>
-	<div class="page-shade" bind:this={shade} aria-hidden="true"></div>
 	<div class="passport-cover" bind:this={cover}>
 		<div class="cover-outside" bind:this={outside} aria-hidden="true">
 			<div class="cover-sheen" bind:this={sheen}></div>
@@ -236,6 +256,11 @@
 	}
 	.waiting {
 		visibility: hidden;
+	}
+	.passport-page {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
 	}
 	.passport-faces {
 		position: absolute;
