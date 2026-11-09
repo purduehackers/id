@@ -86,7 +86,7 @@
 		}
 		const above = -card.getBoundingClientRect().bottom - 24;
 		const arrivalDuration = 600;
-		const openingStart = arrivalDuration * 0.6;
+		const openingStart = arrivalDuration * 0.4;
 		const openingDuration = 700;
 		const duration = openingStart + openingDuration + 80;
 		const opening = (progress: number) => (openingStart + progress * openingDuration) / duration;
