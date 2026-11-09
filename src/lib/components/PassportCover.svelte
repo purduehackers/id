@@ -1,5 +1,4 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
 	/** Exact Figma vector artwork, with a reflection clipped to its gold foil. */
 	let {
 		title = 'PASSPORT',
@@ -8,43 +7,19 @@
 	let artwork: HTMLDivElement;
 	let pitch = 0;
 	let roll = 0;
-	let viewX = 0;
-	let viewY = 0;
 	function reflect() {
 		if (!artwork) return;
 		// A fixed virtual light reflected by the moving cover. Coordinates are
 		// counter-rotated because the Figma seal itself is rotated clockwise.
-		artwork.style.setProperty('--foil-x', `${44 + pitch * 0.85 + viewY * 32}%`);
-		artwork.style.setProperty('--foil-y', `${38 - roll * 0.8 - viewX * 32}%`);
-		artwork.style.setProperty('--foil-angle', `${115 + roll * 0.6 + viewX * 18}deg`);
+		artwork.style.setProperty('--foil-x', `${44 + pitch * 0.85}%`);
+		artwork.style.setProperty('--foil-y', `${38 - roll * 0.8}%`);
+		artwork.style.setProperty('--foil-angle', `${115 + roll * 0.6}deg`);
 	}
 	export function setPose(nextPitch: number, nextRoll: number) {
 		pitch = nextPitch;
 		roll = nextRoll;
 		reflect();
 	}
-	onMount(() => {
-		const pointer = (event: PointerEvent) => {
-			const bounds = artwork.getBoundingClientRect();
-			viewX = Math.max(-1, Math.min(1, ((event.clientX - bounds.left) / bounds.width) * 2 - 1));
-			viewY = Math.max(-1, Math.min(1, ((event.clientY - bounds.top) / bounds.height) * 2 - 1));
-			reflect();
-		};
-		const tilt = (event: DeviceOrientationEvent) => {
-			// Browsers that already permit orientation events need no permission prompt.
-			if (event.gamma === null || event.beta === null) return;
-			viewX = Math.max(-1, Math.min(1, event.gamma / 35));
-			viewY = Math.max(-1, Math.min(1, (event.beta - 45) / 35));
-			reflect();
-		};
-		window.addEventListener('pointermove', pointer, { passive: true });
-		window.addEventListener('deviceorientation', tilt);
-		reflect();
-		return () => {
-			window.removeEventListener('pointermove', pointer);
-			window.removeEventListener('deviceorientation', tilt);
-		};
-	});
 </script>
 
 <div class="passport-cover-art" bind:this={artwork}>
