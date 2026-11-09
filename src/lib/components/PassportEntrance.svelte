@@ -23,6 +23,8 @@
 	let card: HTMLDivElement;
 	let cover: HTMLDivElement;
 	let paper: HTMLDivElement;
+	let paperShadow: HTMLDivElement;
+	let coverShadow: HTMLDivElement;
 	let outside: HTMLDivElement;
 	let inside: HTMLDivElement;
 	let sheen: HTMLDivElement;
@@ -88,6 +90,34 @@
 		const pageLift = Math.min(14, card.getBoundingClientRect().height * 0.06);
 		const easeOut = 'cubic-bezier(0.16, 1, 0.3, 1)';
 		const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
+		const pageFrames: Keyframe[] = [
+			{ transform: 'translateY(0) rotateX(0deg)', offset: 0 },
+			{
+				transform: 'translateY(0) rotateX(0deg)',
+				offset: 0.42,
+				easing: 'cubic-bezier(0.25, 0.5, 0.35, 1)'
+			},
+			{ transform: `translateY(${-pageLift * 0.3}px) rotateX(3deg)`, offset: 0.5, easing: easeOut },
+			{
+				transform: `translateY(${-pageLift}px) rotateX(10deg)`,
+				offset: 0.62,
+				easing: 'cubic-bezier(0.5, 0, 0.75, 0.6)'
+			},
+			{ transform: 'translateY(-1px) rotateX(1deg)', offset: 0.78, easing: settle },
+			{ transform: 'translateY(0) rotateX(0deg)', offset: 0.86 },
+			{ transform: 'translateY(0) rotateX(0deg)', offset: 1 }
+		];
+		const coverFrames: Keyframe[] = [
+			{ transform: 'rotateX(0deg)', offset: 0 },
+			{ transform: 'rotateX(0deg)', offset: 0.35, easing: 'cubic-bezier(0.4, 0, 0.7, 1)' },
+			{ transform: 'rotateX(0deg)', offset: 0.42, easing: 'cubic-bezier(0.55, 0, 0.7, 0.45)' },
+			{ transform: 'rotateX(60deg)', offset: 0.56, easing: 'cubic-bezier(0.3, 0.4, 0.6, 0.8)' },
+			{ transform: 'rotateX(90deg)', offset: 0.61, easing: 'cubic-bezier(0.16, 0.7, 0.25, 1)' },
+			{ transform: 'rotateX(134deg)', offset: 0.76, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
+			{ transform: 'rotateX(140deg)', offset: 0.86 },
+			{ transform: 'rotateX(140deg)', offset: 1 }
+		];
+
 		animations = [
 			card.animate(
 				[
@@ -102,33 +132,32 @@
 				],
 				{ duration, fill: 'both' }
 			),
-			paper.animate(
-				[
-					{ transform: 'translateY(0)', offset: 0 },
-					{ transform: 'translateY(0)', offset: 0.35, easing: 'cubic-bezier(0.25, 0.5, 0.35, 1)' },
-					{ transform: `translateY(${-pageLift * 0.3}px)`, offset: 0.46, easing: easeOut },
-					{
-						transform: `translateY(${-pageLift}px)`,
-						offset: 0.6,
-						easing: 'cubic-bezier(0.5, 0, 0.75, 0.6)'
-					},
-					{ transform: 'translateY(-1px)', offset: 0.78, easing: settle },
-					{ transform: 'translateY(0)', offset: 0.86 },
-					{ transform: 'translateY(0)', offset: 1 }
-				],
+			paper.animate(pageFrames, { duration, fill: 'both' }),
+			cover.animate(coverFrames, { duration, fill: 'both' }),
+			paperShadow.animate(
+				pageFrames.map((frame) => ({
+					...frame,
+					transform: `translate3d(8px, 14px, -16px) ${frame.transform}`,
+					filter: frame.offset === 0.62 ? 'blur(14px)' : 'blur(9px)',
+					boxShadow:
+						frame.offset === 0.62
+							? '0 28px 42px 8px rgb(0 0 0 / .14)'
+							: '0 12px 24px 4px rgb(0 0 0 / .18)'
+				})),
 				{ duration, fill: 'both' }
 			),
-			cover.animate(
-				[
-					{ transform: 'rotateX(0deg)', offset: 0 },
-					{ transform: 'rotateX(0deg)', offset: 0.35, easing: 'cubic-bezier(0.4, 0, 0.7, 1)' },
-					{ transform: 'rotateX(-6deg)', offset: 0.42, easing: 'cubic-bezier(0.55, 0, 0.7, 0.45)' },
-					{ transform: 'rotateX(60deg)', offset: 0.56, easing: 'cubic-bezier(0.3, 0.4, 0.6, 0.8)' },
-					{ transform: 'rotateX(90deg)', offset: 0.61, easing: 'cubic-bezier(0.16, 0.7, 0.25, 1)' },
-					{ transform: 'rotateX(134deg)', offset: 0.76, easing: 'cubic-bezier(0.2, 0.8, 0.3, 1)' },
-					{ transform: 'rotateX(140deg)', offset: 0.86 },
-					{ transform: 'rotateX(140deg)', offset: 1 }
-				],
+			coverShadow.animate(
+				coverFrames.map((frame) => {
+					const angle = Number(String(frame.transform).match(/rotateX\(([-.\d]+)/)?.[1] ?? 0);
+					const elevation =
+						Math.max(0, Math.sin((angle * Math.PI) / 180)) / Math.sin((140 * Math.PI) / 180);
+					return {
+						...frame,
+						transform: `translate3d(${8 + 8 * elevation}px, ${14 + 14 * elevation}px, -24px) ${frame.transform}`,
+						filter: `blur(${8 + 8 * elevation}px)`,
+						boxShadow: `0 ${10 + 8 * elevation}px ${22 + 14 * elevation}px ${4 + 3 * elevation}px rgb(0 0 0 / .17)`
+					};
+				}),
 				{ duration, fill: 'both' }
 			),
 			// Explicit face opacity also prevents Safari from compositing the foil
@@ -190,33 +219,37 @@
 <div class="cover-safe-area" bind:this={safeArea} aria-hidden="true"></div>
 
 <div class="passport-stage" class:waiting bind:this={card}>
-	<div class="passport-page" bind:this={paper}>
-		<div class="passport-faces">
-			{#if profile}
-				<IdCard {...profile} embedded />
-			{:else}
-				<div class="passport-face passport-front">
-					<div
-						class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
-					>
-						<span class="passport-brand flex items-center">Identity document</span>
-						<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
-					</div>
-					<div class="passport-holder flex flex-col">
-						<span class="passport-name ph-headline">{name}</span>
-						<span class="passport-username font-mono"
-							>{username ? `@${username}` : 'Your next chapter starts here'}</span
+	<div class="ground-shadow shadow-paper" bind:this={paperShadow} aria-hidden="true"></div>
+	<div class="ground-shadow shadow-cover" bind:this={coverShadow} aria-hidden="true"></div>
+	<div class="passport-page-clip">
+		<div class="passport-page" bind:this={paper}>
+			<div class="passport-faces">
+				{#if profile}
+					<IdCard {...profile} embedded />
+				{:else}
+					<div class="passport-face passport-front">
+						<div
+							class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
 						>
+							<span class="passport-brand flex items-center">Identity document</span>
+							<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
+						</div>
+						<div class="passport-holder flex flex-col">
+							<span class="passport-name ph-headline">{name}</span>
+							<span class="passport-username font-mono"
+								>{username ? `@${username}` : 'Your next chapter starts here'}</span
+							>
+						</div>
+						<div class="passport-footer font-mono tracking-[0.2em] uppercase">
+							Purdue Hackers Passport <span class="document-mark" aria-hidden="true"
+								>|||| ||| || ||||</span
+							>
+						</div>
 					</div>
-					<div class="passport-footer font-mono tracking-[0.2em] uppercase">
-						Purdue Hackers Passport <span class="document-mark" aria-hidden="true"
-							>|||| ||| || ||||</span
-						>
-					</div>
-				</div>
-			{/if}
+				{/if}
+			</div>
+			<div class="page-shade" bind:this={shade} aria-hidden="true"></div>
 		</div>
-		<div class="page-shade" bind:this={shade} aria-hidden="true"></div>
 	</div>
 	<div class="passport-cover" bind:this={cover}>
 		<div class="cover-outside" bind:this={outside} aria-hidden="true">
@@ -257,7 +290,36 @@
 	.waiting {
 		visibility: hidden;
 	}
+	.ground-shadow {
+		position: absolute;
+		inset: 0;
+		z-index: -1;
+		pointer-events: none;
+		background: rgb(0 0 0 / 0.1);
+		filter: blur(9px);
+		transform-origin: center top;
+	}
+	.shadow-paper {
+		transform: translate3d(8px, 14px, -16px);
+		box-shadow: 0 12px 24px 4px rgb(0 0 0 / 0.18);
+	}
+	.shadow-cover {
+		filter: blur(16px);
+		transform: translate3d(16px, 28px, -24px) rotateX(140deg);
+		box-shadow: 0 18px 36px 7px rgb(0 0 0 / 0.17);
+	}
+	.passport-page-clip {
+		position: absolute;
+		inset: 0;
+		z-index: 0;
+		overflow: visible;
+		clip-path: inset(0 -64px -64px);
+		perspective: 2400px;
+		perspective-origin: center top;
+		background: #000;
+	}
 	.passport-page {
+		transform-origin: center top;
 		position: absolute;
 		inset: 0;
 		z-index: 0;
@@ -271,7 +333,6 @@
 		height: 100%;
 		min-width: 0;
 		transform-style: preserve-3d;
-		box-shadow: 0 14px 35px rgb(0 0 0 / 0.14);
 	}
 	.passport-face {
 		grid-area: 1 / 1;
@@ -284,7 +345,6 @@
 		border-radius: 0;
 		padding: clamp(16px, 6cqw, 24px);
 		backface-visibility: hidden;
-		box-shadow: 0 16px 45px rgb(0 0 0 / 0.16);
 	}
 	.passport-front {
 		display: flex;
@@ -374,9 +434,7 @@
 		background:
 			repeating-linear-gradient(110deg, rgb(255 255 255 / 0.025) 0 1px, transparent 1px 4px),
 			linear-gradient(145deg, #202020, #060606 65%);
-		box-shadow:
-			inset 0 1px 0 rgb(255 255 255 / 0.16),
-			0 12px 30px rgb(0 0 0 / 0.22);
+		box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16);
 	}
 	.cover-outside::before {
 		content: '';
@@ -419,11 +477,11 @@
 		bottom: var(--cover-header-center, 36px);
 		height: 1em;
 		transform: translateY(50%);
-		inset-inline: clamp(16px, 6cqw, 24px);
+		inset-inline: clamp(22px, 8cqw, 34px);
 		display: flex;
 		align-items: center;
 		gap: 8px;
-		font-size: clamp(22px, 8.3cqw, 38px);
+		font-size: clamp(22px, 7.8cqw, 35px);
 		line-height: 1;
 		text-decoration: none;
 		color: #fbf7ec;
