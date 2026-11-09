@@ -41,7 +41,15 @@
 			animations.forEach((animation) => animation.cancel());
 			onfinish();
 		};
+		const fitHeader = () => {
+			const text = header.querySelector('span')!;
+			text.style.setProperty(
+				'--cover-header-text-scale',
+				String(Math.min(1, text.clientWidth / text.scrollWidth))
+			);
+		};
 		const alignHeader = () => {
+			fitHeader();
 			// Center in the visible cover strip, accounting for its 40° projection.
 			const visibleHeight = Math.max(
 				0,
@@ -63,9 +71,16 @@
 		};
 		alignHeader();
 		window.addEventListener('resize', resize);
+		document.fonts.addEventListener('loadingdone', fitHeader);
+		void document.fonts.ready.then(() => {
+			if (header.isConnected) fitHeader();
+		});
 		if (!animate || reduced.matches) {
 			finish();
-			return () => window.removeEventListener('resize', resize);
+			return () => {
+				window.removeEventListener('resize', resize);
+				document.fonts.removeEventListener('loadingdone', fitHeader);
+			};
 		}
 		const above = -card.getBoundingClientRect().bottom - 24;
 		const duration = 2700;
@@ -148,6 +163,7 @@
 		return () => {
 			finish();
 			window.removeEventListener('resize', resize);
+			document.fonts.removeEventListener('loadingdone', fitHeader);
 			reduced.removeEventListener('change', finish);
 		};
 	});
@@ -386,6 +402,14 @@
 		line-height: 1;
 		text-decoration: none;
 		color: #fbf7ec;
+	}
+	.cover-header > span {
+		display: block;
+		flex: 1;
+		min-width: 0;
+		white-space: nowrap;
+		transform: scaleX(var(--cover-header-text-scale, 1));
+		transform-origin: left center;
 	}
 	.cover-header :global(svg) {
 		width: 1em;
