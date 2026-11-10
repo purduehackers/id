@@ -12,7 +12,6 @@
 		name,
 		username,
 		headerStripHeight,
-		inspectOnSpace = true,
 		class: className,
 		animate = false,
 		onstart = () => {},
@@ -24,7 +23,6 @@
 		username?: string | null;
 		animate?: boolean;
 		headerStripHeight?: number;
-		inspectOnSpace?: boolean;
 		class?: string;
 		onstart?: () => void;
 		onfinish?: () => void;
@@ -45,7 +43,6 @@
 	let shade: HTMLDivElement;
 	let header: HTMLAnchorElement;
 	let coverArt: PassportCover;
-	let inspecting = $state(false);
 	let opened = $state(untrack(() => !animate));
 	let waiting = $state(untrack(() => animate));
 
@@ -60,33 +57,12 @@
 			if (finished) return;
 			finished = true;
 			cancelAnimationFrame(reflectionFrame);
-			coverArt?.setPose(inspecting ? 0 : 140, 0);
-			opened = !inspecting;
+			coverArt?.setPose(140, 0);
+			opened = true;
 			waiting = false;
 			animations.forEach((animation) => animation.cancel());
 			onfinish();
 		};
-		const inspectCover = () => {
-			if (!inspectOnSpace || disposed || inspecting) return;
-			inspecting = true;
-			window.scrollTo(0, 0);
-			finish();
-		};
-		const handleSpace = (event: KeyboardEvent) => {
-			if (event.code !== 'Space' || !inspectOnSpace || (finished && !inspecting)) return;
-			const target = event.target;
-			if (
-				target instanceof Element &&
-				target.closest('input, textarea, select, [contenteditable="true"]')
-			)
-				return;
-			event.preventDefault();
-			inspectCover();
-		};
-		window.addEventListener('keydown', handleSpace, true);
-		if ((window as Window & { __phPassportSpaceHeld?: boolean }).__phPassportSpaceHeld)
-			inspectCover();
-
 		let headerDistance = 36;
 		const headerPose = (coverAngle: number) => {
 			// Flatten the cover's exact perspective onto one front-facing plane.
@@ -335,7 +311,6 @@
 			cancelAnimationFrame(reflectionFrame);
 			if (started) animations.forEach((animation) => animation.cancel());
 			window.removeEventListener('resize', resize);
-			window.removeEventListener('keydown', handleSpace, true);
 			document.fonts.removeEventListener('loadingdone', fitHeader);
 			reduced.removeEventListener('change', finish);
 		};
@@ -347,7 +322,6 @@
 <div
 	class={['passport-shell', className]}
 	class:opened
-	class:inspecting
 	bind:this={booklet}
 	style:--cover-strip-height={headerStripHeight === undefined
 		? undefined
@@ -630,20 +604,6 @@
 	}
 	.opened .cover-resting-header {
 		opacity: 1;
-	}
-	.inspecting .passport-cover {
-		transform: rotateX(0deg);
-	}
-	.inspecting .cover-outside {
-		opacity: 1;
-	}
-	.inspecting .cover-inside,
-	.inspecting .cover-header {
-		opacity: 0;
-		pointer-events: none;
-	}
-	.inspecting .shadow-cover {
-		opacity: 0;
 	}
 	.document-mark {
 		color: var(--ph-purple);
