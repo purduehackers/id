@@ -24,9 +24,13 @@
 		{/if}
 
 		<main
-			class:booklet
 			oninput={() => window.dispatchEvent(new Event('ph:glider'))}
-			class="flex w-full max-w-[440px] flex-1 flex-col gap-8 py-8 lg:justify-center lg:py-16"
+			class={[
+				'flex w-full max-w-[440px] flex-1 flex-col gap-8 pb-8 lg:pb-16',
+				booklet
+					? 'mx-auto justify-start pt-[calc(32px+env(safe-area-inset-top,0px))] [--cover-strip-height:56px] lg:[--cover-strip-height:64px]'
+					: 'pt-8 lg:justify-center lg:pt-16'
+			]}
 		>
 			{@render children()}
 		</main>
@@ -46,17 +50,3 @@
 		</a>
 	</aside>
 </div>
-
-<style>
-	main.booklet {
-		--cover-strip-height: 56px;
-		justify-content: flex-start;
-		margin-inline: auto;
-		padding-top: calc(32px + env(safe-area-inset-top, 0px));
-	}
-	@media (min-width: 1024px) {
-		main.booklet {
-			--cover-strip-height: 64px;
-		}
-	}
-</style>

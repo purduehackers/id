@@ -70,21 +70,30 @@
 		};
 	}
 
-	const face =
-		'id-face col-start-1 row-start-1 flex flex-col p-5 backface-hidden sm:aspect-[1.586] sm:p-7';
+	const face = $derived([
+		'col-start-1 row-start-1 flex flex-col backface-hidden',
+		embedded
+			? 'size-full min-h-0 min-w-0 overflow-hidden p-[5cqw] [overflow-wrap:anywhere]'
+			: 'p-5 sm:aspect-[1.586] sm:p-7'
+	]);
 </script>
 
 <div
-	class="id-card w-full max-w-[560px] perspective-[1200px]"
+	class={[
+		'w-full max-w-[560px] perspective-[1200px]',
+		embedded && '@container relative aspect-[85.6/53.98] min-w-0'
+	]}
 	class:enter={!embedded}
-	class:embedded
 	style="--i: 1"
 >
 	<div
 		bind:this={card}
 		onpointermove={move}
 		onpointerleave={() => (tilt = { x: 0, y: 0 })}
-		class="id-tilt transition-transform duration-300 ease-out transform-3d"
+		class={[
+			'transition-transform duration-300 ease-out transform-3d',
+			embedded && 'absolute inset-0'
+		]}
 		style="transform: rotateX({tilt.x}deg) rotateY({tilt.y}deg)"
 		role="presentation"
 	>
@@ -96,65 +105,113 @@
 			}}
 			aria-pressed={embedded ? undefined : flipped}
 			aria-label={`Purdue Hackers ID for ${name}, @${username}, ${label}${embedded ? '' : '. Flip the card'}`}
-			class="id-flip grid w-full cursor-pointer grid-cols-1 text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none"
+			class={[
+				'grid w-full text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none',
+				embedded ? 'h-full cursor-default grid-cols-[minmax(0,1fr)]' : 'cursor-pointer grid-cols-1'
+			]}
 			style="transform: rotateY({flipped ? 180 : 0}deg)"
 		>
 			<!-- Front -->
-			<div class={[face, 'id-front justify-between gap-6', theme.card]} aria-hidden="true">
-				<div class="id-heading flex items-start justify-between gap-4">
-					<div class="id-brand flex items-center gap-2">
-						<Glider class="id-brand-logo size-5" />
-						<span class="ph-subheadline text-[11px] sm:text-[12px]">Purdue Hackers · Identity</span>
+			<div
+				class={[face, 'justify-between', embedded ? 'gap-0' : 'gap-6', theme.card]}
+				aria-hidden="true"
+			>
+				<div
+					class={[
+						'flex items-start justify-between',
+						embedded ? 'gap-[2.8cqw] text-[2.14cqw] leading-[1.2]' : 'gap-4'
+					]}
+				>
+					<div class={['flex items-center', embedded ? 'gap-[1.4cqw]' : 'gap-2']}>
+						<Glider class={embedded ? 'size-[3.57cqw]' : 'size-5'} />
+						<span
+							class={[
+								'ph-subheadline',
+								embedded ? 'text-[length:inherit]' : 'text-[11px] sm:text-[12px]'
+							]}>Purdue Hackers · Identity</span
+						>
 					</div>
 					<span
-						class="id-serial flex items-center gap-2 font-mono text-[12px] font-semibold sm:text-[13px]"
+						class={[
+							'flex items-center font-mono font-semibold',
+							embedded
+								? 'gap-[1.4cqw] text-[2.32cqw] whitespace-nowrap'
+								: 'gap-2 text-[12px] sm:text-[13px]'
+						]}
 					>
 						Nº {serial}
 						{#if !embedded}<Icon name="refresh" class="size-3.5" />{/if}
 					</span>
 				</div>
 
-				<div class="id-person flex items-end gap-4 sm:gap-6">
+				<div class={['flex items-end', embedded ? 'gap-[4.28cqw]' : 'gap-4 sm:gap-6']}>
 					<div
-						class="id-picture grid size-20 shrink-0 place-items-center overflow-hidden bg-ph-black/10 sm:size-28"
+						class={[
+							'grid shrink-0 place-items-center overflow-hidden bg-ph-black/10',
+							embedded ? 'size-[20cqw]' : 'size-20 sm:size-28'
+						]}
 					>
 						{#if image}
 							<img src={image} alt="" class="size-full object-cover" />
 						{:else}
-							<Identicon seed={id} accent={theme.accent} class="id-identicon size-12 sm:size-16" />
+							<Identicon
+								seed={id}
+								accent={theme.accent}
+								class={embedded ? 'size-[11.42cqw]' : 'size-12 sm:size-16'}
+							/>
 						{/if}
 					</div>
-					<div class="id-details flex min-w-0 flex-col gap-1.5 sm:gap-2">
+					<div class={['flex min-w-0 flex-col', embedded ? 'gap-[1.4cqw]' : 'gap-1.5 sm:gap-2']}>
 						<span
-							class:long-name={name.length > 12}
-							class:long-word={longestWord > 10}
 							class={[
-								'id-name ph-headline break-words',
-								longestWord > 10 ? 'text-2xl' : 'text-4xl',
-								name.length > 16 ? 'sm:text-5xl' : 'sm:text-6xl'
+								'ph-headline break-words',
+								embedded
+									? [
+											'line-clamp-2 leading-none [overflow-wrap:anywhere]',
+											longestWord > 10
+												? 'text-[7.3cqw]'
+												: name.length > 12
+													? 'text-[8.57cqw]'
+													: 'text-[10.7cqw]'
+										]
+									: [
+											longestWord > 10 ? 'text-2xl' : 'text-4xl',
+											name.length > 16 ? 'sm:text-5xl' : 'sm:text-6xl'
+										]
 							]}
 						>
 							{name}
 						</span>
 						<span
-							class="id-meta flex flex-wrap gap-x-3 font-mono text-[12px] font-semibold uppercase sm:text-[13px]"
+							class={[
+								'flex flex-wrap font-mono font-semibold uppercase',
+								embedded
+									? 'gap-x-[2.14cqw] gap-y-0 text-[2.32cqw] leading-[1.3]'
+									: 'gap-x-3 text-[12px] sm:text-[13px]'
+							]}
 						>
 							<span>@{username}</span>
 							<span>{label}</span>
 							<span>Since {registered.getFullYear()}</span>
 							{#if censored}<span
-									>Class of <span class="id-redacted" style:width="5.5cqw"></span></span
+									>Class of <span class="inline-block h-[1em] w-[5.5cqw] bg-current align-middle"
+									></span></span
 								>{:else if graduationYear}<span>Class of {graduationYear}</span>{/if}
 						</span>
-						<span class="id-email truncate text-[13px] sm:text-[14px]"
-							>{#if censored}<span class="id-redacted" style:width="38cqw"
+						<span class={['truncate', embedded ? 'text-[2.5cqw]' : 'text-[13px] sm:text-[14px]']}
+							>{#if censored}<span class="inline-block h-[1em] w-[38cqw] bg-current align-middle"
 								></span>{:else}{email}{/if}</span
 						>
 					</div>
 				</div>
 
 				<div
-					class="id-mrz -mx-5 -mb-5 bg-ph-black/[0.07] px-5 py-2 font-mono text-[10px] leading-[1.35] tracking-[0.18em] sm:-mx-7 sm:-mb-7 sm:px-7 sm:text-[12px]"
+					class={[
+						'bg-ph-black/[0.07] font-mono leading-[1.35] tracking-[0.18em]',
+						embedded
+							? '-mx-[5cqw] -mb-[5cqw] px-[5cqw] py-[1.4cqw] text-[2.14cqw]'
+							: '-mx-5 -mb-5 px-5 py-2 text-[10px] sm:-mx-7 sm:-mb-7 sm:px-7 sm:text-[12px]'
+					]}
 				>
 					{#each mrz as line, i (i)}<div class="truncate">{line}</div>{/each}
 				</div>
@@ -229,106 +286,3 @@
 		</button>
 	</div>
 </div>
-
-<style>
-	.embedded {
-		position: relative;
-		width: 100%;
-		max-width: 560px;
-		min-width: 0;
-		aspect-ratio: 85.6 / 53.98;
-		container-type: inline-size;
-		perspective: 1200px;
-	}
-	.embedded .id-tilt {
-		position: absolute;
-		inset: 0;
-	}
-	.embedded .id-flip {
-		cursor: default;
-		height: 100%;
-		grid-template-columns: minmax(0, 1fr);
-	}
-	.embedded .id-face {
-		width: 100%;
-		height: 100%;
-		min-width: 0;
-		min-height: 0;
-		padding: 5cqw;
-		aspect-ratio: auto;
-		overflow: hidden;
-		overflow-wrap: anywhere;
-	}
-	.embedded .id-heading {
-		gap: 2.8cqw;
-		font-size: 2.14cqw;
-		line-height: 1.2;
-	}
-	.embedded .id-brand,
-	.embedded .id-details {
-		gap: 1.4cqw;
-	}
-	.embedded .id-brand :global(.id-brand-logo) {
-		width: 3.57cqw;
-		height: 3.57cqw;
-	}
-	.embedded .id-serial {
-		gap: 1.4cqw;
-		font-size: 2.32cqw;
-		white-space: nowrap;
-	}
-	.embedded .id-person {
-		gap: 4.28cqw;
-	}
-	.embedded .id-picture {
-		width: 20cqw;
-		height: 20cqw;
-	}
-	.embedded .id-picture :global(.id-identicon) {
-		width: 11.42cqw;
-		height: 11.42cqw;
-	}
-	.embedded .id-name {
-		font-size: 10.7cqw;
-		line-height: 1;
-		display: -webkit-box;
-		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		overflow: hidden;
-		overflow-wrap: anywhere;
-	}
-	.embedded .id-name.long-name {
-		font-size: 8.57cqw;
-	}
-	.embedded .id-name.long-word {
-		font-size: 7.3cqw;
-	}
-	.id-redacted {
-		display: inline-block;
-		height: 1em;
-		vertical-align: middle;
-		background: currentColor;
-	}
-	.embedded .id-meta {
-		gap: 0 2.14cqw;
-		font-size: 2.32cqw;
-		line-height: 1.3;
-	}
-	.embedded .id-email {
-		font-size: 2.5cqw;
-	}
-	.embedded .id-mrz {
-		margin: 0 -5cqw -5cqw;
-		padding: 1.4cqw 5cqw;
-		font-size: 2.14cqw;
-		line-height: 1.35;
-		letter-spacing: 0.18em;
-	}
-	.embedded .id-front {
-		gap: 0;
-	}
-	.embedded .id-heading .ph-subheadline {
-		font-size: inherit;
-	}
-</style>

@@ -295,58 +295,92 @@
 	});
 </script>
 
-<div class="cover-safe-area" aria-hidden="true"></div>
+<div
+	class="pointer-events-none fixed inset-x-0 top-0 z-[61] h-[env(safe-area-inset-top,0px)] bg-ph-black"
+	aria-hidden="true"
+></div>
 
 <div
-	class={['passport-shell', className]}
+	class={['passport-shell @container relative z-[60] mx-auto w-full max-w-[440px]', className]}
 	class:opened
 	bind:this={booklet}
 	style:--cover-strip-height={headerStripHeight === undefined
 		? undefined
 		: `${headerStripHeight}px`}
 >
-	<div class="passport-stage" class:waiting bind:this={card}>
-		<div class="ground-shadow shadow-paper" bind:this={paperShadow} aria-hidden="true"></div>
-		<div class="ground-shadow shadow-cover" bind:this={coverShadow} aria-hidden="true"></div>
-		<div class="passport-page-clip">
-			<div class="passport-page" bind:this={paper}>
-				<div class="passport-faces">
+	<div
+		class="passport-stage @container relative z-0 mx-auto aspect-[85.6/53.98] w-full max-w-[440px] min-w-0 motion-reduce:visible"
+		class:invisible={waiting}
+		bind:this={card}
+	>
+		<div
+			class="ground-shadow shadow-paper pointer-events-none absolute inset-0 -z-1 bg-[var(--passport-plate)] blur-[4px]"
+			bind:this={paperShadow}
+			aria-hidden="true"
+		></div>
+		<div
+			class="ground-shadow shadow-cover pointer-events-none absolute inset-0 -z-1 bg-[var(--passport-plate)] blur-[4px]"
+			bind:this={coverShadow}
+			aria-hidden="true"
+		></div>
+		<div class="passport-page-clip absolute inset-0 z-0 overflow-visible bg-transparent">
+			<div class="passport-page absolute inset-0 z-0" bind:this={paper}>
+				<div class="absolute inset-0 grid size-full min-w-0 grid-cols-[minmax(0,1fr)] transform-3d">
 					{#if profile}
 						<IdCard {...profile} embedded />
 					{:else}
-						<div class="passport-face passport-front">
+						<div
+							class="col-start-1 row-start-1 flex size-full min-h-0 min-w-0 flex-col justify-between gap-[3cqw] overflow-hidden border border-[var(--border)] bg-ph-cream p-[clamp(16px,6cqw,24px)] [overflow-wrap:anywhere] text-ph-black backface-hidden"
+						>
 							<div
-								class="passport-header flex items-center justify-between font-mono font-semibold tracking-wider uppercase"
+								class="flex items-center justify-between gap-[2cqw] border-b border-[var(--border)] pb-[2cqw] font-mono text-[clamp(7px,2.25cqw,10px)] font-semibold tracking-wider uppercase"
 							>
-								<span class="passport-brand flex items-center">Identity document</span>
+								<span class="flex min-w-0 items-center gap-[1.8cqw]">Identity document</span>
 								<span class="shrink-0">Nº {String(passportId).padStart(4, '0')}</span>
 							</div>
-							<div class="passport-holder flex flex-col">
-								<span class="passport-name ph-headline">{displayName}</span>
-								<span class="passport-username font-mono"
+							<div class="flex min-h-0 flex-col gap-[1.6cqw]">
+								<span class="line-clamp-2 ph-headline text-[clamp(20px,8cqw,36px)] leading-[1.05]"
+									>{displayName}</span
+								>
+								<span class="truncate font-mono text-[clamp(9px,2.7cqw,12px)]"
 									>{displayUsername ? `@${displayUsername}` : 'Your next chapter starts here'}</span
 								>
 							</div>
-							<div class="passport-footer font-mono tracking-[0.2em] uppercase">
-								Purdue Hackers Passport <span class="document-mark" aria-hidden="true"
-									>|||| ||| || ||||</span
+							<div
+								class="flex justify-between border-t border-[var(--border)] pt-[2cqw] font-mono text-[clamp(7px,2.25cqw,10px)] tracking-[0.2em] uppercase"
+							>
+								Purdue Hackers Passport <span
+									class="tracking-[-0.1em] text-ph-purple"
+									aria-hidden="true">|||| ||| || ||||</span
 								>
 							</div>
 						</div>
 					{/if}
 				</div>
-				<div class="page-shade" bind:this={shade} aria-hidden="true"></div>
+				<div
+					class="page-shade pointer-events-none absolute inset-0 z-1 opacity-0"
+					bind:this={shade}
+					aria-hidden="true"
+				></div>
 			</div>
 		</div>
-		<div class="passport-cover" bind:this={cover}>
-			<div class="cover-outside" bind:this={outside} aria-hidden="true">
+		<div class="passport-cover absolute inset-0 z-2 transform-3d" bind:this={cover}>
+			<div
+				class="cover-outside absolute inset-0 overflow-hidden opacity-0"
+				bind:this={outside}
+				aria-hidden="true"
+			>
 				<PassportCover bind:this={coverArt} />
 			</div>
-			<div class="cover-inside" bind:this={inside} aria-hidden="true"></div>
+			<div
+				class="cover-inside absolute inset-0 opacity-100"
+				bind:this={inside}
+				aria-hidden="true"
+			></div>
 		</div>
 	</div>
 	<a
-		class="cover-header cover-resting-header"
+		class="cover-header cover-resting-header absolute top-0 right-[clamp(22px,8cqw,34px)] bottom-auto left-[clamp(14px,4cqw,20px)] flex h-[1em] items-center gap-[clamp(14px,4cqw,20px)] text-[clamp(22px,7.8cqw,35px)] leading-none text-ph-cream no-underline"
 		bind:this={header}
 		href={resolve('/')}
 		tabindex={opened ? 0 : -1}
@@ -354,7 +388,7 @@
 		aria-label="Purdue Hackers ID home"
 	>
 		<Glider solid class="size-4" />
-		<span class="ph-headline">Purdue Hackers ID</span>
+		<span class="block min-w-0 flex-1 ph-headline whitespace-nowrap">Purdue Hackers ID</span>
 	</a>
 </div>
 
@@ -371,58 +405,13 @@
 		transform-origin: center top;
 	}
 
-	.ground-shadow,
-	.passport-page-clip,
-	.passport-page,
-	.passport-faces,
-	.page-shade,
-	.passport-cover,
-	.cover-outside,
-	.cover-inside {
-		position: absolute;
-		inset: 0;
-	}
-
-	.cover-safe-area {
-		position: fixed;
-		inset: 0 0 auto;
-		height: env(safe-area-inset-top, 0px);
-		background: var(--ph-black);
-		z-index: 61;
-		pointer-events: none;
-	}
 	.passport-shell {
 		/* Black shadows vanish on the dark page, so depth comes from a glow. */
 		--passport-glow: rgb(252 210 2 / 0.36);
 		--passport-cover-glow: rgb(252 210 2 / 0.22);
 		--passport-plate: rgb(252 210 2 / 0.08);
-		position: relative;
-		z-index: 60;
 		/* Keeps the same compositing context at rest as during the arrival animation. */
 		transform: translateZ(0);
-		width: 100%;
-		max-width: 440px;
-		margin-inline: auto;
-		container-type: inline-size;
-	}
-	.passport-stage {
-		position: relative;
-		z-index: 0;
-		width: 100%;
-		max-width: 440px;
-		min-width: 0;
-		margin-inline: auto;
-		aspect-ratio: 85.6 / 53.98;
-		container-type: inline-size;
-	}
-	.waiting {
-		visibility: hidden;
-	}
-	.ground-shadow {
-		z-index: -1;
-		pointer-events: none;
-		background: var(--passport-plate);
-		filter: blur(4px);
 	}
 	.shadow-paper {
 		box-shadow: 0 0 72px 14px var(--passport-glow);
@@ -432,86 +421,9 @@
 		box-shadow: 0 0 120px 30px var(--passport-cover-glow);
 	}
 	.passport-page-clip {
-		z-index: 0;
-		overflow: visible;
 		clip-path: inset(0 -64px -64px);
-		background: transparent;
-	}
-	.passport-page {
-		z-index: 0;
-	}
-	.passport-faces {
-		display: grid;
-		grid-template-columns: minmax(0, 1fr);
-		width: 100%;
-		height: 100%;
-		min-width: 0;
-		transform-style: preserve-3d;
-	}
-	.passport-face {
-		grid-area: 1 / 1;
-		width: 100%;
-		height: 100%;
-		min-width: 0;
-		min-height: 0;
-		overflow: hidden;
-		overflow-wrap: anywhere;
-		padding: clamp(16px, 6cqw, 24px);
-		backface-visibility: hidden;
-	}
-	.passport-front {
-		display: flex;
-		flex-direction: column;
-		justify-content: space-between;
-		gap: 3cqw;
-		background: var(--ph-cream);
-		color: var(--ph-black);
-		border: 1px solid var(--border);
-	}
-	.passport-header {
-		gap: 2cqw;
-		border-bottom: 1px solid var(--border);
-		padding-bottom: 2cqw;
-		font-size: clamp(7px, 2.25cqw, 10px);
-	}
-	.passport-brand {
-		gap: 1.8cqw;
-		min-width: 0;
-	}
-	.passport-brand :global(svg) {
-		width: 4cqw;
-		height: 4cqw;
-	}
-	.passport-holder {
-		gap: 1.6cqw;
-		min-height: 0;
-	}
-	.passport-name {
-		font-size: clamp(20px, 8cqw, 36px);
-		line-height: 1.05;
-		display: -webkit-box;
-		-webkit-box-orient: vertical;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		overflow: hidden;
-	}
-	.passport-username {
-		font-size: clamp(9px, 2.7cqw, 12px);
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-	}
-	.passport-footer {
-		padding-top: 2cqw;
-		border-top: 1px solid var(--border);
-		display: flex;
-		justify-content: space-between;
-		font-size: clamp(7px, 2.25cqw, 10px);
 	}
 	.page-shade {
-		z-index: 1;
-		pointer-events: none;
-		opacity: 0;
 		background: linear-gradient(
 			180deg,
 			var(--ph-black) 0%,
@@ -520,8 +432,6 @@
 		);
 	}
 	.passport-cover {
-		z-index: 2;
-		transform-style: preserve-3d;
 		transform: rotateX(140deg);
 	}
 	.cover-outside,
@@ -532,13 +442,10 @@
 		-webkit-backface-visibility: hidden;
 	}
 	.cover-outside {
-		opacity: 0;
 		transform: translateZ(0.5px);
-		overflow: hidden;
 	}
 	.cover-inside {
 		transform: rotateX(180deg) translateZ(0.5px);
-		opacity: 1;
 		/* No light border at the hinge: it reads as a gap against the yellow page.
 		   This face is flipped, so its bottom edge is the hinge. */
 		box-shadow:
@@ -547,26 +454,9 @@
 			inset 0 1px 0 var(--border);
 	}
 	.cover-header {
-		position: absolute;
-		top: 0;
-		bottom: auto;
-		height: 1em;
 		transform: translateY(50%);
-		left: clamp(14px, 4cqw, 20px);
-		right: clamp(22px, 8cqw, 34px);
-		display: flex;
-		align-items: center;
-		gap: clamp(14px, 4cqw, 20px);
-		font-size: clamp(22px, 7.8cqw, 35px);
-		line-height: 1;
-		text-decoration: none;
-		color: var(--ph-cream);
 	}
 	.cover-header > span {
-		display: block;
-		flex: 1;
-		min-width: 0;
-		white-space: nowrap;
 		transform: translateY(0.08em) scaleX(var(--cover-header-text-scale, 1));
 		transform-origin: left center;
 	}
@@ -584,14 +474,5 @@
 	}
 	.opened .cover-resting-header {
 		opacity: 1;
-	}
-	.document-mark {
-		color: var(--ph-purple);
-		letter-spacing: -0.1em;
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.waiting {
-			visibility: visible;
-		}
 	}
 </style>

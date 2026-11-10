@@ -133,15 +133,14 @@
 		{/if}
 	</AuthShell>
 </div>
-{#if entering}<div class="entrance-curtain" class:revealing aria-hidden="true"></div>{/if}
+{#if entering}<div
+		class="entrance-curtain pointer-events-none fixed inset-0 z-50 bg-background motion-reduce:hidden"
+		class:revealing
+		aria-hidden="true"
+	></div>{/if}
 
 <style>
 	.entrance-curtain {
-		position: fixed;
-		inset: 0;
-		z-index: 50;
-		background: var(--background);
-		pointer-events: none;
 		/* Fallback so a failed hydration cannot leave the page covered. */
 		animation: reveal-page-fallback 450ms 4s ease-out both;
 	}
@@ -162,11 +161,6 @@
 		}
 		to {
 			opacity: 0;
-		}
-	}
-	@media (prefers-reduced-motion: reduce) {
-		.entrance-curtain {
-			display: none;
 		}
 	}
 </style>

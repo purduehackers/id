@@ -20,19 +20,15 @@
 	}
 </script>
 
-<div class="passport-cover-art" bind:this={artwork}>
-	<div class="seal"></div>
+<div
+	class="passport-cover-art relative grid size-full place-items-center overflow-hidden bg-card"
+	bind:this={artwork}
+>
+	<div class="seal relative block aspect-square h-[96%] w-auto max-w-[94%] overflow-hidden"></div>
 </div>
 
 <style>
 	.passport-cover-art {
-		position: relative;
-		display: grid;
-		place-items: center;
-		width: 100%;
-		height: 100%;
-		overflow: hidden;
-		background: var(--card);
 		box-shadow:
 			inset 1px 0 0 var(--border),
 			inset -1px 0 0 var(--border),
@@ -49,16 +45,8 @@
 		mix-blend-mode: screen;
 	}
 	.seal {
-		position: relative;
-		display: block;
-		width: auto;
-		height: 96%;
-		max-width: 94%;
-		aspect-ratio: 1;
 		transform: rotate(90deg);
 		transform-origin: center;
-	}
-	.seal {
 		/* The mask uses the exact outlined Figma lettering and emblem. */
 		background:
 			radial-gradient(
@@ -79,6 +67,5 @@
 			);
 		-webkit-mask: url('/passport-seal.svg') center / contain no-repeat;
 		mask: url('/passport-seal.svg') center / contain no-repeat;
-		overflow: hidden;
 	}
 </style>
