@@ -1,5 +1,4 @@
 import type { Role } from './roles';
-import { identicon, type Cell } from './components/pixel.ts';
 
 export type IdCardData = {
 	id: string;
@@ -15,15 +14,13 @@ export type IdCardData = {
 	since: Date | string | null;
 	passports: number[];
 	linked: string[];
-	identiconCells?: Cell[][];
 	censored?: boolean;
 };
 
 /** Keeps only public fields: photo, name, @username, role, passport number and issue date. */
 export function censorIdCard(card: IdCardData, passportId: number): IdCardData {
 	return {
-		id: `passport-${passportId}`,
-		identiconCells: card.identiconCells ?? identicon(card.id),
+		id: card.id,
 		name: card.name,
 		givenName: card.givenName,
 		familyName: card.familyName,

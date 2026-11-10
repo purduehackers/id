@@ -23,7 +23,6 @@
 		since,
 		passports,
 		linked,
-		identiconCells,
 		censored = false,
 		embedded = false
 	}: Props = $props();
@@ -157,7 +156,6 @@
 						{:else}
 							<Identicon
 								seed={id}
-								cells={identiconCells}
 								accent={theme.accent}
 								class={embedded ? 'size-[11.42cqw]' : 'size-12 sm:size-16'}
 							/>
@@ -232,7 +230,7 @@
 							<span class="-rotate-2 truncate ph-headline text-2xl">{name}</span>
 						</div>
 						<span class="grid w-14 shrink-0 place-items-center bg-ph-black/10">
-							<Identicon seed={id} cells={identiconCells} accent={theme.accent} class="size-8" />
+							<Identicon seed={id} accent={theme.accent} class="size-8" />
 						</span>
 					</div>
 

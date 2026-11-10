@@ -1,15 +1,14 @@
 <script lang="ts">
-	import { identicon, swatch, type Cell } from './pixel';
+	import { identicon, swatch } from './pixel';
 
 	type Props = {
 		seed: string;
 		accent?: string;
-		cells?: Cell[][];
 		class?: string;
 	};
 
-	let { seed, accent, cells: suppliedCells, class: className }: Props = $props();
-	const cells = $derived(suppliedCells ?? identicon(seed));
+	let { seed, accent, class: className }: Props = $props();
+	const cells = $derived(identicon(seed));
 	const tint = $derived(accent ?? swatch(seed).accent);
 </script>
 
