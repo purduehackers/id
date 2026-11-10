@@ -1,4 +1,5 @@
 import type { Role } from './roles';
+import { identicon, type Cell } from './components/pixel.ts';
 
 export type IdCardData = {
 	id: string;
@@ -14,6 +15,7 @@ export type IdCardData = {
 	since: Date | string | null;
 	passports: number[];
 	linked: string[];
+	identiconCells?: Cell[][];
 	censored?: boolean;
 };
 
@@ -21,6 +23,7 @@ export type IdCardData = {
 export function censorIdCard(card: IdCardData, passportId: number): IdCardData {
 	return {
 		id: `passport-${passportId}`,
+		identiconCells: card.identiconCells ?? identicon(card.id),
 		name: card.name,
 		givenName: card.givenName,
 		familyName: card.familyName,

@@ -53,6 +53,10 @@
 		let disposed = false;
 		let started = false;
 		let reflectionFrame = 0;
+		let headerMotion: Animation | undefined;
+		let coverFrames: Keyframe[] = [];
+		let layoutWidth = 0;
+		let stripHeight = '';
 		const finish = () => {
 			if (finished) return;
 			finished = true;
@@ -103,14 +107,30 @@
 			headerDistance = distance / (Math.cos(angle) + (distance * Math.sin(angle)) / 2400);
 			header.style.transform = headerPose(140);
 		};
+		const projectedHeaderFrames = () =>
+			coverFrames.map((frame) => ({
+				...frame,
+				transform: headerPose(Number(String(frame.transform).match(/rotateX\(([-.\d]+)/)?.[1] ?? 0))
+			}));
 		const resize = () => {
-			finish();
+			const width = card.offsetWidth;
+			const strip = getComputedStyle(card).getPropertyValue('--cover-strip-height');
+			// Mobile browser chrome changes viewport height without changing the booklet.
+			if (width === layoutWidth && strip === stripHeight) return;
+			layoutWidth = width;
+			stripHeight = strip;
 			alignHeader();
+			if (!finished) {
+				// Updating an existing effect keeps its currentTime, easing and play state.
+				(headerMotion?.effect as KeyframeEffect | null)?.setKeyframes(projectedHeaderFrames());
+			}
 		};
+		const sizeObserver = new ResizeObserver(resize);
 		const start = () => {
 			if (disposed || finished) return;
 			started = true;
-			alignHeader();
+			resize();
+			sizeObserver.observe(card);
 			window.addEventListener('resize', resize);
 			document.fonts.addEventListener('loadingdone', fitHeader);
 
@@ -143,7 +163,7 @@
 				{ transform: 'rotateX(0deg)', offset: opening(1) },
 				{ transform: 'rotateX(0deg)', offset: 1 }
 			];
-			const coverFrames: Keyframe[] = [
+			coverFrames = [
 				{ transform: 'rotateX(0deg)', offset: 0 },
 				{
 					transform: 'rotateX(0deg)',
@@ -189,15 +209,7 @@
 				]),
 				play(paper, pageFrames),
 				play(cover, coverFrames),
-				play(
-					header,
-					coverFrames.map((frame) => ({
-						...frame,
-						transform: headerPose(
-							Number(String(frame.transform).match(/rotateX\(([-.\d]+)/)?.[1] ?? 0)
-						)
-					}))
-				),
+				(headerMotion = play(header, projectedHeaderFrames())),
 				play(header, visibilityFrames(0, 1)),
 				play(
 					paperShadow,
@@ -286,6 +298,7 @@
 		})();
 		return () => {
 			disposed = true;
+			sizeObserver.disconnect();
 			cancelAnimationFrame(reflectionFrame);
 			if (started) animations.forEach((animation) => animation.cancel());
 			window.removeEventListener('resize', resize);
