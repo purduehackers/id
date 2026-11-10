@@ -31,4 +31,3 @@ scripts/*
 *.db-wal
 .env*
 !.env.example
-
