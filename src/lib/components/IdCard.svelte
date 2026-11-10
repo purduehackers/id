@@ -265,6 +265,9 @@
 		line-height: 1.2;
 	}
 	.embedded .id-brand,
+	.embedded .id-details {
+		gap: 1.4cqw;
+	}
 	.embedded .id-brand :global(.id-brand-logo) {
 		width: 3.57cqw;
 		height: 3.57cqw;
