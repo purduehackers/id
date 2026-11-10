@@ -1,14 +1,18 @@
 import { eq } from 'drizzle-orm';
 import { db } from './db';
-import { user, account } from './db/schema';
-import { passportsOf } from './passport';
+import { user } from './db/schema';
 import { rolesOf } from '$lib/roles';
 import { termYear } from '$lib/graduation';
-import { PROVIDERS } from '$lib/providers';
-import type { IdCardData } from '$lib/id-card';
+import { censorIdCard, type IdCardData } from '$lib/id-card';
 
-// Called only after the scan route resolves a valid, unexpired passport tap.
-export async function idCardForUser(userId: string): Promise<IdCardData | null> {
+// Called only after the scan route resolves a valid, unexpired passport tap. A tap proves
+// someone is holding the passport, not who they are, so only the signed-in owner gets the
+// full card. The embedded card has no back, so its fields are never sent.
+export async function idCardForScan(
+	userId: string,
+	passportId: number,
+	viewerIsOwner: boolean
+): Promise<IdCardData | null> {
 	const [person] = await db
 		.select({
 			id: user.id,
@@ -18,7 +22,6 @@ export async function idCardForUser(userId: string): Promise<IdCardData | null> 
 			username: user.username,
 			image: user.image,
 			email: user.email,
-			phone: user.phone,
 			role: user.role,
 			graduationTerm: user.graduationTerm,
 			createdAt: user.createdAt
@@ -27,11 +30,8 @@ export async function idCardForUser(userId: string): Promise<IdCardData | null> 
 		.where(eq(user.id, userId))
 		.limit(1);
 	if (!person) return null;
-	const [passports, accounts] = await Promise.all([
-		passportsOf(userId),
-		db.select({ providerId: account.providerId }).from(account).where(eq(account.userId, userId))
-	]);
-	return {
+
+	const card: IdCardData = {
 		id: person.id,
 		name: person.name,
 		givenName: person.givenName,
@@ -39,11 +39,12 @@ export async function idCardForUser(userId: string): Promise<IdCardData | null> 
 		username: person.username,
 		image: person.image,
 		email: person.email,
-		phone: person.phone,
+		phone: null,
 		roles: rolesOf(person),
 		graduationYear: person.graduationTerm === null ? null : termYear(person.graduationTerm),
 		since: person.createdAt,
-		passports: passports.filter((p) => p.activated).map((p) => p.id),
-		linked: PROVIDERS.filter((p) => accounts.some((a) => a.providerId === p.id)).map((p) => p.label)
+		passports: [passportId],
+		linked: []
 	};
+	return viewerIsOwner ? card : censorIdCard(card, passportId);
 }

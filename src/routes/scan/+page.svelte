@@ -15,6 +15,7 @@
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 
 	let entering = $state(untrack(() => data.entrance && !!data.tap));
+	let revealing = $state(false);
 	let page: HTMLDivElement;
 	$effect(() => {
 		if (page) page.inert = entering;
@@ -52,6 +53,7 @@
 				name={data.tap.owner?.name ?? data.tap.returning?.name ?? `Passport ${data.tap.passportId}`}
 				username={data.tap.owner?.username}
 				animate={entering}
+				onstart={() => (revealing = true)}
 				onfinish={() => (entering = false)}
 			/>
 		{/if}
@@ -131,7 +133,7 @@
 		{/if}
 	</AuthShell>
 </div>
-{#if entering}<div class="entrance-curtain" aria-hidden="true"></div>{/if}
+{#if entering}<div class="entrance-curtain" class:revealing aria-hidden="true"></div>{/if}
 
 <style>
 	.entrance-curtain {
@@ -140,9 +142,21 @@
 		z-index: 50;
 		background: var(--background);
 		pointer-events: none;
+		/* Fallback so a failed hydration cannot leave the page covered. */
+		animation: reveal-page-fallback 450ms 4s ease-out both;
+	}
+	.entrance-curtain.revealing {
 		animation: reveal-page 450ms 480ms ease-out both;
 	}
 	@keyframes reveal-page {
+		from {
+			opacity: 1;
+		}
+		to {
+			opacity: 0;
+		}
+	}
+	@keyframes reveal-page-fallback {
 		from {
 			opacity: 1;
 		}

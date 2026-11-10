@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, untrack } from 'svelte';
+	import { resolve } from '$app/paths';
 	import IdCard from './IdCard.svelte';
 	import PassportCover from './PassportCover.svelte';
 	import type { IdCardData } from '$lib/id-card';
@@ -10,12 +11,11 @@
 		profile = null,
 		name,
 		username,
-		coverTitle = 'PASSPORT',
-		coverCountry = 'REPUBLIC OF HACKERLAND',
 		headerStripHeight,
 		inspectOnSpace = true,
 		class: className,
 		animate = false,
+		onstart = () => {},
 		onfinish = () => {}
 	}: {
 		passportId: number;
@@ -23,14 +23,14 @@
 		name?: string;
 		username?: string | null;
 		animate?: boolean;
-		coverTitle?: string;
-		coverCountry?: string;
 		headerStripHeight?: number;
 		inspectOnSpace?: boolean;
 		class?: string;
+		onstart?: () => void;
 		onfinish?: () => void;
 	} = $props();
 
+	const FONT_WAIT = 1000;
 	const displayName = $derived(name ?? profile?.name ?? `Passport ${passportId}`);
 	const displayUsername = $derived(username ?? profile?.username);
 
@@ -151,20 +151,19 @@
 			const faceSwitch = opening(0.45);
 			const easeOut = 'cubic-bezier(0.16, 1, 0.3, 1)';
 			const settle = 'cubic-bezier(0.2, 0.8, 0.3, 1)';
+			const pageLift = 20;
 			const pageFrames: Keyframe[] = [
 				{ transform: 'rotateX(0deg)', offset: 0 },
 				{
 					transform: 'rotateX(0deg)',
-					offset: opening(0),
-					easing: 'cubic-bezier(0.25, 0.5, 0.35, 1)'
+					offset: opening(0.1),
+					easing: 'cubic-bezier(0.3, 0, 0.3, 1)'
 				},
-				{ transform: 'rotateX(6deg)', offset: opening(0.3), easing: easeOut },
 				{
-					transform: 'rotateX(20deg)',
+					transform: `rotateX(${pageLift}deg)`,
 					offset: opening(0.7),
-					easing: 'cubic-bezier(0.5, 0, 0.75, 0.6)'
+					easing: 'cubic-bezier(0.5, 0, 0.8, 0.7)'
 				},
-				{ transform: 'rotateX(3deg)', offset: opening(0.94), easing: settle },
 				{ transform: 'rotateX(0deg)', offset: opening(1) },
 				{ transform: 'rotateX(0deg)', offset: 1 }
 			];
@@ -229,25 +228,27 @@
 				paperShadow.animate(
 					pageFrames.map((frame) => ({
 						...frame,
-						transform: `translate3d(6px, 10px, -16px) ${frame.transform}`,
+						transform: frame.transform,
 						filter: frame.offset === opening(0.7) ? 'blur(7px)' : 'blur(4px)',
 						boxShadow:
 							frame.offset === opening(0.7)
-								? '0 16px 24px 4px rgb(0 0 0 / .3)'
-								: '0 8px 16px 2px rgb(0 0 0 / .34)'
+								? '0 0 84px 18px var(--passport-glow)'
+								: '0 0 72px 14px var(--passport-glow)'
 					})),
 					{ duration, fill: 'both' }
 				),
+				// The glow follows the cover and widens as it lifts away from the page.
 				coverShadow.animate(
 					coverFrames.map((frame) => {
 						const angle = Number(String(frame.transform).match(/rotateX\(([-.\d]+)/)?.[1] ?? 0);
-						const elevation =
-							Math.max(0, Math.sin((angle * Math.PI) / 180)) / Math.sin((140 * Math.PI) / 180);
+						const lift = Math.min(
+							1,
+							Math.max(0, Math.sin((angle * Math.PI) / 180)) / Math.sin((140 * Math.PI) / 180)
+						);
 						return {
 							...frame,
-							transform: `translate3d(${6 + 8 * elevation}px, ${8 + 12 * elevation}px, -24px) ${frame.transform}`,
-							filter: `blur(${4 + 4 * elevation}px)`,
-							boxShadow: `0 ${6 + 6 * elevation}px ${14 + 10 * elevation}px ${2 + 2 * elevation}px rgb(0 0 0 / .3)`
+							opacity: lift,
+							boxShadow: `0 0 ${72 + 48 * lift}px ${14 + 16 * lift}px var(--passport-cover-glow)`
 						};
 					}),
 					{ duration, fill: 'both' }
@@ -296,6 +297,7 @@
 			};
 			reflectCover();
 			waiting = false;
+			onstart();
 			void Promise.all(animations.map((animation) => animation.finished))
 				.then(finish)
 				.catch(finish);
@@ -303,22 +305,23 @@
 		};
 		void (async () => {
 			try {
-				const labels = [
-					...header.querySelectorAll('span'),
-					...card.querySelectorAll('.passport-cover-art text')
-				];
+				const labels = [...header.querySelectorAll('span')];
 				// Each primary font is supplied by the shared theme. A failed
 				// fallback request must not release other pending font waits.
-				await Promise.allSettled(
-					labels.map((label) => {
-						const font = getComputedStyle(label);
-						const primaryFamily = font.fontFamily.split(',')[0];
-						return document.fonts.load(
-							`${font.fontStyle} ${font.fontWeight} ${font.fontSize} ${primaryFamily}`,
-							label.textContent ?? ''
-						);
-					})
-				);
+				// A slow font host must not hold the page; fitHeader reruns when it arrives.
+				await Promise.race([
+					Promise.allSettled(
+						labels.map((label) => {
+							const font = getComputedStyle(label);
+							const primaryFamily = font.fontFamily.split(',')[0];
+							return document.fonts.load(
+								`${font.fontStyle} ${font.fontWeight} ${font.fontSize} ${primaryFamily}`,
+								label.textContent ?? ''
+							);
+						})
+					),
+					new Promise((resolve) => setTimeout(resolve, FONT_WAIT))
+				]);
 			} catch {
 				// A failed font request uses the browser's fallback rather than blocking entry.
 			}
@@ -385,7 +388,7 @@
 		</div>
 		<div class="passport-cover" bind:this={cover}>
 			<div class="cover-outside" bind:this={outside} aria-hidden="true">
-				<PassportCover bind:this={coverArt} title={coverTitle} country={coverCountry} />
+				<PassportCover bind:this={coverArt} />
 			</div>
 			<div class="cover-inside" bind:this={inside} aria-hidden="true"></div>
 		</div>
@@ -393,7 +396,7 @@
 	<a
 		class="cover-header cover-resting-header"
 		bind:this={header}
-		href="/"
+		href={resolve('/')}
 		tabindex={opened ? 0 : -1}
 		aria-hidden={!opened}
 		aria-label="Purdue Hackers ID home"
@@ -413,8 +416,14 @@
 		pointer-events: none;
 	}
 	.passport-shell {
+		/* Black shadows vanish on the dark page, so depth comes from a glow. */
+		--passport-glow: rgb(252 210 2 / 0.36);
+		--passport-cover-glow: rgb(252 210 2 / 0.22);
+		--passport-plate: rgb(252 210 2 / 0.08);
 		position: relative;
 		z-index: 60;
+		/* Keeps the same compositing context at rest as during the arrival animation. */
+		transform: translateZ(0);
 		width: 100%;
 		max-width: 440px;
 		margin-inline: auto;
@@ -440,18 +449,16 @@
 		inset: 0;
 		z-index: -1;
 		pointer-events: none;
-		background: rgb(0 0 0 / 0.2);
+		background: var(--passport-plate);
 		filter: blur(4px);
 		transform-origin: center top;
 	}
 	.shadow-paper {
-		transform: translate3d(6px, 10px, -16px);
-		box-shadow: 0 8px 16px 2px rgb(0 0 0 / 0.34);
+		box-shadow: 0 0 72px 14px var(--passport-glow);
 	}
 	.shadow-cover {
-		filter: blur(8px);
-		transform: translate3d(14px, 20px, -24px) rotateX(140deg);
-		box-shadow: 0 12px 24px 4px rgb(0 0 0 / 0.3);
+		transform: rotateX(140deg);
+		box-shadow: 0 0 120px 30px var(--passport-cover-glow);
 	}
 	.passport-page-clip {
 		position: absolute;
@@ -565,7 +572,7 @@
 	.cover-inside {
 		position: absolute;
 		inset: 0;
-		background: var(--ph-black);
+		background: var(--card);
 		color: var(--ph-cream);
 		backface-visibility: hidden;
 		-webkit-backface-visibility: hidden;
@@ -578,7 +585,12 @@
 	.cover-inside {
 		transform: rotateX(180deg) translateZ(0.5px);
 		opacity: 1;
-		/* No light border at the hinge: it reads as a gap against the yellow page. */
+		/* No light border at the hinge: it reads as a gap against the yellow page.
+		   This face is flipped, so its bottom edge is the hinge. */
+		box-shadow:
+			inset 1px 0 0 var(--border),
+			inset -1px 0 0 var(--border),
+			inset 0 1px 0 var(--border);
 	}
 	.cover-header {
 		position: absolute;
@@ -631,9 +643,7 @@
 		pointer-events: none;
 	}
 	.inspecting .shadow-cover {
-		transform: translate3d(6px, 8px, -24px) rotateX(0deg);
-		filter: blur(4px);
-		box-shadow: 0 6px 14px 2px rgb(0 0 0 / 0.3);
+		opacity: 0;
 	}
 	.document-mark {
 		color: var(--ph-purple);

@@ -1,7 +1,37 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" class="dark">
 	<head>
 		<script src="/passport-inspection.js"></script>
+		<script>
+			// Right Shift held during load censors the card. Modifier keys do not repeat, so a
+			// press on the previous document is carried across the reload.
+			(() => {
+				const key = 'ph-preview-rshift-held';
+				let held = false;
+				try {
+					held = sessionStorage.getItem(key) === '1';
+					sessionStorage.removeItem(key);
+				} catch {}
+				window.__phPreviewCensor = held;
+				const remember = (value) => {
+					try {
+						if (value) sessionStorage.setItem(key, '1');
+						else sessionStorage.removeItem(key);
+					} catch {}
+				};
+				addEventListener(
+					'keydown',
+					(event) => {
+						if (event.code !== 'ShiftRight') return;
+						if (document.readyState !== 'complete') window.__phPreviewCensor = true;
+						remember(true);
+					},
+					true
+				);
+				addEventListener('keyup', (event) => event.code === 'ShiftRight' && remember(false), true);
+				addEventListener('blur', () => remember(false));
+			})();
+		</script>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width,initial-scale=1" />
 		<meta name="apple-mobile-web-app-capable" content="yes" />
@@ -13,7 +43,6 @@
 			html,
 			body {
 				margin: 0;
-				background: #fbf7ec;
 			}
 		</style>
 	</head>

@@ -1,9 +1,5 @@
 <script lang="ts">
 	/** Exact Figma vector artwork, with a reflection clipped to its gold foil. */
-	let {
-		title = 'PASSPORT',
-		country = 'REPUBLIC OF HACKERLAND'
-	}: { title?: string; country?: string } = $props();
 	let artwork: HTMLDivElement;
 	let pitch = 0;
 	let roll = 0;
@@ -25,7 +21,7 @@
 </script>
 
 <div class="passport-cover-art" bind:this={artwork}>
-	<div class="seal" role="img" aria-label={`${title} — ${country}`}></div>
+	<div class="seal"></div>
 </div>
 
 <style>
@@ -36,10 +32,12 @@
 		width: 100%;
 		height: 100%;
 		overflow: hidden;
-		background: var(--ph-black);
+		background: var(--card);
 		box-shadow:
-			inset 10px 0 18px rgb(0 0 0 / 0.25),
-			inset 0 1px 0 rgb(255 255 255 / 0.08);
+			inset 1px 0 0 var(--border),
+			inset -1px 0 0 var(--border),
+			inset 0 -1px 0 var(--border),
+			inset 10px 0 18px rgb(0 0 0 / 0.25);
 	}
 	.passport-cover-art::before {
 		content: '';

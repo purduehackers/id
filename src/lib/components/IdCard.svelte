@@ -23,6 +23,7 @@
 		since,
 		passports,
 		linked,
+		censored = false,
 		embedded = false
 	}: Props = $props();
 
@@ -35,7 +36,7 @@
 	const theme = $derived(themes[roles[0] ?? 'member']);
 	const label = $derived(roles[0] ? ROLE_LABELS[roles[0]] : 'Member');
 	const serial = $derived(String(passports[0] ?? hash(id) % 10000).padStart(4, '0'));
-	const registered = $derived(new Date(since));
+	const registered = $derived(new Date(since ?? 0));
 	const longestWord = $derived(Math.max(...name.split(/\s+/).map((word) => word.length)));
 
 	const mrzName = $derived(
@@ -51,7 +52,7 @@
 	const mrz = $derived([
 		fill(`ID<PRH<${mrzName}`),
 		fill(
-			`${username.toUpperCase()}<<${serial}<${label.slice(0, 3).toUpperCase()}<${registered.getFullYear()}`
+			`${(username ?? '').toUpperCase()}<<${serial}<${label.slice(0, 3).toUpperCase()}<${registered.getFullYear()}`
 		)
 	]);
 
@@ -72,7 +73,7 @@
 	const face = 'id-face col-start-1 row-start-1 flex flex-col backface-hidden';
 </script>
 
-<div class="id-card" class:enter={!embedded} style="--i: 1">
+<div class="id-card" class:enter={!embedded} class:embedded style="--i: 1">
 	<div
 		bind:this={card}
 		onpointermove={move}
@@ -121,68 +122,73 @@
 						<span class="id-meta flex flex-wrap font-mono font-semibold uppercase"
 							><span>@{username}</span><span>{label}</span><span
 								>Since {registered.getFullYear()}</span
-							>{#if graduationYear}<span>Class of {graduationYear}</span>{/if}</span
+							>{#if censored}<span
+									>Class of <span class="id-redacted" style:width="5.5cqw"></span></span
+								>{:else if graduationYear}<span>Class of {graduationYear}</span>{/if}</span
 						>
-						<span class="id-email truncate">{email}</span>
+						<span class="id-email truncate"
+							>{#if censored}<span class="id-redacted" style:width="38cqw"
+								></span>{:else}{email}{/if}</span
+						>
 					</div>
 				</div>
 				<div class="id-mrz bg-ph-black/[0.07] font-mono">
 					{#each mrz as line, i (i)}<div class="truncate">{line}</div>{/each}
 				</div>
 			</div>
-			<div class={[face, 'id-back rotate-y-180', theme.card]} aria-hidden="true">
-				<div class="id-stripe shrink-0 bg-ph-black"></div>
-				<div class="id-signature flex items-stretch">
-					<div
-						class="id-signature-box flex min-w-0 flex-1 flex-col justify-center bg-ph-cream text-ph-black"
-					>
-						<span class="id-signature-label ph-subheadline">Authorized signature</span><span
-							class="id-signature-name -rotate-2 truncate ph-headline">{name}</span
+			{#if !embedded}<div class={[face, 'id-back rotate-y-180', theme.card]} aria-hidden="true">
+					<div class="id-stripe shrink-0 bg-ph-black"></div>
+					<div class="id-signature flex items-stretch">
+						<div
+							class="id-signature-box flex min-w-0 flex-1 flex-col justify-center bg-ph-cream text-ph-black"
+						>
+							<span class="id-signature-label ph-subheadline">Authorized signature</span><span
+								class="id-signature-name -rotate-2 truncate ph-headline">{name}</span
+							>
+						</div>
+						<span class="id-seal grid shrink-0 place-items-center bg-ph-black/10"
+							><Identicon seed={id} accent={theme.accent} class="id-seal-icon" /></span
 						>
 					</div>
-					<span class="id-seal grid shrink-0 place-items-center bg-ph-black/10"
-						><Identicon seed={id} accent={theme.accent} class="id-seal-icon" /></span
-					>
-				</div>
-				<dl class="id-data grid flex-1 grid-cols-2 content-start">
-					<div class="min-w-0">
-						<dt class="ph-subheadline">Given names</dt>
-						<dd>{givenName || name}</dd>
-					</div>
-					{#if familyName}<div class="min-w-0">
-							<dt class="ph-subheadline">Surname</dt>
-							<dd>{familyName}</dd>
-						</div>{/if}
-					<div class="min-w-0">
-						<dt class="ph-subheadline">Passport ID<span class="normal-case">s</span></dt>
-						<dd class="font-mono font-semibold">
-							{passports.length ? passports.map((p) => `#${p}`).join('  ') : 'None yet'}
-						</dd>
-					</div>
-					<div class="min-w-0">
-						<dt class="ph-subheadline">Registered</dt>
-						<dd>
-							{registered.toLocaleDateString(undefined, {
-								year: 'numeric',
-								month: 'long',
-								day: 'numeric'
-							})}
-						</dd>
-					</div>
-					{#if phone}<div class="min-w-0">
-							<dt class="ph-subheadline">Phone</dt>
-							<dd class="font-mono">{formatPhone(phone)}</dd>
-						</div>{/if}
-					<div class="min-w-0">
-						<dt class="ph-subheadline">Linked</dt>
-						<dd>{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
-					</div>
-				</dl>
-				<p class="id-property flex items-center font-mono uppercase">
-					<Glider class="id-property-icon" />Property of Purdue Hackers. If found, return to
-					purduehackers.com
-				</p>
-			</div>
+					<dl class="id-data grid flex-1 grid-cols-2 content-start">
+						<div class="min-w-0">
+							<dt class="ph-subheadline">Given names</dt>
+							<dd>{givenName || name}</dd>
+						</div>
+						{#if familyName}<div class="min-w-0">
+								<dt class="ph-subheadline">Surname</dt>
+								<dd>{familyName}</dd>
+							</div>{/if}
+						<div class="min-w-0">
+							<dt class="ph-subheadline">Passport ID<span class="normal-case">s</span></dt>
+							<dd class="font-mono font-semibold">
+								{passports.length ? passports.map((p) => `#${p}`).join('  ') : 'None yet'}
+							</dd>
+						</div>
+						<div class="min-w-0">
+							<dt class="ph-subheadline">Registered</dt>
+							<dd>
+								{registered.toLocaleDateString(undefined, {
+									year: 'numeric',
+									month: 'long',
+									day: 'numeric'
+								})}
+							</dd>
+						</div>
+						{#if phone}<div class="min-w-0">
+								<dt class="ph-subheadline">Phone</dt>
+								<dd class="font-mono">{formatPhone(phone)}</dd>
+							</div>{/if}
+						<div class="min-w-0">
+							<dt class="ph-subheadline">Linked</dt>
+							<dd>{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
+						</div>
+					</dl>
+					<p class="id-property flex items-center font-mono uppercase">
+						<Glider class="id-property-icon" />Property of Purdue Hackers. If found, return to
+						purduehackers.com
+					</p>
+				</div>{/if}
 		</button>
 	</div>
 </div>
@@ -265,8 +271,14 @@
 	.id-name.long-name {
 		font-size: 8.57cqw;
 	}
-	.id-name.long-word {
-		font-size: 4.28cqw;
+	.embedded .id-name.long-word {
+		font-size: 7.3cqw;
+	}
+	.id-redacted {
+		display: inline-block;
+		height: 1em;
+		vertical-align: middle;
+		background: currentColor;
 	}
 	.id-meta {
 		gap: 0 2.14cqw;
@@ -327,5 +339,119 @@
 	.id-property :global(.id-property-icon) {
 		width: 2.5cqw;
 		height: 2.5cqw;
+	}
+	/* The account page grows with its content on phones, so text stays readable. */
+	@media (max-width: 639.98px) {
+		.id-card:not(.embedded) {
+			aspect-ratio: auto;
+		}
+		.id-card:not(.embedded) .id-tilt {
+			position: relative;
+			inset: auto;
+		}
+		.id-card:not(.embedded) .id-flip,
+		.id-card:not(.embedded) .id-face {
+			height: auto;
+		}
+		.id-card:not(.embedded) .id-face {
+			padding: 20px;
+		}
+		.id-card:not(.embedded) .id-front {
+			gap: 24px;
+		}
+		.id-card:not(.embedded) .id-heading {
+			gap: 16px;
+			font-size: 11px;
+		}
+		.id-card:not(.embedded) .id-brand {
+			gap: 8px;
+		}
+		.id-card:not(.embedded) .id-brand :global(.id-brand-logo) {
+			width: 20px;
+			height: 20px;
+		}
+		.id-card:not(.embedded) .id-serial {
+			gap: 8px;
+			font-size: 12px;
+		}
+		.id-card:not(.embedded) .id-serial :global(.id-refresh) {
+			width: 14px;
+			height: 14px;
+		}
+		.id-card:not(.embedded) .id-person {
+			gap: 16px;
+		}
+		.id-card:not(.embedded) .id-picture {
+			width: 80px;
+			height: 80px;
+		}
+		.id-card:not(.embedded) .id-picture :global(.id-identicon) {
+			width: 48px;
+			height: 48px;
+		}
+		.id-card:not(.embedded) .id-details {
+			gap: 6px;
+		}
+		.id-card:not(.embedded) .id-name {
+			display: block;
+			font-size: 36px;
+			overflow: visible;
+		}
+		.id-card:not(.embedded) .id-name.long-word {
+			font-size: 24px;
+		}
+		.id-card:not(.embedded) .id-meta {
+			gap: 0 12px;
+			font-size: 12px;
+		}
+		.id-card:not(.embedded) .id-email {
+			font-size: 13px;
+		}
+		.id-card:not(.embedded) .id-mrz {
+			margin: 0 -20px -20px;
+			padding: 8px 20px;
+			font-size: 10px;
+		}
+		.id-card:not(.embedded) .id-back {
+			gap: 16px;
+		}
+		.id-card:not(.embedded) .id-stripe {
+			margin: -4px -20px 0;
+			height: 40px;
+		}
+		.id-card:not(.embedded) .id-signature {
+			gap: 12px;
+		}
+		.id-card:not(.embedded) .id-signature-box {
+			padding: 8px 12px;
+		}
+		.id-card:not(.embedded) .id-signature-label {
+			font-size: 9px;
+		}
+		.id-card:not(.embedded) .id-signature-name {
+			font-size: 24px;
+		}
+		.id-card:not(.embedded) .id-seal {
+			width: 56px;
+		}
+		.id-card:not(.embedded) .id-seal :global(.id-seal-icon) {
+			width: 32px;
+			height: 32px;
+		}
+		.id-card:not(.embedded) .id-data {
+			gap: 8px 20px;
+			font-size: 13px;
+		}
+		.id-card:not(.embedded) .id-data dt {
+			font-size: 10px;
+		}
+		.id-card:not(.embedded) .id-property {
+			gap: 8px;
+			font-size: 10px;
+		}
+		.id-card:not(.embedded) .id-property :global(.id-property-icon) {
+			width: 14px;
+			height: 14px;
+		}
 	}
 </style>

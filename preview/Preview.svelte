@@ -3,11 +3,37 @@
 	import Button from '../src/lib/components/ph/Button.svelte';
 	import Notice from '../src/lib/components/ph/Notice.svelte';
 	import Scan from '../src/routes/scan/+page.svelte';
+	import { censorIdCard, type IdCardData } from '../src/lib/id-card';
 	const key = 'passport-flip-9907-a6e81d3b';
 	const params = new URLSearchParams(location.search);
 	const allowed = params.get('secret') === key;
 	const coverOnly = params.get('view') === 'cover';
 	let message = $state('');
+
+	const holder: IdCardData = {
+		id: 'preview-holder',
+		name: 'Purdue Hacker',
+		givenName: 'Purdue',
+		familyName: 'Hacker',
+		username: 'hacker',
+		email: 'hacker@example.invalid',
+		image: null,
+		phone: null,
+		roles: [],
+		graduationYear: 2028,
+		since: '2024-08-23T12:00:00Z',
+		passports: [9907],
+		linked: []
+	};
+	const censorFlag = () =>
+		(window as Window & { __phPreviewCensor?: boolean }).__phPreviewCensor === true;
+	let censored = $state(censorFlag());
+	$effect(() => {
+		if (document.readyState === 'complete') return;
+		const onKey = () => (censored = censorFlag());
+		addEventListener('keydown', onKey);
+		return () => removeEventListener('keydown', onKey);
+	});
 </script>
 
 {#if allowed && coverOnly}
@@ -30,23 +56,9 @@
 				entrance: true,
 				tap: {
 					passportId: 9907,
-					owner: { name: 'Purdue Hacker', username: 'hacker' },
+					owner: { name: holder.name, username: holder.username },
 					returning: null,
-					card: {
-						id: 'preview-holder',
-						name: 'Purdue Hacker',
-						givenName: 'Purdue',
-						familyName: 'Hacker',
-						username: 'hacker',
-						email: 'hacker@example.invalid',
-						image: null,
-						phone: '+17655550107',
-						roles: [],
-						graduationYear: 2028,
-						since: '2024-08-23T12:00:00Z',
-						passports: [9907],
-						linked: ['Discord', 'GitHub']
-					}
+					card: censored ? censorIdCard(holder, 9907) : holder
 				},
 				me: null,
 				error: null
