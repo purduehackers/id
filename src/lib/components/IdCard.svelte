@@ -70,10 +70,16 @@
 		};
 	}
 
-	const face = 'id-face col-start-1 row-start-1 flex flex-col backface-hidden';
+	const face =
+		'id-face col-start-1 row-start-1 flex flex-col p-5 backface-hidden sm:aspect-[1.586] sm:p-7';
 </script>
 
-<div class="id-card" class:enter={!embedded} class:embedded style="--i: 1">
+<div
+	class="id-card w-full max-w-[560px] perspective-[1200px]"
+	class:enter={!embedded}
+	class:embedded
+	style="--i: 1"
+>
 	<div
 		bind:this={card}
 		onpointermove={move}
@@ -85,7 +91,6 @@
 		<button
 			type="button"
 			disabled={embedded}
-			class:readonly-card={embedded}
 			onclick={() => {
 				if (!embedded) flipped = !flipped;
 			}}
@@ -94,79 +99,107 @@
 			class="id-flip grid w-full cursor-pointer grid-cols-1 text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none"
 			style="transform: rotateY({flipped ? 180 : 0}deg)"
 		>
-			<div class={[face, 'id-front justify-between', theme.card]} aria-hidden="true">
-				<div class="id-heading flex items-start justify-between">
-					<div class="id-brand flex items-center">
-						<Glider class="id-brand-logo" /><span class="ph-subheadline"
-							>Purdue Hackers · Identity</span
-						>
+			<!-- Front -->
+			<div class={[face, 'id-front justify-between gap-6', theme.card]} aria-hidden="true">
+				<div class="id-heading flex items-start justify-between gap-4">
+					<div class="id-brand flex items-center gap-2">
+						<Glider class="id-brand-logo size-5" />
+						<span class="ph-subheadline text-[11px] sm:text-[12px]">Purdue Hackers · Identity</span>
 					</div>
-					<span class="id-serial flex items-center font-mono font-semibold"
-						>Nº {serial}{#if !embedded}<Icon name="refresh" class="id-refresh" />{/if}</span
+					<span
+						class="id-serial flex items-center gap-2 font-mono text-[12px] font-semibold sm:text-[13px]"
 					>
+						Nº {serial}
+						{#if !embedded}<Icon name="refresh" class="size-3.5" />{/if}
+					</span>
 				</div>
-				<div class="id-person flex items-end">
-					<div class="id-picture grid shrink-0 place-items-center overflow-hidden bg-ph-black/10">
-						{#if image}<img src={image} alt="" class="size-full object-cover" />{:else}<Identicon
-								seed={id}
-								accent={theme.accent}
-								class="id-identicon"
-							/>{/if}
+
+				<div class="id-person flex items-end gap-4 sm:gap-6">
+					<div
+						class="id-picture grid size-20 shrink-0 place-items-center overflow-hidden bg-ph-black/10 sm:size-28"
+					>
+						{#if image}
+							<img src={image} alt="" class="size-full object-cover" />
+						{:else}
+							<Identicon seed={id} accent={theme.accent} class="id-identicon size-12 sm:size-16" />
+						{/if}
 					</div>
-					<div class="id-details flex min-w-0 flex-col">
+					<div class="id-details flex min-w-0 flex-col gap-1.5 sm:gap-2">
 						<span
-							class="id-name ph-headline"
 							class:long-name={name.length > 12}
-							class:long-word={longestWord > 10}>{name}</span
+							class:long-word={longestWord > 10}
+							class={[
+								'id-name ph-headline break-words',
+								longestWord > 10 ? 'text-2xl' : 'text-4xl',
+								name.length > 16 ? 'sm:text-5xl' : 'sm:text-6xl'
+							]}
 						>
-						<span class="id-meta flex flex-wrap font-mono font-semibold uppercase"
-							><span>@{username}</span><span>{label}</span><span
-								>Since {registered.getFullYear()}</span
-							>{#if censored}<span
+							{name}
+						</span>
+						<span
+							class="id-meta flex flex-wrap gap-x-3 font-mono text-[12px] font-semibold uppercase sm:text-[13px]"
+						>
+							<span>@{username}</span>
+							<span>{label}</span>
+							<span>Since {registered.getFullYear()}</span>
+							{#if censored}<span
 									>Class of <span class="id-redacted" style:width="5.5cqw"></span></span
-								>{:else if graduationYear}<span>Class of {graduationYear}</span>{/if}</span
-						>
-						<span class="id-email truncate"
+								>{:else if graduationYear}<span>Class of {graduationYear}</span>{/if}
+						</span>
+						<span class="id-email truncate text-[13px] sm:text-[14px]"
 							>{#if censored}<span class="id-redacted" style:width="38cqw"
 								></span>{:else}{email}{/if}</span
 						>
 					</div>
 				</div>
-				<div class="id-mrz bg-ph-black/[0.07] font-mono">
+
+				<div
+					class="id-mrz -mx-5 -mb-5 bg-ph-black/[0.07] px-5 py-2 font-mono text-[10px] leading-[1.35] tracking-[0.18em] sm:-mx-7 sm:-mb-7 sm:px-7 sm:text-[12px]"
+				>
 					{#each mrz as line, i (i)}<div class="truncate">{line}</div>{/each}
 				</div>
 			</div>
-			{#if !embedded}<div class={[face, 'id-back rotate-y-180', theme.card]} aria-hidden="true">
-					<div class="id-stripe shrink-0 bg-ph-black"></div>
-					<div class="id-signature flex items-stretch">
+
+			{#if !embedded}
+				<!-- Back -->
+				<div class={[face, 'rotate-y-180 gap-4', theme.card]} aria-hidden="true">
+					<div class="-mx-5 -mt-1 h-10 shrink-0 bg-ph-black sm:-mx-7 sm:h-11"></div>
+
+					<div class="flex items-stretch gap-3">
 						<div
-							class="id-signature-box flex min-w-0 flex-1 flex-col justify-center bg-ph-cream text-ph-black"
+							class="flex min-w-0 flex-1 flex-col justify-center bg-ph-cream px-3 py-2 text-ph-black"
 						>
-							<span class="id-signature-label ph-subheadline">Authorized signature</span><span
-								class="id-signature-name -rotate-2 truncate ph-headline">{name}</span
-							>
+							<span class="ph-subheadline text-[9px]">Authorized signature</span>
+							<span class="-rotate-2 truncate ph-headline text-2xl">{name}</span>
 						</div>
-						<span class="id-seal grid shrink-0 place-items-center bg-ph-black/10"
-							><Identicon seed={id} accent={theme.accent} class="id-seal-icon" /></span
-						>
+						<span class="grid w-14 shrink-0 place-items-center bg-ph-black/10">
+							<Identicon seed={id} accent={theme.accent} class="size-8" />
+						</span>
 					</div>
-					<dl class="id-data grid flex-1 grid-cols-2 content-start">
+
+					<dl
+						class="grid flex-1 grid-cols-2 content-start gap-x-5 gap-y-2 text-[13px] sm:text-[14px]"
+					>
 						<div class="min-w-0">
-							<dt class="ph-subheadline">Given names</dt>
-							<dd>{givenName || name}</dd>
+							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Given names</dt>
+							<dd class="break-words">{givenName || name}</dd>
 						</div>
-						{#if familyName}<div class="min-w-0">
-								<dt class="ph-subheadline">Surname</dt>
-								<dd>{familyName}</dd>
-							</div>{/if}
+						{#if familyName}
+							<div class="min-w-0">
+								<dt class="ph-subheadline text-[10px] sm:text-[11px]">Surname</dt>
+								<dd class="break-words">{familyName}</dd>
+							</div>
+						{/if}
 						<div class="min-w-0">
-							<dt class="ph-subheadline">Passport ID<span class="normal-case">s</span></dt>
-							<dd class="font-mono font-semibold">
+							<dt class="ph-subheadline text-[10px] sm:text-[11px]">
+								Passport ID<span class="normal-case">s</span>
+							</dt>
+							<dd class="font-mono font-semibold break-words">
 								{passports.length ? passports.map((p) => `#${p}`).join('  ') : 'None yet'}
 							</dd>
 						</div>
 						<div class="min-w-0">
-							<dt class="ph-subheadline">Registered</dt>
+							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Registered</dt>
 							<dd>
 								{registered.toLocaleDateString(undefined, {
 									year: 'numeric',
@@ -175,29 +208,30 @@
 								})}
 							</dd>
 						</div>
-						{#if phone}<div class="min-w-0">
-								<dt class="ph-subheadline">Phone</dt>
-								<dd class="font-mono">{formatPhone(phone)}</dd>
-							</div>{/if}
+						{#if phone}
+							<div class="min-w-0">
+								<dt class="ph-subheadline text-[10px] sm:text-[11px]">Phone</dt>
+								<dd class="font-mono break-words">{formatPhone(phone)}</dd>
+							</div>
+						{/if}
 						<div class="min-w-0">
-							<dt class="ph-subheadline">Linked</dt>
-							<dd>{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
+							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Linked</dt>
+							<dd class="break-words">{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
 						</div>
 					</dl>
-					<p class="id-property flex items-center font-mono uppercase">
-						<Glider class="id-property-icon" />Property of Purdue Hackers. If found, return to
-						purduehackers.com
+
+					<p class="flex items-center gap-2 font-mono text-[10px] uppercase sm:text-[11px]">
+						<Glider class="size-3.5" />
+						Property of Purdue Hackers. If found, return to purduehackers.com
 					</p>
-				</div>{/if}
+				</div>
+			{/if}
 		</button>
 	</div>
 </div>
 
 <style>
-	.id-flip.readonly-card {
-		cursor: default;
-	}
-	.id-card {
+	.embedded {
 		position: relative;
 		width: 100%;
 		max-width: 560px;
@@ -206,59 +240,52 @@
 		container-type: inline-size;
 		perspective: 1200px;
 	}
-	.id-tilt {
+	.embedded .id-tilt {
 		position: absolute;
 		inset: 0;
 	}
-	.id-flip {
+	.embedded .id-flip {
+		cursor: default;
 		height: 100%;
 		grid-template-columns: minmax(0, 1fr);
 	}
-	.id-face {
+	.embedded .id-face {
 		width: 100%;
 		height: 100%;
 		min-width: 0;
 		min-height: 0;
 		padding: 5cqw;
+		aspect-ratio: auto;
 		overflow: hidden;
 		overflow-wrap: anywhere;
 	}
-	.id-heading {
+	.embedded .id-heading {
 		gap: 2.8cqw;
 		font-size: 2.14cqw;
 		line-height: 1.2;
 	}
-	.id-brand {
-		gap: 1.4cqw;
-	}
-	.id-brand :global(.id-brand-logo) {
+	.embedded .id-brand,
+	.embedded .id-brand :global(.id-brand-logo) {
 		width: 3.57cqw;
 		height: 3.57cqw;
 	}
-	.id-serial {
+	.embedded .id-serial {
 		gap: 1.4cqw;
 		font-size: 2.32cqw;
 		white-space: nowrap;
 	}
-	.id-serial :global(.id-refresh) {
-		width: 2.5cqw;
-		height: 2.5cqw;
-	}
-	.id-person {
+	.embedded .id-person {
 		gap: 4.28cqw;
 	}
-	.id-picture {
+	.embedded .id-picture {
 		width: 20cqw;
 		height: 20cqw;
 	}
-	.id-picture :global(.id-identicon) {
+	.embedded .id-picture :global(.id-identicon) {
 		width: 11.42cqw;
 		height: 11.42cqw;
 	}
-	.id-details {
-		gap: 1.4cqw;
-	}
-	.id-name {
+	.embedded .id-name {
 		font-size: 10.7cqw;
 		line-height: 1;
 		display: -webkit-box;
@@ -268,7 +295,7 @@
 		overflow: hidden;
 		overflow-wrap: anywhere;
 	}
-	.id-name.long-name {
+	.embedded .id-name.long-name {
 		font-size: 8.57cqw;
 	}
 	.embedded .id-name.long-word {
@@ -280,178 +307,25 @@
 		vertical-align: middle;
 		background: currentColor;
 	}
-	.id-meta {
+	.embedded .id-meta {
 		gap: 0 2.14cqw;
 		font-size: 2.32cqw;
 		line-height: 1.3;
 	}
-	.id-email {
+	.embedded .id-email {
 		font-size: 2.5cqw;
 	}
-	.id-mrz {
+	.embedded .id-mrz {
 		margin: 0 -5cqw -5cqw;
 		padding: 1.4cqw 5cqw;
 		font-size: 2.14cqw;
 		line-height: 1.35;
 		letter-spacing: 0.18em;
 	}
-	.id-back {
-		gap: 2.5cqw;
+	.embedded .id-front {
+		gap: 0;
 	}
-	.id-stripe {
-		margin: -0.7cqw -5cqw 0;
-		height: 7.85cqw;
-	}
-	.id-signature {
-		gap: 2.14cqw;
-	}
-	.id-signature-box {
-		padding: 1.4cqw 2.14cqw;
-	}
-	.id-signature-label {
-		font-size: 1.6cqw;
-	}
-	.id-signature-name {
-		font-size: 4.28cqw;
-	}
-	.id-seal {
-		width: 10cqw;
-	}
-	.id-seal :global(.id-seal-icon) {
-		width: 5.7cqw;
-		height: 5.7cqw;
-	}
-	.id-data {
-		gap: 1.4cqw 3.57cqw;
-		font-size: 2.5cqw;
-		line-height: 1.25;
-	}
-	.id-data dt {
-		font-size: 1.96cqw;
-	}
-	.id-data dd {
-		overflow-wrap: anywhere;
-	}
-	.id-property {
-		gap: 1.4cqw;
-		font-size: 1.96cqw;
-	}
-	.id-property :global(.id-property-icon) {
-		width: 2.5cqw;
-		height: 2.5cqw;
-	}
-	/* The account page grows with its content on phones, so text stays readable. */
-	@media (max-width: 639.98px) {
-		.id-card:not(.embedded) {
-			aspect-ratio: auto;
-		}
-		.id-card:not(.embedded) .id-tilt {
-			position: relative;
-			inset: auto;
-		}
-		.id-card:not(.embedded) .id-flip,
-		.id-card:not(.embedded) .id-face {
-			height: auto;
-		}
-		.id-card:not(.embedded) .id-face {
-			padding: 20px;
-		}
-		.id-card:not(.embedded) .id-front {
-			gap: 24px;
-		}
-		.id-card:not(.embedded) .id-heading {
-			gap: 16px;
-			font-size: 11px;
-		}
-		.id-card:not(.embedded) .id-brand {
-			gap: 8px;
-		}
-		.id-card:not(.embedded) .id-brand :global(.id-brand-logo) {
-			width: 20px;
-			height: 20px;
-		}
-		.id-card:not(.embedded) .id-serial {
-			gap: 8px;
-			font-size: 12px;
-		}
-		.id-card:not(.embedded) .id-serial :global(.id-refresh) {
-			width: 14px;
-			height: 14px;
-		}
-		.id-card:not(.embedded) .id-person {
-			gap: 16px;
-		}
-		.id-card:not(.embedded) .id-picture {
-			width: 80px;
-			height: 80px;
-		}
-		.id-card:not(.embedded) .id-picture :global(.id-identicon) {
-			width: 48px;
-			height: 48px;
-		}
-		.id-card:not(.embedded) .id-details {
-			gap: 6px;
-		}
-		.id-card:not(.embedded) .id-name {
-			display: block;
-			font-size: 36px;
-			overflow: visible;
-		}
-		.id-card:not(.embedded) .id-name.long-word {
-			font-size: 24px;
-		}
-		.id-card:not(.embedded) .id-meta {
-			gap: 0 12px;
-			font-size: 12px;
-		}
-		.id-card:not(.embedded) .id-email {
-			font-size: 13px;
-		}
-		.id-card:not(.embedded) .id-mrz {
-			margin: 0 -20px -20px;
-			padding: 8px 20px;
-			font-size: 10px;
-		}
-		.id-card:not(.embedded) .id-back {
-			gap: 16px;
-		}
-		.id-card:not(.embedded) .id-stripe {
-			margin: -4px -20px 0;
-			height: 40px;
-		}
-		.id-card:not(.embedded) .id-signature {
-			gap: 12px;
-		}
-		.id-card:not(.embedded) .id-signature-box {
-			padding: 8px 12px;
-		}
-		.id-card:not(.embedded) .id-signature-label {
-			font-size: 9px;
-		}
-		.id-card:not(.embedded) .id-signature-name {
-			font-size: 24px;
-		}
-		.id-card:not(.embedded) .id-seal {
-			width: 56px;
-		}
-		.id-card:not(.embedded) .id-seal :global(.id-seal-icon) {
-			width: 32px;
-			height: 32px;
-		}
-		.id-card:not(.embedded) .id-data {
-			gap: 8px 20px;
-			font-size: 13px;
-		}
-		.id-card:not(.embedded) .id-data dt {
-			font-size: 10px;
-		}
-		.id-card:not(.embedded) .id-property {
-			gap: 8px;
-			font-size: 10px;
-		}
-		.id-card:not(.embedded) .id-property :global(.id-property-icon) {
-			width: 14px;
-			height: 14px;
-		}
+	.embedded .id-heading .ph-subheadline {
+		font-size: inherit;
 	}
 </style>

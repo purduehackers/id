@@ -165,56 +165,54 @@
 				{ transform: 'rotateX(140deg)', offset: 1 }
 			];
 
+			const play = (element: Element, frames: Keyframe[]) =>
+				element.animate(frames, { duration, fill: 'both' });
+			const visibilityFrames = (before: number, after: number): Keyframe[] => [
+				{ opacity: before, offset: 0 },
+				{ opacity: before, offset: faceSwitch - 0.00001 },
+				{ opacity: after, offset: faceSwitch },
+				{ opacity: after, offset: 1 }
+			];
+
 			animations = [
-				booklet.animate(
-					[
-						{
-							transform: `translateY(${above}px) rotateZ(-2deg) scale(0.98)`,
-							offset: 0,
-							easing: easeOut
-						},
-						{
-							transform: 'translateY(0) rotateZ(0deg) scale(1)',
-							offset: arrivalDuration / duration
-						},
-						{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 1 }
-					],
-					{ duration, fill: 'both' }
-				),
-				paper.animate(pageFrames, { duration, fill: 'both' }),
-				cover.animate(coverFrames, { duration, fill: 'both' }),
-				header.animate(
+				play(booklet, [
+					{
+						transform: `translateY(${above}px) rotateZ(-2deg) scale(0.98)`,
+						offset: 0,
+						easing: easeOut
+					},
+					{
+						transform: 'translateY(0) rotateZ(0deg) scale(1)',
+						offset: arrivalDuration / duration
+					},
+					{ transform: 'translateY(0) rotateZ(0deg) scale(1)', offset: 1 }
+				]),
+				play(paper, pageFrames),
+				play(cover, coverFrames),
+				play(
+					header,
 					coverFrames.map((frame) => ({
 						...frame,
 						transform: headerPose(
 							Number(String(frame.transform).match(/rotateX\(([-.\d]+)/)?.[1] ?? 0)
 						)
-					})),
-					{ duration, fill: 'both' }
+					}))
 				),
-				header.animate(
-					[
-						{ opacity: 0, offset: 0 },
-						{ opacity: 0, offset: faceSwitch - 0.00001 },
-						{ opacity: 1, offset: faceSwitch },
-						{ opacity: 1, offset: 1 }
-					],
-					{ duration, fill: 'both' }
-				),
-				paperShadow.animate(
+				play(header, visibilityFrames(0, 1)),
+				play(
+					paperShadow,
 					pageFrames.map((frame) => ({
 						...frame,
-						transform: frame.transform,
 						filter: frame.offset === opening(0.7) ? 'blur(7px)' : 'blur(4px)',
 						boxShadow:
 							frame.offset === opening(0.7)
 								? '0 0 84px 18px var(--passport-glow)'
 								: '0 0 72px 14px var(--passport-glow)'
-					})),
-					{ duration, fill: 'both' }
+					}))
 				),
 				// The glow follows the cover and widens as it lifts away from the page.
-				coverShadow.animate(
+				play(
+					coverShadow,
 					coverFrames.map((frame) => {
 						const angle = Number(String(frame.transform).match(/rotateX\(([-.\d]+)/)?.[1] ?? 0);
 						const lift = Math.min(
@@ -226,40 +224,20 @@
 							opacity: lift,
 							boxShadow: `0 0 ${72 + 48 * lift}px ${14 + 16 * lift}px var(--passport-cover-glow)`
 						};
-					}),
-					{ duration, fill: 'both' }
+					})
 				),
 				// Explicit face opacity also prevents Safari from compositing the foil
 				// logo through the reverse face. Switch only at the edge-on pose.
-				outside.animate(
-					[
-						{ opacity: 1, offset: 0 },
-						{ opacity: 1, offset: faceSwitch - 0.00001 },
-						{ opacity: 0, offset: faceSwitch },
-						{ opacity: 0, offset: 1 }
-					],
-					{ duration, fill: 'both' }
-				),
-				inside.animate(
-					[
-						{ opacity: 0, offset: 0 },
-						{ opacity: 0, offset: faceSwitch - 0.00001 },
-						{ opacity: 1, offset: faceSwitch },
-						{ opacity: 1, offset: 1 }
-					],
-					{ duration, fill: 'both' }
-				),
-				shade.animate(
-					[
-						{ opacity: 0.5, offset: 0 },
-						{ opacity: 0.5, offset: opening(0) },
-						{ opacity: 0.32, offset: opening(0.33), easing: 'ease-out' },
-						{ opacity: 0.04, offset: opening(0.7) },
-						{ opacity: 0, offset: opening(1) },
-						{ opacity: 0, offset: 1 }
-					],
-					{ duration, fill: 'both' }
-				)
+				play(outside, visibilityFrames(1, 0)),
+				play(inside, visibilityFrames(0, 1)),
+				play(shade, [
+					{ opacity: 0.5, offset: 0 },
+					{ opacity: 0.5, offset: opening(0) },
+					{ opacity: 0.32, offset: opening(0.33), easing: 'ease-out' },
+					{ opacity: 0.04, offset: opening(0.7) },
+					{ opacity: 0, offset: opening(1) },
+					{ opacity: 0, offset: 1 }
+				])
 			];
 			const reflectCover = () => {
 				if (disposed || finished) return;
@@ -381,6 +359,30 @@
 </div>
 
 <style>
+	.passport-stage,
+	.passport-page-clip {
+		perspective: 2400px;
+		perspective-origin: center top;
+	}
+
+	.ground-shadow,
+	.passport-page,
+	.passport-cover {
+		transform-origin: center top;
+	}
+
+	.ground-shadow,
+	.passport-page-clip,
+	.passport-page,
+	.passport-faces,
+	.page-shade,
+	.passport-cover,
+	.cover-outside,
+	.cover-inside {
+		position: absolute;
+		inset: 0;
+	}
+
 	.cover-safe-area {
 		position: fixed;
 		inset: 0 0 auto;
@@ -412,20 +414,15 @@
 		margin-inline: auto;
 		aspect-ratio: 85.6 / 53.98;
 		container-type: inline-size;
-		perspective: 2400px;
-		perspective-origin: center top;
 	}
 	.waiting {
 		visibility: hidden;
 	}
 	.ground-shadow {
-		position: absolute;
-		inset: 0;
 		z-index: -1;
 		pointer-events: none;
 		background: var(--passport-plate);
 		filter: blur(4px);
-		transform-origin: center top;
 	}
 	.shadow-paper {
 		box-shadow: 0 0 72px 14px var(--passport-glow);
@@ -435,24 +432,15 @@
 		box-shadow: 0 0 120px 30px var(--passport-cover-glow);
 	}
 	.passport-page-clip {
-		position: absolute;
-		inset: 0;
 		z-index: 0;
 		overflow: visible;
 		clip-path: inset(0 -64px -64px);
-		perspective: 2400px;
-		perspective-origin: center top;
 		background: transparent;
 	}
 	.passport-page {
-		transform-origin: center top;
-		position: absolute;
-		inset: 0;
 		z-index: 0;
 	}
 	.passport-faces {
-		position: absolute;
-		inset: 0;
 		display: grid;
 		grid-template-columns: minmax(0, 1fr);
 		width: 100%;
@@ -479,7 +467,6 @@
 		background: var(--ph-cream);
 		color: var(--ph-black);
 		border: 1px solid var(--border);
-		border-top: 1px solid var(--border);
 	}
 	.passport-header {
 		gap: 2cqw;
@@ -522,8 +509,6 @@
 		font-size: clamp(7px, 2.25cqw, 10px);
 	}
 	.page-shade {
-		position: absolute;
-		inset: 0;
 		z-index: 1;
 		pointer-events: none;
 		opacity: 0;
@@ -535,17 +520,12 @@
 		);
 	}
 	.passport-cover {
-		position: absolute;
-		inset: 0;
 		z-index: 2;
 		transform-style: preserve-3d;
-		transform-origin: center top;
 		transform: rotateX(140deg);
 	}
 	.cover-outside,
 	.cover-inside {
-		position: absolute;
-		inset: 0;
 		background: var(--card);
 		color: var(--ph-cream);
 		backface-visibility: hidden;
