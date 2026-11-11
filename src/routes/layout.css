@@ -11,6 +11,7 @@
 		font-size: 15px;
 		/* app.html sets viewport-fit=cover, so keep content clear of landscape notches. */
 		padding-inline: env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px);
+		padding-bottom: env(safe-area-inset-bottom, 0px);
 	}
 
 	button:not(:disabled),
