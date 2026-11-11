@@ -1,7 +1,7 @@
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 import { dev } from '$app/environment';
-import { idCardForScan } from '$lib/server/id-card';
+import { idCardFromOwner } from '$lib/server/id-card';
 import { auth } from '$lib/server/auth';
 import { APIError } from 'better-auth/api';
 import {
@@ -48,7 +48,7 @@ export const load: PageServerLoad = async (event) => {
 			passportId: tap.passportId,
 			owner: tap.owner && { username: tap.owner.username, name: tap.owner.name },
 			returning: tap.returning,
-			card: tap.owner ? await idCardForScan(tap.owner.id, tap.passportId, viewerIsOwner) : null
+			card: tap.owner ? idCardFromOwner(tap.owner, tap.passportId, viewerIsOwner) : null
 		},
 		me: event.locals.user ? { username: event.locals.user.username } : null,
 		error: null

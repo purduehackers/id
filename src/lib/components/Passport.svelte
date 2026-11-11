@@ -51,7 +51,6 @@
 		let animations: Animation[] = [];
 		let finished = false;
 		let disposed = false;
-		let started = false;
 		let reflectionFrame = 0;
 		let headerMotion: Animation | undefined;
 		let coverFrames: Keyframe[] = [];
@@ -128,7 +127,6 @@
 		const sizeObserver = new ResizeObserver(resize);
 		const start = () => {
 			if (disposed || finished) return;
-			started = true;
 			resize();
 			sizeObserver.observe(card);
 			window.addEventListener('resize', resize);
@@ -300,7 +298,7 @@
 			disposed = true;
 			sizeObserver.disconnect();
 			cancelAnimationFrame(reflectionFrame);
-			if (started) animations.forEach((animation) => animation.cancel());
+			animations.forEach((animation) => animation.cancel());
 			window.removeEventListener('resize', resize);
 			document.fonts.removeEventListener('loadingdone', fitHeader);
 			reduced.removeEventListener('change', finish);
@@ -393,7 +391,7 @@
 		</div>
 	</div>
 	<a
-		class="cover-header cover-resting-header absolute top-0 right-[clamp(22px,8cqw,34px)] bottom-auto left-[clamp(14px,4cqw,20px)] flex h-[1em] items-center gap-[clamp(14px,4cqw,20px)] text-[clamp(22px,7.8cqw,35px)] leading-none text-ph-cream no-underline"
+		class="cover-header absolute top-0 right-[clamp(22px,8cqw,34px)] bottom-auto left-[clamp(14px,4cqw,20px)] flex h-[1em] items-center gap-[clamp(14px,4cqw,20px)] text-[clamp(22px,7.8cqw,35px)] leading-none text-ph-cream no-underline"
 		bind:this={header}
 		href={resolve('/')}
 		tabindex={opened ? 0 : -1}
@@ -466,9 +464,6 @@
 			inset -1px 0 0 var(--border),
 			inset 0 1px 0 var(--border);
 	}
-	.cover-header {
-		transform: translateY(50%);
-	}
 	.cover-header > span {
 		transform: translateY(0.08em) scaleX(var(--cover-header-text-scale, 1));
 		transform-origin: left center;
@@ -478,14 +473,14 @@
 		height: 1em;
 	}
 	/* One projected header plane keeps the cover's angle without a handoff. */
-	.cover-resting-header {
+	.cover-header {
 		transform-origin: 0 0;
 		transform: translateY(calc(-0.5 * var(--cover-strip-height, 56px) - 0.5em)) perspective(2400px)
 			rotateX(-40deg);
 		z-index: 3;
 		opacity: 0;
 	}
-	.opened .cover-resting-header {
+	.opened .cover-header {
 		opacity: 1;
 	}
 </style>

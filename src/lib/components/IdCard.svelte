@@ -70,19 +70,12 @@
 		};
 	}
 
-	const face = $derived([
-		'col-start-1 row-start-1 flex flex-col backface-hidden',
-		embedded
-			? 'size-full min-h-0 min-w-0 overflow-hidden p-[5cqw] [overflow-wrap:anywhere]'
-			: 'p-5 sm:aspect-[1.586] sm:p-7'
-	]);
+	const face =
+		'col-start-1 row-start-1 flex size-full min-h-0 min-w-0 flex-col overflow-hidden p-[5cqw] backface-hidden [overflow-wrap:anywhere]';
 </script>
 
 <div
-	class={[
-		'w-full max-w-[560px] perspective-[1200px]',
-		embedded && '@container relative aspect-[85.6/53.98] min-w-0'
-	]}
+	class="@container relative aspect-[85.6/53.98] w-full max-w-[560px] min-w-0 perspective-[1200px]"
 	class:enter={!embedded}
 	style="--i: 1"
 >
@@ -90,10 +83,7 @@
 		bind:this={card}
 		onpointermove={move}
 		onpointerleave={() => (tilt = { x: 0, y: 0 })}
-		class={[
-			'transition-transform duration-300 ease-out transform-3d',
-			embedded && 'absolute inset-0'
-		]}
+		class="absolute inset-0 transition-transform duration-300 ease-out transform-3d"
 		style="transform: rotateX({tilt.x}deg) rotateY({tilt.y}deg)"
 		role="presentation"
 	>
@@ -106,89 +96,49 @@
 			aria-pressed={embedded ? undefined : flipped}
 			aria-label={`Purdue Hackers ID for ${name}, @${username}, ${label}${embedded ? '' : '. Flip the card'}`}
 			class={[
-				'grid w-full text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none',
-				embedded ? 'h-full cursor-default grid-cols-[minmax(0,1fr)]' : 'cursor-pointer grid-cols-1'
+				'grid size-full grid-cols-[minmax(0,1fr)] text-left transition-transform duration-500 ease-quint select-none transform-3d motion-reduce:transition-none',
+				embedded ? 'cursor-default' : 'cursor-pointer'
 			]}
 			style="transform: rotateY({flipped ? 180 : 0}deg)"
 		>
 			<!-- Front -->
-			<div
-				class={[face, 'justify-between', embedded ? 'gap-0' : 'gap-6', theme.card]}
-				aria-hidden="true"
-			>
-				<div
-					class={[
-						'flex items-start justify-between',
-						embedded ? 'gap-[2.8cqw] text-[2.14cqw] leading-[1.2]' : 'gap-4'
-					]}
-				>
-					<div class={['flex items-center', embedded ? 'gap-[1.4cqw]' : 'gap-2']}>
-						<Glider class={embedded ? 'size-[3.57cqw]' : 'size-5'} />
-						<span
-							class={[
-								'ph-subheadline',
-								embedded ? 'text-[length:inherit]' : 'text-[11px] sm:text-[12px]'
-							]}>Purdue Hackers · Identity</span
-						>
+			<div class={[face, 'justify-between', theme.card]} aria-hidden="true">
+				<div class="flex items-start justify-between gap-[2.8cqw] text-[2.14cqw] leading-[1.2]">
+					<div class="flex items-center gap-[1.4cqw]">
+						<Glider class="size-[3.57cqw]" />
+						<span class="ph-subheadline text-[length:inherit]">Purdue Hackers · Identity</span>
 					</div>
 					<span
-						class={[
-							'flex items-center font-mono font-semibold',
-							embedded
-								? 'gap-[1.4cqw] text-[2.32cqw] whitespace-nowrap'
-								: 'gap-2 text-[12px] sm:text-[13px]'
-						]}
+						class="flex items-center gap-[1.4cqw] font-mono text-[2.32cqw] font-semibold whitespace-nowrap"
 					>
 						Nº {serial}
-						{#if !embedded}<Icon name="refresh" class="size-3.5" />{/if}
+						{#if !embedded}<Icon name="refresh" class="size-[2.5cqw]" />{/if}
 					</span>
 				</div>
 
-				<div class={['flex items-end', embedded ? 'gap-[4.28cqw]' : 'gap-4 sm:gap-6']}>
-					<div
-						class={[
-							'grid shrink-0 place-items-center overflow-hidden bg-ph-black/10',
-							embedded ? 'size-[20cqw]' : 'size-20 sm:size-28'
-						]}
-					>
+				<div class="flex items-end gap-[4.28cqw]">
+					<div class="grid size-[20cqw] shrink-0 place-items-center overflow-hidden bg-ph-black/10">
 						{#if image}
 							<img src={image} alt="" class="size-full object-cover" />
 						{:else}
-							<Identicon
-								seed={id}
-								accent={theme.accent}
-								class={embedded ? 'size-[11.42cqw]' : 'size-12 sm:size-16'}
-							/>
+							<Identicon seed={id} accent={theme.accent} class="size-[11.42cqw]" />
 						{/if}
 					</div>
-					<div class={['flex min-w-0 flex-col', embedded ? 'gap-[1.4cqw]' : 'gap-1.5 sm:gap-2']}>
+					<div class="flex min-w-0 flex-col gap-[1.4cqw]">
 						<span
 							class={[
-								'ph-headline break-words',
-								embedded
-									? [
-											'line-clamp-2 leading-none [overflow-wrap:anywhere]',
-											longestWord > 10
-												? 'text-[7.3cqw]'
-												: name.length > 12
-													? 'text-[8.57cqw]'
-													: 'text-[10.7cqw]'
-										]
-									: [
-											longestWord > 10 ? 'text-2xl' : 'text-4xl',
-											name.length > 16 ? 'sm:text-5xl' : 'sm:text-6xl'
-										]
+								'line-clamp-2 ph-headline leading-none [overflow-wrap:anywhere]',
+								longestWord > 10
+									? 'text-[7.3cqw]'
+									: name.length > 12
+										? 'text-[8.57cqw]'
+										: 'text-[10.7cqw]'
 							]}
 						>
 							{name}
 						</span>
 						<span
-							class={[
-								'flex flex-wrap font-mono font-semibold uppercase',
-								embedded
-									? 'gap-x-[2.14cqw] gap-y-0 text-[2.32cqw] leading-[1.3]'
-									: 'gap-x-3 text-[12px] sm:text-[13px]'
-							]}
+							class="flex flex-wrap gap-x-[2.14cqw] gap-y-0 font-mono text-[2.32cqw] leading-[1.3] font-semibold uppercase"
 						>
 							<span>@{username}</span>
 							<span>{label}</span>
@@ -198,7 +148,7 @@
 									></span></span
 								>{:else if graduationYear}<span>Class of {graduationYear}</span>{/if}
 						</span>
-						<span class={['truncate', embedded ? 'text-[2.5cqw]' : 'text-[13px] sm:text-[14px]']}
+						<span class="truncate text-[2.5cqw]"
 							>{#if censored}<span class="inline-block h-[1em] w-[38cqw] bg-current align-middle"
 								></span>{:else}{email}{/if}</span
 						>
@@ -206,12 +156,7 @@
 				</div>
 
 				<div
-					class={[
-						'bg-ph-black/[0.07] font-mono leading-[1.35] tracking-[0.18em]',
-						embedded
-							? '-mx-[5cqw] -mb-[5cqw] px-[5cqw] py-[1.4cqw] text-[2.14cqw]'
-							: '-mx-5 -mb-5 px-5 py-2 text-[10px] sm:-mx-7 sm:-mb-7 sm:px-7 sm:text-[12px]'
-					]}
+					class="-mx-[5cqw] -mb-[5cqw] bg-ph-black/[0.07] px-[5cqw] py-[1.4cqw] font-mono text-[2.14cqw] leading-[1.35] tracking-[0.18em]"
 				>
 					{#each mrz as line, i (i)}<div class="truncate">{line}</div>{/each}
 				</div>
@@ -219,36 +164,36 @@
 
 			{#if !embedded}
 				<!-- Back -->
-				<div class={[face, 'rotate-y-180 gap-4', theme.card]} aria-hidden="true">
-					<div class="-mx-5 -mt-1 h-10 shrink-0 bg-ph-black sm:-mx-7 sm:h-11"></div>
+				<div class={[face, 'rotate-y-180 gap-[2.5cqw]', theme.card]} aria-hidden="true">
+					<div class="-mx-[5cqw] -mt-[0.7cqw] h-[7.85cqw] shrink-0 bg-ph-black"></div>
 
-					<div class="flex items-stretch gap-3">
+					<div class="flex items-stretch gap-[2.14cqw]">
 						<div
-							class="flex min-w-0 flex-1 flex-col justify-center bg-ph-cream px-3 py-2 text-ph-black"
+							class="flex min-w-0 flex-1 flex-col justify-center bg-ph-cream px-[2.14cqw] py-[1.4cqw] text-ph-black"
 						>
-							<span class="ph-subheadline text-[9px]">Authorized signature</span>
-							<span class="-rotate-2 truncate ph-headline text-2xl">{name}</span>
+							<span class="ph-subheadline text-[1.6cqw]">Authorized signature</span>
+							<span class="-rotate-2 truncate ph-headline text-[4.28cqw]">{name}</span>
 						</div>
-						<span class="grid w-14 shrink-0 place-items-center bg-ph-black/10">
-							<Identicon seed={id} accent={theme.accent} class="size-8" />
+						<span class="grid w-[10cqw] shrink-0 place-items-center bg-ph-black/10">
+							<Identicon seed={id} accent={theme.accent} class="size-[5.7cqw]" />
 						</span>
 					</div>
 
 					<dl
-						class="grid flex-1 grid-cols-2 content-start gap-x-5 gap-y-2 text-[13px] sm:text-[14px]"
+						class="grid flex-1 grid-cols-2 content-start gap-x-[3.57cqw] gap-y-[1.4cqw] text-[2.5cqw] leading-[1.25]"
 					>
 						<div class="min-w-0">
-							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Given names</dt>
+							<dt class="ph-subheadline text-[1.96cqw]">Given names</dt>
 							<dd class="break-words">{givenName || name}</dd>
 						</div>
 						{#if familyName}
 							<div class="min-w-0">
-								<dt class="ph-subheadline text-[10px] sm:text-[11px]">Surname</dt>
+								<dt class="ph-subheadline text-[1.96cqw]">Surname</dt>
 								<dd class="break-words">{familyName}</dd>
 							</div>
 						{/if}
 						<div class="min-w-0">
-							<dt class="ph-subheadline text-[10px] sm:text-[11px]">
+							<dt class="ph-subheadline text-[1.96cqw]">
 								Passport ID<span class="normal-case">s</span>
 							</dt>
 							<dd class="font-mono font-semibold break-words">
@@ -256,7 +201,7 @@
 							</dd>
 						</div>
 						<div class="min-w-0">
-							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Registered</dt>
+							<dt class="ph-subheadline text-[1.96cqw]">Registered</dt>
 							<dd>
 								{registered.toLocaleDateString(undefined, {
 									year: 'numeric',
@@ -267,18 +212,18 @@
 						</div>
 						{#if phone}
 							<div class="min-w-0">
-								<dt class="ph-subheadline text-[10px] sm:text-[11px]">Phone</dt>
+								<dt class="ph-subheadline text-[1.96cqw]">Phone</dt>
 								<dd class="font-mono break-words">{formatPhone(phone)}</dd>
 							</div>
 						{/if}
 						<div class="min-w-0">
-							<dt class="ph-subheadline text-[10px] sm:text-[11px]">Linked</dt>
+							<dt class="ph-subheadline text-[1.96cqw]">Linked</dt>
 							<dd class="break-words">{linked.length ? linked.join(', ') : 'Nothing linked'}</dd>
 						</div>
 					</dl>
 
-					<p class="flex items-center gap-2 font-mono text-[10px] uppercase sm:text-[11px]">
-						<Glider class="size-3.5" />
+					<p class="flex items-center gap-[1.4cqw] font-mono text-[1.96cqw] uppercase">
+						<Glider class="size-[2.5cqw]" />
 						Property of Purdue Hackers. If found, return to purduehackers.com
 					</p>
 				</div>

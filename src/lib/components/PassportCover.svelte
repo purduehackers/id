@@ -1,22 +1,12 @@
 <script lang="ts">
 	/** Exact Figma vector artwork, with a reflection clipped to its gold foil. */
 	let artwork: HTMLDivElement;
-	let pitch = 0;
-	let roll = 0;
-	let slide = 0;
-	function reflect() {
+	export function setPose(pitch: number, roll: number, slide = 0) {
 		if (!artwork) return;
-		// A fixed virtual light reflected by the moving cover. Coordinates are
-		// counter-rotated because the Figma seal itself is rotated clockwise.
+		// Counter-rotate the light coordinates for the clockwise-rotated seal.
 		artwork.style.setProperty('--foil-x', `${44 + pitch * 0.85 + slide * 48}%`);
 		artwork.style.setProperty('--foil-y', `${38 - roll * 0.8 - slide * 12}%`);
 		artwork.style.setProperty('--foil-angle', `${115 + roll * 0.6}deg`);
-	}
-	export function setPose(nextPitch: number, nextRoll: number, nextSlide = 0) {
-		pitch = nextPitch;
-		roll = nextRoll;
-		slide = nextSlide;
-		reflect();
 	}
 </script>
 

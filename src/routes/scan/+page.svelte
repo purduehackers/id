@@ -133,29 +133,26 @@
 		{/if}
 	</AuthShell>
 </div>
-{#if entering}<div
-		class="entrance-curtain pointer-events-none fixed inset-0 z-50 bg-background motion-reduce:hidden"
-		class:revealing
-		aria-hidden="true"
-	></div>{/if}
+{#if entering}
+	<!-- Restart the fade delay when the entrance actually starts after font loading. -->
+	{#key revealing}
+		<div
+			class="entrance-curtain pointer-events-none fixed inset-0 z-50 bg-background motion-reduce:hidden"
+			class:revealing
+			aria-hidden="true"
+		></div>
+	{/key}
+{/if}
 
 <style>
 	.entrance-curtain {
 		/* Fallback so a failed hydration cannot leave the page covered. */
-		animation: reveal-page-fallback 450ms 4s ease-out both;
+		animation: reveal-page 450ms 4s ease-out both;
 	}
 	.entrance-curtain.revealing {
-		animation: reveal-page 450ms 480ms ease-out both;
+		animation-delay: 480ms;
 	}
 	@keyframes reveal-page {
-		from {
-			opacity: 1;
-		}
-		to {
-			opacity: 0;
-		}
-	}
-	@keyframes reveal-page-fallback {
 		from {
 			opacity: 1;
 		}

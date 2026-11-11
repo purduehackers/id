@@ -5,32 +5,41 @@ import { rolesOf } from '$lib/roles';
 import { termYear } from '$lib/graduation';
 import { censorIdCard, type IdCardData } from '$lib/id-card';
 
-// Called only after the scan route resolves a valid, unexpired passport tap. A tap proves
-// someone is holding the passport, not who they are, so only the signed-in owner gets the
-// full card. The embedded card has no back, so its fields are never sent.
+/** Fields needed to build the scan card; also selected when resolving its owner. */
+export const idCardOwnerFields = {
+	id: user.id,
+	name: user.name,
+	givenName: user.givenName,
+	familyName: user.familyName,
+	username: user.username,
+	image: user.image,
+	email: user.email,
+	role: user.role,
+	graduationTerm: user.graduationTerm,
+	createdAt: user.createdAt
+};
+type IdCardOwner = Pick<typeof user.$inferSelect, keyof typeof idCardOwnerFields>;
+
+/** Fetch only when the caller does not already have the owner. */
 export async function idCardForScan(
 	userId: string,
 	passportId: number,
 	viewerIsOwner: boolean
 ): Promise<IdCardData | null> {
 	const [person] = await db
-		.select({
-			id: user.id,
-			name: user.name,
-			givenName: user.givenName,
-			familyName: user.familyName,
-			username: user.username,
-			image: user.image,
-			email: user.email,
-			role: user.role,
-			graduationTerm: user.graduationTerm,
-			createdAt: user.createdAt
-		})
+		.select(idCardOwnerFields)
 		.from(user)
 		.where(eq(user.id, userId))
 		.limit(1);
-	if (!person) return null;
+	return person ? idCardFromOwner(person, passportId, viewerIsOwner) : null;
+}
 
+/** Build a scan card without another query. Redact before returning data to the browser. */
+export function idCardFromOwner(
+	person: IdCardOwner,
+	passportId: number,
+	viewerIsOwner: boolean
+): IdCardData {
 	const card: IdCardData = {
 		id: person.id,
 		name: person.name,

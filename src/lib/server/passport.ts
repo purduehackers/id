@@ -11,6 +11,7 @@ import {
 	user
 } from '$lib/server/db/schema';
 import { uuidv7 } from '$lib/server/uuid';
+import { idCardOwnerFields } from './id-card';
 
 export class PassportError extends Error {}
 
@@ -31,7 +32,7 @@ const randomCode = () =>
 	String(crypto.getRandomValues(new Uint32Array(1))[0] % 1_000_000).padStart(6, '0');
 
 type Actor = { id: string; username: string };
-type Owner = { id: string; username: string; name: string };
+type Owner = NonNullable<Awaited<ReturnType<typeof findUser>>>;
 
 function parseNumber(raw: string) {
 	const id = Number(raw.trim());
@@ -39,11 +40,7 @@ function parseNumber(raw: string) {
 }
 
 async function findUser(where: SQL) {
-	const [row] = await db
-		.select({ id: user.id, username: user.username, name: user.name })
-		.from(user)
-		.where(where)
-		.limit(1);
+	const [row] = await db.select(idCardOwnerFields).from(user).where(where).limit(1);
 	return row ?? null;
 }
 
@@ -54,7 +51,7 @@ async function ownerOf(p: {
 	if (p.userId) return findUser(eq(user.id, p.userId));
 	if (!p.discordId) return null;
 	const [row] = await db
-		.select({ id: user.id, username: user.username, name: user.name })
+		.select(idCardOwnerFields)
 		.from(account)
 		.innerJoin(user, eq(user.id, account.userId))
 		.where(and(eq(account.providerId, 'discord'), eq(account.accountId, p.discordId)))
