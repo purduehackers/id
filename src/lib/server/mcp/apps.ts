@@ -315,10 +315,15 @@ export function registerAppTools(server: McpServer, caller: Caller) {
 		async ({ app_id, delivery_id }) =>
 			withApp(app_id, async (app) => {
 				if (!app.endpoint) return fail('There is no webhook yet.');
-				if (!(await resend(delivery_id, app.endpoint.id))) {
+				const state = await resend(delivery_id, app.endpoint.id);
+				if (!state) {
 					return fail('This webhook has no delivery with that ID. Get the IDs from get_app.');
 				}
-				return ok({ resent: delivery_id });
+				if (state.deliveredAt) return ok({ delivered: delivery_id });
+				if (state.failedAt) return fail(`Not sent: ${state.lastError}.`);
+				return state.lastError
+					? fail(`Sending failed: ${state.lastError}. It will be sent again later.`)
+					: ok({ queued: delivery_id });
 			})
 	);
 

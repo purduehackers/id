@@ -11,7 +11,8 @@ import { githubAccountsClaim, githubLinkEvent } from '../src/lib/server/github-l
 import {
 	availableEvents,
 	expandScopes,
-	githubDeliveryAllowed
+	deliveryAllowed,
+	payloadScopes
 } from '../src/lib/server/webhook-policy.ts';
 
 const linked = {
@@ -119,11 +120,58 @@ test('resource migration preserves scopes and grants and is idempotent', async (
 
 test('queued, retry and resend GitHub events are suppressed after grant or subscription revocation', () => {
 	for (const type of ['user.github.linked', 'user.github.unlinked']) {
-		// The payload was valid when queued; dispatch must use the new state instead.
-		assert.ok(githubLinkEvent(expandScopes(['directory:github']), { sub: 'phid1' }, linked));
-		assert.ok(githubDeliveryAllowed(type, [type], ['directory:roles', 'directory:github']));
-		assert.equal(githubDeliveryAllowed(type, [type], ['directory:roles']), false);
-		assert.equal(githubDeliveryAllowed(type, [], ['directory:github']), false);
-		assert.equal(githubDeliveryAllowed(type, [], []), false);
+		const data = githubLinkEvent(expandScopes(['directory:github']), { sub: 'phid1' }, linked);
+		assert.ok(data);
+		assert.ok(deliveryAllowed(type, data, [type], ['directory:roles', 'directory:github']));
+		assert.equal(deliveryAllowed(type, data, [type], ['directory:roles']), false);
+		assert.equal(deliveryAllowed(type, data, [], ['directory:github']), false);
+		assert.equal(deliveryAllowed(type, data, [], []), false);
 	}
+});
+
+test('queued events are suppressed when any field in the payload lost its scope', () => {
+	const updated = {
+		user: { sub: 'phid1', preferred_username: 'a', email: 'a@x', phone_number: '+1' }
+	};
+	assert.deepEqual(payloadScopes(updated), new Set(['profile', 'email', 'phone']));
+	const events = ['user.updated'];
+	assert.ok(
+		deliveryAllowed('user.updated', updated, events, ['directory:roles', 'directory:contact'])
+	);
+	assert.equal(deliveryAllowed('user.updated', updated, events, ['directory:roles']), false);
+	assert.ok(deliveryAllowed('user.updated', updated, events, ['profile', 'email', 'phone']));
+	assert.equal(deliveryAllowed('user.updated', updated, events, ['profile', 'email']), false);
+
+	const discord = { user: { sub: 'phid1', discord_id: '1' } };
+	const linkedEvents = ['user.discord.linked'];
+	assert.ok(deliveryAllowed('user.discord.linked', discord, linkedEvents, ['directory:discord']));
+	assert.equal(
+		deliveryAllowed('user.discord.linked', discord, linkedEvents, ['directory:roles']),
+		false
+	);
+
+	const github = {
+		user: { sub: 'phid1', preferred_username: 'a', discord_id: '1' },
+		github_account: {}
+	};
+	const githubEvents = ['user.github.linked'];
+	const all = ['directory:roles', 'directory:discord', 'directory:github'];
+	assert.ok(deliveryAllowed('user.github.linked', github, githubEvents, all));
+	assert.equal(
+		deliveryAllowed('user.github.linked', github, githubEvents, [
+			'directory:roles',
+			'directory:github'
+		]),
+		false
+	);
+
+	const banned = { user: { sub: 'phid1' } };
+	assert.ok(deliveryAllowed('user.banned', banned, ['user.banned'], ['profile']));
+	assert.equal(deliveryAllowed('user.banned', banned, ['user.banned'], []), false);
+	assert.equal(
+		deliveryAllowed('user.banned', { user: { sub: 'x', secret: 1 } }, ['user.banned'], ['profile']),
+		false
+	);
+	assert.equal(deliveryAllowed('user.banned', null, ['user.banned'], ['profile']), false);
+	assert.ok(deliveryAllowed('webhook.test', { client_id: 'c' }, [], []));
 });

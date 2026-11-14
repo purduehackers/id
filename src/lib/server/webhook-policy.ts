@@ -38,10 +38,49 @@ export function availableEvents(scopes: string[]): WebhookEvent[] {
 	});
 }
 
-/** Queued/retried link events must honor revocation at delivery time too. */
-export function githubDeliveryAllowed(type: string, events: string[], directoryScopes: string[]) {
-	return (
-		!type.startsWith('user.github.') ||
-		(events.includes(type) && directoryScopes.includes('directory:github'))
-	);
+const USER_FIELD_SCOPES: Record<string, string | null> = {
+	sub: null,
+	preferred_username: 'profile',
+	name: 'profile',
+	given_name: 'profile',
+	family_name: 'profile',
+	picture: 'profile',
+	graduation_year: 'profile',
+	email: 'email',
+	email_verified: 'email',
+	phone_number: 'phone',
+	discord_id: 'discord'
+};
+
+const DATA_FIELD_SCOPES: Record<string, string | null> = {
+	user: null,
+	roles: 'roles',
+	previous_roles: 'roles',
+	github_account: 'github'
+};
+
+export function payloadScopes(data: unknown): Set<string> | null {
+	if (typeof data !== 'object' || data === null) return null;
+	const needed = new Set<string>();
+	const add = (fields: object, scopes: Record<string, string | null>) => {
+		for (const field of Object.keys(fields)) {
+			if (!Object.hasOwn(scopes, field)) return false;
+			const scope = scopes[field];
+			if (scope) needed.add(scope);
+		}
+		return true;
+	};
+	const { user } = data as { user?: unknown };
+	if (user !== undefined && (typeof user !== 'object' || user === null)) return null;
+	if (!add(data, DATA_FIELD_SCOPES) || (user && !add(user, USER_FIELD_SCOPES))) return null;
+	return needed;
+}
+
+export function deliveryAllowed(type: string, data: unknown, events: string[], granted: string[]) {
+	if (type === 'webhook.test') return true;
+	if (!events.includes(type) || granted.length === 0) return false;
+	const needed = payloadScopes(data);
+	if (!needed) return false;
+	const visible = expandScopes(granted);
+	return [...needed].every((scope) => visible.has(scope));
 }

@@ -168,10 +168,13 @@ export const actions: Actions = {
 		const deliveryId = (await event.request.formData()).get('deliveryId')?.toString();
 		if (!endpoint || !deliveryId) return fail(400, { message: 'Nothing to resend.' });
 
-		if (!(await resend(deliveryId, endpoint.id))) {
-			return fail(404, { message: 'That delivery is gone.' });
-		}
-		return { notice: 'Sent again.' };
+		const state = await resend(deliveryId, endpoint.id);
+		if (!state) return fail(404, { message: 'That delivery is gone.' });
+		if (state.deliveredAt) return { notice: 'Sent again.' };
+		if (state.failedAt) return fail(400, { message: `Not sent: ${state.lastError}.` });
+		return state.lastError
+			? fail(400, { message: `Sending failed: ${state.lastError}. Will retry.` })
+			: { notice: 'Queued. It will be sent soon.' };
 	},
 
 	requestAccess: async (event) => {

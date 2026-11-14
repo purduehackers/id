@@ -3,7 +3,7 @@ import { lookup } from 'node:dns/promises';
 import { request as httpRequest } from 'node:http';
 import { request as httpsRequest } from 'node:https';
 import { isIP, type LookupFunction } from 'node:net';
-import { and, asc, desc, eq, isNotNull, isNull, lt, lte, or } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, lte, or } from 'drizzle-orm';
 import { waitUntil } from '@vercel/functions';
 import { symmetricDecrypt, symmetricEncrypt } from 'better-auth/crypto';
 import { env } from '$env/dynamic/private';
@@ -25,7 +25,7 @@ import type { Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
 export { WEBHOOK_EVENTS, availableEvents } from './webhook-policy';
-import { expandScopes, githubDeliveryAllowed, type WebhookEvent } from './webhook-policy';
+import { deliveryAllowed, expandScopes, type WebhookEvent } from './webhook-policy';
 import { githubLinkEvent, type LinkedGitHubAccount } from './github-links';
 
 type Db = typeof db;
@@ -366,10 +366,14 @@ export async function deliverDue(options: { endpointId?: string } = {}) {
 			payload: webhookDelivery.payload,
 			attempts: webhookDelivery.attempts,
 			url: webhookEndpoint.url,
-			secret: webhookEndpoint.secret
+			secret: webhookEndpoint.secret,
+			clientId: webhookEndpoint.clientId,
+			events: webhookEndpoint.events,
+			directoryScopes: directoryAccess.grantedScopes
 		})
 		.from(webhookDelivery)
 		.innerJoin(webhookEndpoint, eq(webhookEndpoint.id, webhookDelivery.endpointId))
+		.leftJoin(directoryAccess, eq(directoryAccess.clientId, webhookEndpoint.clientId))
 		.where(
 			and(
 				isNull(webhookDelivery.deliveredAt),
@@ -381,9 +385,16 @@ export async function deliverDue(options: { endpointId?: string } = {}) {
 		.orderBy(asc(webhookDelivery.nextAttemptAt))
 		.limit(25);
 
+	const deliveries = due.map((row) => {
+		const data = row.type === 'webhook.test' ? null : payloadData(row.payload);
+		const userId: unknown = data?.user?.sub;
+		return { ...row, data, userId: typeof userId === 'string' ? userId : null };
+	});
+	const consents = await consentScopes(deliveries);
+
 	const secrets = new Map<string, Promise<string>>();
 	await Promise.all(
-		due.map(async (row) => {
+		deliveries.map(async (row) => {
 			const [claimed] = await db
 				.update(webhookDelivery)
 				.set({ nextAttemptAt: new Date(Date.now() + LEASE) })
@@ -398,26 +409,20 @@ export async function deliverDue(options: { endpointId?: string } = {}) {
 				.returning({ id: webhookDelivery.id });
 			if (!claimed) return;
 
-			if (row.type.startsWith('user.github.')) {
-				// A retry or manual resend may outlive the grant/subscription that
-				// authorized the queued payload. Check the current state before signing.
-				const [access] = await db
-					.select({ events: webhookEndpoint.events, scopes: directoryAccess.grantedScopes })
-					.from(webhookEndpoint)
-					.leftJoin(directoryAccess, eq(directoryAccess.clientId, webhookEndpoint.clientId))
-					.where(eq(webhookEndpoint.id, row.endpointId))
-					.limit(1);
-				if (!githubDeliveryAllowed(row.type, access?.events ?? [], access?.scopes ?? [])) {
-					await db
-						.update(webhookDelivery)
-						.set({
-							failedAt: new Date(),
-							nextAttemptAt: null,
-							lastError: 'GitHub directory access or event subscription was revoked'
-						})
-						.where(eq(webhookDelivery.id, row.id));
-					return;
-				}
+			const granted = [
+				...(row.userId ? (consents.get(`${row.clientId} ${row.userId}`) ?? []) : []),
+				...(row.directoryScopes ?? [])
+			];
+			if (!deliveryAllowed(row.type, row.data, row.events, granted)) {
+				await db
+					.update(webhookDelivery)
+					.set({
+						failedAt: new Date(),
+						nextAttemptAt: null,
+						lastError: 'Access or event subscription was revoked'
+					})
+					.where(eq(webhookDelivery.id, row.id));
+				return;
 			}
 
 			if (!secrets.has(row.secret)) secrets.set(row.secret, openSecret(row.secret));
@@ -442,6 +447,36 @@ export async function deliverDue(options: { endpointId?: string } = {}) {
 	);
 }
 
+function payloadData(payload: string) {
+	try {
+		return JSON.parse(payload).data;
+	} catch {
+		return null;
+	}
+}
+
+async function consentScopes(rows: { clientId: string; userId: string | null }[]) {
+	const clientIds = [...new Set(rows.filter((row) => row.userId).map((row) => row.clientId))];
+	const userIds = [...new Set(rows.flatMap((row) => (row.userId ? [row.userId] : [])))];
+	const scopes = new Map<string, string[]>();
+	if (clientIds.length === 0) return scopes;
+
+	const consents = await db
+		.select({
+			clientId: oauthConsent.clientId,
+			userId: oauthConsent.userId,
+			scopes: oauthConsent.scopes
+		})
+		.from(oauthConsent)
+		.where(and(inArray(oauthConsent.clientId, clientIds), inArray(oauthConsent.userId, userIds)));
+	for (const consent of consents) {
+		const key = `${consent.clientId} ${consent.userId}`;
+		const list = readList(consent.scopes).filter((scope) => !isDirectoryScope(scope));
+		scopes.set(key, [...(scopes.get(key) ?? []), ...list]);
+	}
+	return scopes;
+}
+
 export function deliverSoon() {
 	waitUntil(
 		Promise.all([deliverDue(), pruneDeliveries()]).catch((error) =>
@@ -463,14 +498,23 @@ async function pruneDeliveries() {
 }
 
 export async function resend(deliveryId: string, endpointId: string) {
+	const where = and(eq(webhookDelivery.id, deliveryId), eq(webhookDelivery.endpointId, endpointId));
 	const updated = await db
 		.update(webhookDelivery)
 		.set({ deliveredAt: null, failedAt: null, attempts: 0, nextAttemptAt: new Date() })
-		.where(and(eq(webhookDelivery.id, deliveryId), eq(webhookDelivery.endpointId, endpointId)))
+		.where(where)
 		.returning({ id: webhookDelivery.id });
-	if (updated.length === 0) return false;
+	if (updated.length === 0) return null;
 	await deliverDue({ endpointId });
-	return true;
+	const [state] = await db
+		.select({
+			deliveredAt: webhookDelivery.deliveredAt,
+			failedAt: webhookDelivery.failedAt,
+			lastError: webhookDelivery.lastError
+		})
+		.from(webhookDelivery)
+		.where(where);
+	return state ?? null;
 }
 
 export function recentDeliveries(endpointId: string) {
