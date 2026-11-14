@@ -13,18 +13,20 @@
 
 	const granted = $derived(form && 'granted' in form ? form.granted : null);
 
+	let timer: ReturnType<typeof setTimeout> | undefined;
+
 	// The meta refresh is the no-JS fallback.
 	$effect(() => {
 		if (!granted) return;
 		const quick = matchMedia('(prefers-reduced-motion: reduce)').matches;
-		const timer = setTimeout(() => location.assign(granted), quick ? 400 : 1400);
+		timer = setTimeout(() => location.assign(granted), quick ? 400 : 1400);
 		return () => clearTimeout(timer);
 	});
 </script>
 
 <svelte:head>
 	<title>Authorize {data.clientName} - Purdue Hackers ID</title>
-	{#if granted}<meta http-equiv="refresh" content="3;url={granted}" />{/if}
+	{#if granted}<noscript><meta http-equiv="refresh" content="3;url={granted}" /></noscript>{/if}
 </svelte:head>
 
 <AuthShell>
@@ -33,7 +35,7 @@
 		<p class="flex enter flex-wrap items-center gap-x-3 gap-y-1" style="--i: 6">
 			Taking you back to {data.clientName}.
 			<!-- eslint-disable-next-line svelte/no-navigation-without-resolve -- the app's redirect URI, same tab -->
-			<a href={granted} class="ph-link">Continue now</a>
+			<a href={granted} class="ph-link" onclick={() => clearTimeout(timer)}>Continue now</a>
 		</p>
 	{:else}
 		<PageTitle title="Authorize {data.clientName}">It is asking to:</PageTitle>
