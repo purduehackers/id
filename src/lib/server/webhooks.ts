@@ -463,11 +463,14 @@ async function pruneDeliveries() {
 }
 
 export async function resend(deliveryId: string, endpointId: string) {
-	await db
+	const updated = await db
 		.update(webhookDelivery)
 		.set({ deliveredAt: null, failedAt: null, attempts: 0, nextAttemptAt: new Date() })
-		.where(and(eq(webhookDelivery.id, deliveryId), eq(webhookDelivery.endpointId, endpointId)));
+		.where(and(eq(webhookDelivery.id, deliveryId), eq(webhookDelivery.endpointId, endpointId)))
+		.returning({ id: webhookDelivery.id });
+	if (updated.length === 0) return false;
 	await deliverDue({ endpointId });
+	return true;
 }
 
 export function recentDeliveries(endpointId: string) {

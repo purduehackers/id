@@ -96,6 +96,20 @@ export const directoryAccess = sqliteTable('directory_access', {
 	decidedAt: integer('decided_at', { mode: 'timestamp_ms' })
 });
 
+export const oauthGrantRevocation = sqliteTable(
+	'oauth_grant_revocation',
+	{
+		userId: text('user_id')
+			.notNull()
+			.references(() => user.id, { onDelete: 'cascade' }),
+		clientId: text('client_id')
+			.notNull()
+			.references(() => oauthClient.clientId, { onDelete: 'cascade' }),
+		revokedAt: integer('revoked_at', { mode: 'timestamp_ms' }).notNull()
+	},
+	(table) => [primaryKey({ columns: [table.userId, table.clientId] })]
+);
+
 export const passport = sqliteTable(
 	'passport',
 	{

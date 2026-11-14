@@ -50,6 +50,16 @@ await authClient.signIn.social({ provider: 'purduehackers', callbackURL: '/' });
 
 There's another example in `examples/demo-client` that doesn't rely on external dependencies, although it is significantly larger (200+ LOC) than this.
 
+## MCP server
+
+ID has a remote MCP server at `https://id.purduehackers.com/mcp`.
+
+```sh
+claude mcp add --transport http purduehackers https://id.purduehackers.com/mcp
+```
+
+Access tokens must have the audience `https://id.purduehackers.com/mcp`.
+
 ## Passport UI
 
 The scan page uses the reusable `Passport` component with the same `IdCard` as the

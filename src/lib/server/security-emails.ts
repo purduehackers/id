@@ -1,6 +1,5 @@
 import { and, eq } from 'drizzle-orm';
 import { geolocation, waitUntil } from '@vercel/functions';
-import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
 import { db } from '$lib/server/db';
 import { readList } from '$lib/server/db/json';
@@ -16,8 +15,9 @@ import {
 import { sendEmail } from '$lib/server/email';
 import { SCOPE_DESCRIPTIONS } from '$lib/server/scopes';
 import { describeUserAgent } from '$lib/server/user-agent';
+import { configuredOrigin } from '$lib/server/origin';
 
-const site = () => env.ORIGIN || 'https://id.purduehackers.com';
+const site = () => configuredOrigin ?? getRequestEvent().url.origin;
 
 function inBackground(task: () => Promise<void>) {
 	waitUntil(task().catch((error) => console.error('[security-emails] failed', error)));

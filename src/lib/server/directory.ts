@@ -1,7 +1,5 @@
 import { and, desc, eq } from 'drizzle-orm';
-import { verifyJwsAccessToken } from 'better-auth/oauth2';
-import { env } from '$env/dynamic/private';
-import { auth } from '$lib/server/auth';
+import { bearerToken, verifyAccessToken } from '$lib/server/bearer';
 import { db } from '$lib/server/db';
 import {
 	auditEvent,
@@ -53,6 +51,7 @@ export async function requestAccess(ownerId: string, clientId: string, scopes: s
 			target: directoryAccess.clientId,
 			set: { requestedScopes: requested, requestedAt: new Date() }
 		});
+	return requested;
 }
 
 export function listAccess() {
@@ -139,8 +138,6 @@ export async function decide(actor: Actor, clientId: string, scopes: string[]) {
 	});
 }
 
-const jwksCacheKey = {};
-
 function bearerError(status: 401 | 403, error: string, description: string) {
 	return Response.json(
 		{ error, error_description: description },
@@ -152,33 +149,17 @@ function bearerError(status: 401 | 403, error: string, description: string) {
 }
 
 export async function authorizeDirectoryRequest(request: Request) {
-	const header = request.headers.get('authorization') ?? '';
-	const token = header.match(/^Bearer\s+(.+)$/i)?.[1];
+	const token = bearerToken(request);
 	if (!token) return bearerError(401, 'invalid_request', 'Missing bearer token.');
 
-	const origin = new URL(request.url).origin;
-	const issuers = [...new Set([`${env.ORIGIN ?? origin}/api/auth`, `${origin}/api/auth`])];
+	const verified = await verifyAccessToken(token, new URL(request.url), DIRECTORY_RESOURCE);
+	if (!verified) return bearerError(401, 'invalid_token', 'Invalid or expired token.');
 
-	let payload;
-	try {
-		payload = await verifyJwsAccessToken(token, {
-			jwksFetch: () => auth.api.getJwks(),
-			jwksCacheKey,
-			verifyOptions: { audience: DIRECTORY_RESOURCE, issuer: issuers }
-		});
-	} catch {
-		return bearerError(401, 'invalid_token', 'Invalid or expired token.');
-	}
-
-	const clientId = (payload.azp ?? payload.client_id) as string | undefined;
-	if (!clientId) return bearerError(401, 'invalid_token', 'Token has no client.');
-
-	const tokenScopes = String(payload.scope ?? '').split(' ');
-	const granted = await grantedScopes(clientId);
-	const scopes = new Set(granted.filter((scope) => tokenScopes.includes(scope)));
+	const granted = await grantedScopes(verified.clientId);
+	const scopes = new Set(granted.filter((scope) => verified.scopes.has(scope)));
 	if (!scopes.has('directory:roles')) {
 		return bearerError(403, 'insufficient_scope', 'This application lacks directory:roles.');
 	}
 
-	return { clientId, scopes };
+	return { clientId: verified.clientId, scopes };
 }

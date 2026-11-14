@@ -7,6 +7,7 @@ export type Scope =
 	| 'roles'
 	| 'user:read'
 	| 'user'
+	| 'apps'
 	| DirectoryScope;
 
 export type DirectoryScope =
@@ -19,6 +20,16 @@ export const DIRECTORY_SCOPES: DirectoryScope[] = [
 ];
 export const DIRECTORY_RESOURCE = 'https://id.purduehackers.com/api/directory';
 
+export const MCP_SCOPES: Scope[] = [
+	'openid',
+	'profile',
+	'email',
+	'offline_access',
+	'user:read',
+	'user',
+	'apps'
+];
+
 export const MEMBER_CLIENT_SCOPES: Scope[] = [
 	'openid',
 	'profile',
@@ -27,7 +38,8 @@ export const MEMBER_CLIENT_SCOPES: Scope[] = [
 	'offline_access',
 	'roles',
 	'user:read',
-	'user'
+	'user',
+	'apps'
 ];
 
 export const SCOPES: Scope[] = [...MEMBER_CLIENT_SCOPES, ...DIRECTORY_SCOPES];
@@ -41,6 +53,7 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 	roles: 'See your roles at Purdue Hackers, like organizer',
 	'user:read': 'Read your user data',
 	user: 'Change your user data',
+	apps: 'See and manage the applications you made',
 	'directory:roles': "See every member's username, name, roles and public information",
 	'directory:contact': "See every member's email address and phone number",
 	'directory:discord': "See every member's linked Discord account",

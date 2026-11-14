@@ -13,6 +13,7 @@
 	import LinkButton from '$lib/components/ph/LinkButton.svelte';
 	import Notice from '$lib/components/ph/Notice.svelte';
 	import Secret from '$lib/components/ph/Secret.svelte';
+	import Textarea from '$lib/components/ph/Textarea.svelte';
 	import Identicon from '$lib/components/Identicon.svelte';
 	import { swatch } from '$lib/components/pixel';
 
@@ -24,6 +25,9 @@
 			: (data.webhook?.events ?? data.events.map((e) => e.type))
 	);
 	const subscribed = (type: string) => (chosen as string[]).includes(type);
+	const settings = $derived(
+		form && 'settings' in form && form.settings ? form.settings : data.settings
+	);
 	const at = (value: Date | string | null) => (value ? new Date(value).toLocaleString() : '');
 	const pretty = (payload: string) => JSON.stringify(JSON.parse(payload), null, 2);
 
@@ -86,6 +90,49 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 		values={[{ label: 'webhook secret', value: form.secret as string }]}
 	/>
 {/if}
+
+<Section title="Settings">
+	<form method="post" action="?/update" class="flex flex-col gap-7">
+		<Field label="Name" for="app-name">
+			<Input id="app-name" name="name" required value={settings.name} />
+		</Field>
+
+		<Field label="Redirect URLs" for="app-redirects" hint="One per line.">
+			<Textarea
+				id="app-redirects"
+				name="redirectUris"
+				rows={3}
+				placeholder="https://myapp.com/api/auth/callback/purduehackers"
+				class="font-mono text-[13px]"
+				value={settings.redirectUris}
+			/>
+		</Field>
+
+		<fieldset class="flex flex-col gap-3">
+			<legend class="mb-3 ph-subheadline text-[12px]">Type</legend>
+			<p>
+				<span class="font-medium">{data.app.confidential ? 'Confidential.' : 'Public.'}</span>
+				To change the type, register a new app.
+			</p>
+			<Checkbox name="device" checked={settings.device} class="mt-2">
+				<span class="font-medium">Device sign-in.</span> CLIs and devices without a browser enter a
+				code at <span class="font-mono">/device</span>.
+			</Checkbox>
+		</fieldset>
+
+		<fieldset class="flex flex-col gap-3">
+			<legend class="mb-3 ph-subheadline text-[12px]">Scopes</legend>
+			{#each data.scopeOptions as { scope, description } (scope)}
+				<Checkbox name="scope" value={scope} checked={settings.scopes.includes(scope)}>
+					<span class="font-mono font-semibold">{scope}</span>
+					{description}
+				</Checkbox>
+			{/each}
+		</fieldset>
+
+		<Button type="submit">Save settings</Button>
+	</form>
+</Section>
 
 <Section title="Webhook">
 	<form method="post" action="?/save" class="flex flex-col gap-7">

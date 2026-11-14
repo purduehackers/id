@@ -1,12 +1,12 @@
 import { fail } from '@sveltejs/kit';
-import { and, desc, eq, gt } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { APIError } from 'better-auth/api';
 import type { Actions, PageServerLoad } from './$types';
 import { auth } from '$lib/server/auth';
 import { db } from '$lib/server/db';
 import { session } from '$lib/server/db/schema';
 import { requireUser } from '$lib/server/guard';
-import { describeUserAgent } from '$lib/server/user-agent';
+import { activeSessions } from '$lib/server/sessions';
 
 function messageFrom(error: unknown, fallback: string) {
 	return error instanceof APIError ? error.message || fallback : fallback;
@@ -15,27 +15,10 @@ function messageFrom(error: unknown, fallback: string) {
 export const load: PageServerLoad = async (event) => {
 	const user = requireUser(event);
 
-	const rows = await db
-		.select({
-			id: session.id,
-			createdAt: session.createdAt,
-			updatedAt: session.updatedAt,
-			ipAddress: session.ipAddress,
-			userAgent: session.userAgent
-		})
-		.from(session)
-		.where(and(eq(session.userId, user.id), gt(session.expiresAt, new Date())))
-		.orderBy(desc(session.updatedAt));
+	const rows = await activeSessions(user.id);
 
 	const current = event.locals.session?.id;
-	const sessions = rows.map((row) => ({
-		id: row.id,
-		device: describeUserAgent(row.userAgent),
-		ipAddress: row.ipAddress,
-		signedInAt: row.createdAt,
-		activeAt: row.updatedAt,
-		current: row.id === current
-	}));
+	const sessions = rows.map((row) => ({ ...row, current: row.id === current }));
 
 	return { sessions: sessions.toSorted((a, b) => Number(b.current) - Number(a.current)) };
 };

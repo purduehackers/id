@@ -50,6 +50,13 @@
       "when": 1794646344840,
       "tag": "0006_directory_github_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1794688928089,
+      "tag": "0007_oauth_grant_revocation",
+      "breakpoints": true
     }
   ]
 }

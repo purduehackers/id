@@ -23,11 +23,13 @@
 		"sharp": "^0.35.5"
 	},
 	"devDependencies": {
+		"@better-auth/cimd": "1.7.15",
 		"@better-auth/core": "1.7.15",
 		"@better-auth/oauth-provider": "1.7.15",
 		"@better-auth/passkey": "1.7.15",
 		"@eslint/js": "^10.0.1",
 		"@libsql/client": "^0.15.15",
+		"@modelcontextprotocol/sdk": "^1.32.2",
 		"@sveltejs/adapter-vercel": "^6.3.3",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
@@ -54,6 +56,7 @@
 		"tailwindcss": "^4.3.0",
 		"typescript": "^6.0.3",
 		"typescript-eslint": "^8.60.1",
-		"vite": "^8.0.16"
+		"vite": "^8.0.16",
+		"zod": "^4.6.7"
 	}
 }

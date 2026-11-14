@@ -1,13 +1,13 @@
-import { env } from '$env/dynamic/private';
 import { getRequestEvent } from '$app/server';
+import { configuredOrigin } from '$lib/server/origin';
 
 function origin() {
-	if (env.ORIGIN) return env.ORIGIN.replace(/\/$/, '');
+	if (configuredOrigin) return configuredOrigin;
 	try {
 		return getRequestEvent().url.origin;
 	} catch {
 		// No request context, for example in webhook retries.
-		return 'https://id.purduehackers.com';
+		return '';
 	}
 }
 

@@ -10,13 +10,22 @@ import { admin } from 'better-auth/plugins/admin';
 import { createAccessControl } from 'better-auth/plugins/access';
 import { oauthDeviceAuthorization, oauthProvider } from '@better-auth/oauth-provider';
 import { getAuthenticatorName, passkey } from '@better-auth/passkey';
+import { cimd } from '@better-auth/cimd';
+import { fetchClientMetadataResource } from '@better-auth/cimd/node';
 import { getRequestEvent } from '$app/server';
 import { dev } from '$app/environment';
 import { and, eq, isNotNull } from 'drizzle-orm';
 import { db } from '$lib/server/db';
-import { userEmail } from '$lib/server/db/schema';
+import { oauthClient, oauthClientResource, userEmail } from '$lib/server/db/schema';
 import { uuidv7 } from '$lib/server/uuid';
-import { DIRECTORY_RESOURCE, DIRECTORY_SCOPES, SCOPES, isDirectoryScope } from '$lib/server/scopes';
+import {
+	DIRECTORY_RESOURCE,
+	DIRECTORY_SCOPES,
+	MCP_SCOPES,
+	SCOPES,
+	isDirectoryScope
+} from '$lib/server/scopes';
+import { MCP_RESOURCE, configuredOrigin } from '$lib/server/origin';
 import { emailConfigured, sendEmail } from '$lib/server/email';
 import {
 	USERNAME_MAX_LENGTH,
@@ -65,14 +74,40 @@ const ADMIN_PLUGIN_PATHS = [
 	'has-permission'
 ].map((path) => `/admin/${path}`);
 
-const passkeyOrigin = dev
-	? new URL(env.ORIGIN || 'http://localhost:5173').origin
-	: 'https://id.purduehackers.com';
+function requestClientId(ctx: {
+	query?: Record<string, unknown>;
+	body?: Record<string, unknown>;
+	headers?: Headers;
+}) {
+	const id = ctx.query?.client_id ?? ctx.body?.client_id;
+	if (typeof id === 'string') return id;
+	const basic = ctx.headers?.get('authorization')?.match(/^Basic\s+(.+)$/i)?.[1];
+	if (!basic) return null;
+	try {
+		return decodeURIComponent(atob(basic).split(':')[0]);
+	} catch {
+		return null;
+	}
+}
+
+async function linkMcpResources(clientId: string | null, resource: unknown) {
+	if (!clientId || !MCP_RESOURCE || ![resource].flat().includes(MCP_RESOURCE)) return;
+	const [client] = await db
+		.select({ clientId: oauthClient.clientId })
+		.from(oauthClient)
+		.where(eq(oauthClient.clientId, clientId))
+		.limit(1);
+	if (!client) return;
+	await db
+		.insert(oauthClientResource)
+		.values({ id: uuidv7(), clientId, resourceId: MCP_RESOURCE, createdAt: new Date() })
+		.onConflictDoNothing();
+}
+
+const passkeyOrigin = configuredOrigin ?? 'http://localhost:5173';
 
 export const auth = betterAuth({
-	baseURL: env.ORIGIN ?? {
-		allowedHosts: ['id.purduehackers.com', '*.vercel.app']
-	},
+	baseURL: configuredOrigin ?? { allowedHosts: ['*.vercel.app'] },
 	secret: env.BETTER_AUTH_SECRET,
 	database: drizzleAdapter(db, { provider: 'sqlite' }),
 
@@ -144,6 +179,15 @@ export const auth = betterAuth({
 				const userId = (await getSessionFromCtx(ctx))?.user.id;
 				if (userId && ctx.body?.accept === true) await rememberConsents(userId);
 				return;
+			}
+
+			if (ctx.path === '/oauth2/authorize') {
+				await linkMcpResources(requestClientId(ctx), ctx.query?.resource);
+			} else if (
+				ctx.path === '/device/code' ||
+				(ctx.path === '/oauth2/token' && ctx.body?.grant_type !== 'client_credentials')
+			) {
+				await linkMcpResources(requestClientId(ctx), ctx.body?.resource);
 			}
 
 			const unique = (scope: unknown) =>
@@ -328,7 +372,8 @@ export const auth = betterAuth({
 				'phone',
 				'roles',
 				'user:read',
-				'user'
+				'user',
+				'apps'
 			],
 			customUserInfoClaims: userInfoClaims,
 			customIdTokenClaims: identityClaims,
@@ -339,8 +384,12 @@ export const auth = betterAuth({
 					name: 'Purdue Hackers directory',
 					allowedScopes: DIRECTORY_SCOPES,
 					accessTokenTtl: 60 * 5
-				}
+				},
+				...(MCP_RESOURCE
+					? [{ identifier: MCP_RESOURCE, name: 'Purdue Hackers ID MCP', allowedScopes: MCP_SCOPES }]
+					: [])
 			],
+			clientRegistrationDefaultResources: MCP_RESOURCE ? [MCP_RESOURCE] : [],
 			clientPrivileges: ({ action, user }) =>
 				action !== 'configure-client-credentials-scopes' ||
 				hasRole(user?.role as string | undefined, 'admin'),
@@ -352,6 +401,7 @@ export const auth = betterAuth({
 				clientSecret: 'phid_cs_'
 			}
 		}),
+		cimd({ fetchClientMetadataResource }),
 		oauthDeviceAuthorization({
 			verificationUri: '/device',
 			expiresIn: '10m',
