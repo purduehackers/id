@@ -24,39 +24,9 @@ import { termYear } from '$lib/graduation';
 import type { Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
 
-export const WEBHOOK_EVENTS = {
-	'user.roles.changed': { description: "A user's roles changed.", needs: ['roles'] },
-	'user.banned': { description: 'A user was banned.', needs: [] },
-	'user.unbanned': { description: 'A user was unbanned.', needs: [] },
-	'user.updated': {
-		description: 'A user was updated. Carries their current profile, email or phone number.',
-		needs: ['profile', 'email', 'phone']
-	},
-	'user.discord.linked': { description: 'A user connected a Discord account.', needs: ['discord'] },
-	'user.discord.unlinked': {
-		description: 'A user disconnected their Discord account.',
-		needs: ['discord']
-	}
-} as const satisfies Record<string, { description: string; needs: readonly string[] }>;
-export type WebhookEvent = keyof typeof WEBHOOK_EVENTS;
-
-const DIRECTORY_EXPANDS: Record<string, string[]> = {
-	'directory:roles': ['roles', 'profile'],
-	'directory:contact': ['email', 'phone'],
-	'directory:discord': ['discord']
-};
-
-export function expandScopes(scopes: string[]): Set<string> {
-	return new Set(scopes.flatMap((scope) => DIRECTORY_EXPANDS[scope] ?? [scope]));
-}
-
-export function availableEvents(scopes: string[]): WebhookEvent[] {
-	const visible = expandScopes(scopes);
-	return (Object.keys(WEBHOOK_EVENTS) as WebhookEvent[]).filter((type) => {
-		const needs: readonly string[] = WEBHOOK_EVENTS[type].needs;
-		return needs.length === 0 || needs.some((scope) => visible.has(scope));
-	});
-}
+export { WEBHOOK_EVENTS, availableEvents } from './webhook-policy';
+import { expandScopes, githubDeliveryAllowed, type WebhookEvent } from './webhook-policy';
+import { githubLinkEvent, type LinkedGitHubAccount } from './github-links';
 
 type Db = typeof db;
 type Tx = Parameters<Parameters<Db['transaction']>[0]>[0];
@@ -293,6 +263,26 @@ export async function recordDiscordLink(userId: string, discordId: string, linke
 	deliverSoon();
 }
 
+export async function recordGitHubLink(
+	userId: string,
+	account: LinkedGitHubAccount,
+	linked: boolean
+) {
+	const [target] = await db
+		.select({ id: user.id, username: user.username })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	if (!target) return;
+	await enqueueForUser(
+		db,
+		target,
+		linked ? 'user.github.linked' : 'user.github.unlinked',
+		(scopes, ref) => githubLinkEvent(scopes, ref, account)
+	);
+	deliverSoon();
+}
+
 export async function enqueueTest(endpointId: string, clientId: string) {
 	const id = `msg_${uuidv7()}`;
 	await db.insert(webhookDelivery).values({
@@ -371,6 +361,8 @@ export async function deliverDue(options: { endpointId?: string } = {}) {
 	const due = await db
 		.select({
 			id: webhookDelivery.id,
+			type: webhookDelivery.type,
+			endpointId: webhookDelivery.endpointId,
 			payload: webhookDelivery.payload,
 			attempts: webhookDelivery.attempts,
 			url: webhookEndpoint.url,
@@ -405,6 +397,28 @@ export async function deliverDue(options: { endpointId?: string } = {}) {
 				)
 				.returning({ id: webhookDelivery.id });
 			if (!claimed) return;
+
+			if (row.type.startsWith('user.github.')) {
+				// A retry or manual resend may outlive the grant/subscription that
+				// authorized the queued payload. Check the current state before signing.
+				const [access] = await db
+					.select({ events: webhookEndpoint.events, scopes: directoryAccess.grantedScopes })
+					.from(webhookEndpoint)
+					.leftJoin(directoryAccess, eq(directoryAccess.clientId, webhookEndpoint.clientId))
+					.where(eq(webhookEndpoint.id, row.endpointId))
+					.limit(1);
+				if (!githubDeliveryAllowed(row.type, access?.events ?? [], access?.scopes ?? [])) {
+					await db
+						.update(webhookDelivery)
+						.set({
+							failedAt: new Date(),
+							nextAttemptAt: null,
+							lastError: 'GitHub directory access or event subscription was revoked'
+						})
+						.where(eq(webhookDelivery.id, row.id));
+					return;
+				}
+			}
 
 			if (!secrets.has(row.secret)) secrets.set(row.secret, openSecret(row.secret));
 			const outcome = await send(row.url, await secrets.get(row.secret)!, row.id, row.payload);

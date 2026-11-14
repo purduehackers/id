@@ -7,6 +7,7 @@ import { authorizeDirectoryRequest } from '$lib/server/directory';
 import { lastEndedTerm, termYear } from '$lib/graduation';
 import { ROLES, isRole, rolesOf, type Role } from '$lib/roles';
 import { pictureFor } from '$lib/server/avatar';
+import { githubAccountsClaim } from '$lib/server/github-links';
 
 export const GET: RequestHandler = async ({ request, url }) => {
 	const authorized = await authorizeDirectoryRequest(request);
@@ -14,6 +15,7 @@ export const GET: RequestHandler = async ({ request, url }) => {
 	const { scopes } = authorized;
 	const withContact = scopes.has('directory:contact');
 	const withDiscord = scopes.has('directory:discord');
+	const withGitHub = scopes.has('directory:github');
 
 	const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 100, 1), 500);
 	const cursor = url.searchParams.get('cursor');
@@ -89,6 +91,21 @@ export const GET: RequestHandler = async ({ request, url }) => {
 
 	const page = rows.slice(0, limit);
 	const userIds = page.map((r) => r.id);
+	// Query accounts after paging users so multiple provider links cannot duplicate
+	// users or change the directory cursor. No provider credentials are selected.
+	const githubAccounts =
+		withGitHub && userIds.length > 0
+			? await db
+					.select({
+						userId: account.userId,
+						accountId: account.accountId,
+						createdAt: account.createdAt,
+						updatedAt: account.updatedAt
+					})
+					.from(account)
+					.where(and(inArray(account.userId, userIds), eq(account.providerId, 'github')))
+					.orderBy(asc(account.accountId), asc(account.id))
+			: [];
 	const secondaryEmails =
 		withContact && userIds.length > 0
 			? await db
@@ -125,7 +142,11 @@ export const GET: RequestHandler = async ({ request, url }) => {
 					emails: allEmails,
 					phone_number: row.phone
 				}),
-				...(withDiscord && { discord_id: row.discordId ?? null })
+				...(withDiscord && { discord_id: row.discordId ?? null }),
+				...githubAccountsClaim(
+					scopes,
+					githubAccounts.filter((account) => account.userId === row.id)
+				)
 			};
 		}),
 		next_cursor: rows.length > limit ? page.at(-1)!.id : null
