@@ -9,11 +9,13 @@ export type Scope =
 	| 'user'
 	| DirectoryScope;
 
-export type DirectoryScope = 'directory:roles' | 'directory:contact' | 'directory:discord';
+export type DirectoryScope =
+	'directory:roles' | 'directory:contact' | 'directory:discord' | 'directory:github';
 export const DIRECTORY_SCOPES: DirectoryScope[] = [
 	'directory:roles',
 	'directory:contact',
-	'directory:discord'
+	'directory:discord',
+	'directory:github'
 ];
 export const DIRECTORY_RESOURCE = 'https://id.purduehackers.com/api/directory';
 
@@ -41,7 +43,8 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 	user: 'Change your user data',
 	'directory:roles': "See every member's username, name, roles and public information",
 	'directory:contact': "See every member's email address and phone number",
-	'directory:discord': "See every member's linked Discord account"
+	'directory:discord': "See every member's linked Discord account",
+	'directory:github': "See every member's linked GitHub accounts"
 };
 
 export function isDirectoryScope(scope: string): scope is DirectoryScope {

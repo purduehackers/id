@@ -25,7 +25,7 @@ import {
 	normalizeUsername
 } from '$lib/username';
 import { accessTokenClaims, identityClaims, userInfoClaims } from '$lib/server/claims';
-import { recordDiscordLink, recordProfileUpdate } from '$lib/server/webhooks';
+import { recordDiscordLink, recordGitHubLink, recordProfileUpdate } from '$lib/server/webhooks';
 import { passportSignIn } from '$lib/server/passport-plugin';
 import { recoverByDiscord } from '$lib/server/passport';
 import { PART_NAME_MAX_LENGTH, normalizeNamePart, splitNameParts } from '$lib/profile';
@@ -234,6 +234,8 @@ export const auth = betterAuth({
 					if (account.providerId === 'discord') {
 						await recoverByDiscord(account.userId, account.accountId);
 						await recordDiscordLink(account.userId, account.accountId, true);
+					} else if (account.providerId === 'github') {
+						await recordGitHubLink(account.userId, account, true);
 					}
 				}
 			},
@@ -241,6 +243,8 @@ export const auth = betterAuth({
 				async after(account) {
 					if (account.providerId === 'discord') {
 						await recordDiscordLink(account.userId, account.accountId, false);
+					} else if (account.providerId === 'github') {
+						await recordGitHubLink(account.userId, account, false);
 					}
 				}
 			}

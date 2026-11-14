@@ -43,6 +43,13 @@
       "when": 1794179305040,
       "tag": "0005_roles_and_graduation_term",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1794646344840,
+      "tag": "0006_directory_github_scope",
+      "breakpoints": true
     }
   ]
 }

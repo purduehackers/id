@@ -7,6 +7,7 @@
  * Required OAuth scopes:
  * - `directory:roles`: Access to roles and graduation year.
  * - `directory:contact` (optional): Access to member email and phone number.
+ * - `directory:github` (optional): Native GitHub account IDs and link timestamps.
  *
  * Usage:
  *   deno run -A examples/demo-client/directory.ts
