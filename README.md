@@ -52,14 +52,13 @@ There's another example in `examples/demo-client` that doesn't rely on external 
 
 ## MCP server
 
-ID has a remote MCP server at `https://id.purduehackers.com/mcp`.
+ID has a remote MCP server at `https://id.purduehackers.com/mcp`, with pre-connection discovery via `https://id.purduehackers.com/mcp/server-card` and `https://id.purduehackers.com/.well-known/ai-catalog.json`.
 
 ```sh
 claude mcp add --transport http purduehackers https://id.purduehackers.com/mcp
 ```
 
 Access tokens must have the audience `https://id.purduehackers.com/mcp`.
-
 
 Migration `0006_directory_github_scope.sql` extends the existing directory
 resource's allowed scopes without changing client grants. New resource setup and
