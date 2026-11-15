@@ -11,6 +11,7 @@ import { hasRole } from '$lib/roles';
 import { registerAdminTools } from './admin';
 import { registerAppTools } from './apps';
 import { asMember } from './as-member';
+import { MCP_SERVER_INFO } from './server-card';
 import { registerMemberTools } from './member';
 import type { Caller } from './result';
 
@@ -69,7 +70,7 @@ async function authenticate(request: Request, resource: string): Promise<Caller 
 
 function buildServer(caller: Caller) {
 	const server = new McpServer(
-		{ name: 'purdue-hackers-id', title: 'Purdue Hackers ID', version: '1.0.0' },
+		{ ...MCP_SERVER_INFO, websiteUrl: new URL(caller.issuer).origin },
 		{
 			instructions:
 				'Tools for the Purdue Hackers ID of the signed-in member. ' +
