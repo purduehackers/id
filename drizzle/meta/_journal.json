@@ -57,6 +57,13 @@
       "when": 1794688928089,
       "tag": "0007_oauth_grant_revocation",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1794714519599,
+      "tag": "0008_mcp_admin_scope",
+      "breakpoints": true
     }
   ]
 }

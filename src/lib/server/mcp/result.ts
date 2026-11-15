@@ -7,6 +7,7 @@ export type Caller = {
 	issuer: string;
 	scopes: Set<string>;
 	member: Member;
+	admin: { id: string; username: string } | null;
 };
 
 export const ok = (data: unknown): CallToolResult => ({

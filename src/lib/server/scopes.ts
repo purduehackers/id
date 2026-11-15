@@ -8,6 +8,7 @@ export type Scope =
 	| 'user:read'
 	| 'user'
 	| 'apps'
+	| 'admin'
 	| DirectoryScope;
 
 export type DirectoryScope =
@@ -27,7 +28,8 @@ export const MCP_SCOPES: Scope[] = [
 	'offline_access',
 	'user:read',
 	'user',
-	'apps'
+	'apps',
+	'admin'
 ];
 
 export const MEMBER_CLIENT_SCOPES: Scope[] = [
@@ -42,7 +44,7 @@ export const MEMBER_CLIENT_SCOPES: Scope[] = [
 	'apps'
 ];
 
-export const SCOPES: Scope[] = [...MEMBER_CLIENT_SCOPES, ...DIRECTORY_SCOPES];
+export const SCOPES: Scope[] = [...MEMBER_CLIENT_SCOPES, 'admin', ...DIRECTORY_SCOPES];
 
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 	openid: 'Confirm who you are',
@@ -54,6 +56,7 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 	'user:read': 'Read your user data',
 	user: 'Change your user data',
 	apps: 'See and manage the applications you made',
+	admin: 'If you are an admin, find members and decide directory access',
 	'directory:roles': "See every member's username, name, roles and public information",
 	'directory:contact': "See every member's email address and phone number",
 	'directory:discord': "See every member's linked Discord account",

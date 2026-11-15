@@ -1,9 +1,14 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
+import { eq } from 'drizzle-orm';
 import { bearerToken, verifyAccessToken } from '$lib/server/bearer';
+import { db } from '$lib/server/db';
+import { user } from '$lib/server/db/schema';
 import { grantIsActive } from '$lib/server/grants';
 import { MCP_RESOURCE, issuerFor } from '$lib/server/origin';
 import { MCP_SCOPES } from '$lib/server/scopes';
+import { hasRole } from '$lib/roles';
+import { registerAdminTools } from './admin';
 import { registerAppTools } from './apps';
 import { asMember } from './as-member';
 import { registerMemberTools } from './member';
@@ -43,14 +48,23 @@ async function authenticate(request: Request, resource: string): Promise<Caller 
 		return challenge(url, 401, 'invalid_token', 'This access is no longer valid. Sign in again.');
 	}
 
-	if (!['user:read', 'user', 'apps'].some((scope) => scopes.has(scope))) {
-		return challenge(url, 403, 'insufficient_scope', 'Token lacks user:read or apps.', [
+	if (!['user:read', 'user', 'apps', 'admin'].some((scope) => scopes.has(scope))) {
+		return challenge(url, 403, 'insufficient_scope', 'Token lacks user:read, apps or admin.', [
 			'user:read',
-			'apps'
+			'apps',
+			'admin'
 		]);
 	}
 
-	return { userId, clientId, issuer: issuerFor(url), scopes, member: asMember(userId) };
+	const [row] = await db
+		.select({ username: user.username, role: user.role })
+		.from(user)
+		.where(eq(user.id, userId))
+		.limit(1);
+	const admin =
+		row?.username && hasRole(row.role, 'admin') ? { id: userId, username: row.username } : null;
+
+	return { userId, clientId, issuer: issuerFor(url), scopes, member: asMember(userId), admin };
 }
 
 function buildServer(caller: Caller) {
@@ -61,12 +75,14 @@ function buildServer(caller: Caller) {
 				'Tools for the Purdue Hackers ID of the signed-in member. ' +
 				'Member tools show and change the profile, signed-in devices and authorized apps. ' +
 				'Developer tools manage the OAuth applications that the member made, with their webhooks. ' +
+				'Admin tools find members and decide directory access; only admins get them. ' +
 				'Confirm with the member before you use a write tool.'
 		}
 	);
 
 	registerMemberTools(server, caller);
 	registerAppTools(server, caller);
+	registerAdminTools(server, caller);
 	return server;
 }
 

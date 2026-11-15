@@ -373,7 +373,8 @@ export const auth = betterAuth({
 				'roles',
 				'user:read',
 				'user',
-				'apps'
+				'apps',
+				'admin'
 			],
 			customUserInfoClaims: userInfoClaims,
 			customIdTokenClaims: identityClaims,
