@@ -11,7 +11,7 @@ import { hasRole } from '$lib/roles';
 import { registerAdminTools } from './admin';
 import { registerAppTools } from './apps';
 import { asMember } from './as-member';
-import { MCP_SERVER_INFO } from './discovery';
+import { MCP_SERVER_INFO } from './server-card';
 import { registerMemberTools } from './member';
 import type { Caller } from './result';
 

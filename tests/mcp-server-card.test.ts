@@ -2,14 +2,12 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { SUPPORTED_PROTOCOL_VERSIONS } from '@modelcontextprotocol/sdk/types.js';
 import {
-	AI_CATALOG_MEDIA_TYPE,
 	SERVER_CARD_MEDIA_TYPE,
 	SERVER_CARD_SCHEMA,
-	buildAiCatalog,
 	buildServerCard,
-	discoveryJsonResponse,
-	discoveryOptionsResponse
-} from '../src/lib/server/mcp/discovery.ts';
+	serverCardOptionsResponse,
+	serverCardResponse
+} from '../src/lib/server/mcp/server-card.ts';
 
 const origin = 'https://id.purduehackers.com';
 
@@ -39,61 +37,39 @@ test('buildServerCard conforms to SEP-2127 server card constraints', () => {
 	assert.equal('prompts' in card, false);
 });
 
-test('buildAiCatalog points to the hosted MCP server card', () => {
-	const catalog = buildAiCatalog(origin);
-
-	assert.deepEqual(catalog, {
-		specVersion: '1.0',
-		entries: [
-			{
-				identifier: 'urn:air:id.purduehackers.com:mcp:id',
-				type: SERVER_CARD_MEDIA_TYPE,
-				url: 'https://id.purduehackers.com/mcp/server-card'
-			}
-		]
-	});
-});
-
-test('discoveryJsonResponse sets media type, CORS, caching, ETag and honors If-None-Match', async () => {
+test('serverCardResponse sets noindex, media type, CORS, caching, ETag and honors If-None-Match', async () => {
 	const card = buildServerCard(origin);
-	const initial = discoveryJsonResponse(
-		new Request(`${origin}/mcp/server-card`),
-		card,
-		SERVER_CARD_MEDIA_TYPE
-	);
+	const initial = serverCardResponse(new Request(`${origin}/mcp/server-card`), origin);
 
 	assert.equal(initial.status, 200);
 	assert.equal(initial.headers.get('content-type'), `${SERVER_CARD_MEDIA_TYPE}; charset=utf-8`);
 	assert.equal(initial.headers.get('access-control-allow-origin'), '*');
 	assert.equal(initial.headers.get('access-control-expose-headers'), 'ETag');
 	assert.equal(initial.headers.get('cache-control'), 'public, max-age=3600');
+	assert.equal(initial.headers.get('x-robots-tag'), 'noindex, nofollow');
 
 	const etag = initial.headers.get('etag');
 	assert.ok(etag && /^".+"$/.test(etag));
 	assert.deepEqual(await initial.json(), card);
 
 	for (const header of [etag, `W/${etag}`, `"other", ${etag}`, '*']) {
-		const cached = discoveryJsonResponse(
+		const cached = serverCardResponse(
 			new Request(`${origin}/mcp/server-card`, { headers: { 'if-none-match': header } }),
-			card,
-			SERVER_CARD_MEDIA_TYPE
+			origin
 		);
 		assert.equal(cached.status, 304);
 		assert.equal(cached.headers.get('etag'), etag);
 		assert.equal(await cached.text(), '');
 	}
 
-	const stale = discoveryJsonResponse(
-		new Request(`${origin}/.well-known/ai-catalog.json`, {
-			headers: { 'if-none-match': '"stale"' }
-		}),
-		buildAiCatalog(origin),
-		AI_CATALOG_MEDIA_TYPE
+	const stale = serverCardResponse(
+		new Request(`${origin}/mcp/server-card`, { headers: { 'if-none-match': '"stale"' } }),
+		origin
 	);
 	assert.equal(stale.status, 200);
-	assert.equal(stale.headers.get('content-type'), `${AI_CATALOG_MEDIA_TYPE}; charset=utf-8`);
 
-	const options = discoveryOptionsResponse();
+	const options = serverCardOptionsResponse();
 	assert.equal(options.status, 204);
 	assert.equal(options.headers.get('access-control-allow-origin'), '*');
+	assert.equal(options.headers.get('x-robots-tag'), 'noindex, nofollow');
 });
