@@ -370,6 +370,7 @@ export const auth = betterAuth({
 				'profile',
 				'email',
 				'phone',
+				'offline_access',
 				'roles',
 				'user:read',
 				'user',
