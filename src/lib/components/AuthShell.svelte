@@ -41,12 +41,11 @@
 	<aside
 		class="relative h-40 shrink-0 overflow-hidden bg-ph-yellow text-ph-black sm:h-52 lg:sticky lg:top-0 lg:h-dvh"
 	>
-		<Life class="absolute inset-0 size-full cursor-crosshair text-ph-black" />
-		<a
-			href={resolve('/')}
+		<Life class="absolute inset-0 size-full text-ph-black" />
+		<div
 			class="absolute bottom-0 left-0 hidden flex-col gap-3 bg-ph-yellow pt-4 pr-10 pb-10 pl-12 no-underline lg:flex"
 		>
 			<span class="ph-headline text-7xl xl:text-8xl">Purdue<br /> Hackers ID</span>
-		</a>
+		</div>
 	</aside>
 </div>
