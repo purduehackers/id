@@ -7,6 +7,7 @@ in
 pkgs.mkShell {
   nativeBuildInputs = with pkgs.buildPackages; [
     deno
+    pkgconf
     nodejs_22
     turso-cli
     turso

@@ -152,8 +152,7 @@
 
 <Section title="Profile">
 	{#snippet description()}
-		Keep your details up to date. Apps you authorize and the Purdue Hackers directory only see what
-		they have permission for.
+		Keep your details up to date.
 	{/snippet}
 
 	<div class="flex items-center gap-5">
@@ -289,7 +288,7 @@
 				<Badge>Primary</Badge>
 				{#if !data.user.emailVerified}<Badge color="orange">Not verified</Badge>{/if}
 			{/snippet}
-			{#snippet meta()}Apps you authorize see this one{/snippet}
+			{#snippet meta()}Apps you authorize use this one{/snippet}
 		</Row>
 		{#each data.emails as email (email.id)}
 			<Row icon="envelope">
