@@ -10,7 +10,6 @@ pkgs.mkShell {
     pkgconf
     nodejs_22
     turso-cli
-    turso
     vercel
   ];
 }

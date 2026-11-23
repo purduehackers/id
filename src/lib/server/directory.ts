@@ -1,15 +1,9 @@
 import { and, desc, eq } from 'drizzle-orm';
 import { bearerToken, verifyAccessToken } from '$lib/server/bearer';
 import { db } from '$lib/server/db';
-import {
-	auditEvent,
-	directoryAccess,
-	oauthClient,
-	oauthClientResource,
-	user
-} from '$lib/server/db/schema';
-import { readList, writeList } from '$lib/server/db/json';
+import { auditEvent, directoryAccess, oauthClient, user } from '$lib/server/db/schema';
 import { DIRECTORY_RESOURCE, isDirectoryScope, type DirectoryScope } from '$lib/server/scopes';
+import { syncClientCredentials } from '$lib/server/client-credentials';
 import { uuidv7 } from '$lib/server/uuid';
 
 export class DirectoryError extends Error {}
@@ -81,7 +75,6 @@ export async function decide(actor: Actor, clientId: string, scopes: string[]) {
 		const [client] = await tx
 			.select({
 				name: oauthClient.name,
-				grantTypes: oauthClient.grantTypes,
 				ownerId: oauthClient.userId,
 				ownerUsername: user.username
 			})
@@ -94,34 +87,11 @@ export async function decide(actor: Actor, clientId: string, scopes: string[]) {
 		const granted = scopes.filter(
 			(scope) => isDirectoryScope(scope) && access.requestedScopes.includes(scope)
 		);
-		const grantTypes = readList(client.grantTypes).filter((type) => type !== 'client_credentials');
-		if (granted.length) grantTypes.push('client_credentials');
-
-		await tx
-			.update(oauthClient)
-			.set({ grantTypes: writeList(grantTypes), clientCredentialsScopes: writeList(granted) })
-			.where(eq(oauthClient.clientId, clientId));
-
-		if (granted.length) {
-			await tx
-				.insert(oauthClientResource)
-				.values({ id: uuidv7(), clientId, resourceId: DIRECTORY_RESOURCE, createdAt: new Date() })
-				.onConflictDoNothing();
-		} else {
-			await tx
-				.delete(oauthClientResource)
-				.where(
-					and(
-						eq(oauthClientResource.clientId, clientId),
-						eq(oauthClientResource.resourceId, DIRECTORY_RESOURCE)
-					)
-				);
-		}
-
 		await tx
 			.update(directoryAccess)
 			.set({ grantedScopes: granted, decidedAt: new Date() })
 			.where(eq(directoryAccess.clientId, clientId));
+		await syncClientCredentials(tx, clientId);
 		await tx.insert(auditEvent).values({
 			id: uuidv7(),
 			action: 'access',

@@ -22,8 +22,10 @@ import {
 	DIRECTORY_RESOURCE,
 	DIRECTORY_SCOPES,
 	MCP_SCOPES,
+	PASSPORT_RESOURCE,
+	PASSPORT_SCOPES,
 	SCOPES,
-	isDirectoryScope
+	isAdminGrantedScope
 } from '$lib/server/scopes';
 import { MCP_RESOURCE, configuredOrigin } from '$lib/server/origin';
 import { emailConfigured, sendEmail } from '$lib/server/email';
@@ -207,10 +209,10 @@ export const auth = betterAuth({
 				return;
 			}
 			const scope = String(ctx.body?.update?.scope ?? ctx.body?.scope ?? '');
-			if (scope.split(/\s+/).some(isDirectoryScope)) {
+			if (scope.split(/\s+/).some(isAdminGrantedScope)) {
 				throw new APIError('BAD_REQUEST', {
 					error: 'invalid_scope',
-					error_description: 'Directory scopes are granted by admins.'
+					error_description: 'Directory and passport scopes are granted by admins.'
 				});
 			}
 		}),
@@ -386,6 +388,13 @@ export const auth = betterAuth({
 					name: 'Purdue Hackers directory',
 					allowedScopes: DIRECTORY_SCOPES,
 					accessTokenTtl: 60 * 5
+				},
+				{
+					identifier: PASSPORT_RESOURCE,
+					name: 'Purdue Hackers passports',
+					allowedScopes: PASSPORT_SCOPES,
+					accessTokenTtl: 60 * 5,
+					dpopBoundAccessTokensRequired: true
 				},
 				...(MCP_RESOURCE
 					? [{ identifier: MCP_RESOURCE, name: 'Purdue Hackers ID MCP', allowedScopes: MCP_SCOPES }]

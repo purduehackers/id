@@ -15,11 +15,18 @@ import {
 } from '$lib/server/apps';
 import { requireUser } from '$lib/server/guard';
 import { DirectoryError, decide, requestAccess } from '$lib/server/directory';
+import {
+	IssuerError,
+	decideIssuing,
+	issuerFor,
+	requestIssuing
+} from '$lib/server/passport-issuers';
 import { hasRole } from '$lib/roles';
 import {
 	DIRECTORY_RESOURCE,
 	DIRECTORY_SCOPES,
 	MEMBER_CLIENT_SCOPES,
+	PASSPORT_RESOURCE,
 	SCOPE_DESCRIPTIONS
 } from '$lib/server/scopes';
 import { WEBHOOK_EVENTS, availableEvents, recentDeliveries, resend } from '$lib/server/webhooks';
@@ -44,7 +51,10 @@ export const load: PageServerLoad = async (event) => {
 	if (oauth.status === 'rejected') throw oauth.reason;
 	const { client, endpoint, access, scopes } = owned.value;
 	const settings = describeClient(oauth.value);
-	const deliveries = endpoint ? await recentDeliveries(endpoint.id) : [];
+	const [deliveries, issuer] = await Promise.all([
+		endpoint ? recentDeliveries(endpoint.id) : [],
+		issuerFor(client.clientId)
+	]);
 
 	return {
 		app: {
@@ -73,6 +83,13 @@ export const load: PageServerLoad = async (event) => {
 			requested: access?.requestedScopes ?? [],
 			granted: access?.grantedScopes ?? [],
 			decided: !!access?.decidedAt
+		},
+		passports: {
+			resource: PASSPORT_RESOURCE,
+			apiUrl: `${event.url.origin}/api/passports`,
+			requested: !!issuer,
+			granted: issuer?.granted ?? false,
+			decided: !!issuer?.decidedAt
 		},
 		events: availableEvents(scopes).map((type) => ({
 			type,
@@ -190,5 +207,20 @@ export const actions: Actions = {
 			throw error;
 		}
 		return { notice: 'Asked an admin for directory access.' };
+	},
+
+	requestIssuing: async (event) => {
+		const user = requireUser(event);
+		try {
+			await requestIssuing(user.id, event.params.clientId);
+			if (hasRole(user.role, 'admin')) {
+				await decideIssuing({ id: user.id, username: user.username! }, event.params.clientId, true);
+				return { notice: 'This app can now issue passports.' };
+			}
+		} catch (error) {
+			if (error instanceof IssuerError) return fail(400, { message: error.message });
+			throw error;
+		}
+		return { notice: 'Asked an admin to let this app issue passports.' };
 	}
 };

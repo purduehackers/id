@@ -29,7 +29,9 @@ export const auditEvent = sqliteTable(
 	'audit_event',
 	{
 		id: text('id').primaryKey(),
-		action: text('action', { enum: ['role', 'ban', 'unban', 'access', 'passport'] }).notNull(),
+		action: text('action', {
+			enum: ['role', 'ban', 'unban', 'access', 'passport', 'passport-issue', 'passport-access']
+		}).notNull(),
 		actorId: text('actor_id').references(() => user.id, { onDelete: 'set null' }),
 		actorUsername: text('actor_username').notNull(),
 		targetId: text('target_id').references(() => user.id, { onDelete: 'set null' }),
@@ -116,17 +118,32 @@ export const passport = sqliteTable(
 		id: integer('id').primaryKey(),
 		userId: text('user_id').references(() => user.id, { onDelete: 'set null' }),
 		discordId: text('discord_id'),
-		secretHash: text('secret_hash').notNull(),
+		secretHash: text('secret_hash'),
+		uid: text('uid'),
+		keyVersion: integer('key_version'),
+		readCounter: integer('read_counter'),
+		issuedBy: text('issued_by').references(() => oauthClient.clientId, { onDelete: 'set null' }),
 		activated: integer('activated', { mode: 'boolean' }).default(false).notNull(),
+		activatedAt: integer('activated_at', { mode: 'timestamp_ms' }),
 		importedAt: integer('imported_at', { mode: 'timestamp_ms' })
 			.default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
 			.notNull()
 	},
 	(table) => [
 		index('passport_userId_idx').on(table.userId),
-		index('passport_discordId_idx').on(table.discordId)
+		index('passport_discordId_idx').on(table.discordId),
+		uniqueIndex('passport_uid_uidx').on(table.uid)
 	]
 );
+
+export const passportIssuer = sqliteTable('passport_issuer', {
+	clientId: text('client_id')
+		.primaryKey()
+		.references(() => oauthClient.clientId, { onDelete: 'cascade' }),
+	granted: integer('granted', { mode: 'boolean' }).default(false).notNull(),
+	requestedAt: integer('requested_at', { mode: 'timestamp_ms' }).notNull(),
+	decidedAt: integer('decided_at', { mode: 'timestamp_ms' })
+});
 
 export const passportLogin = sqliteTable(
 	'passport_login',

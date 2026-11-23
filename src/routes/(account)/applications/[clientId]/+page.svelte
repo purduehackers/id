@@ -262,4 +262,37 @@ curl -H "Authorization: Bearer $TOKEN" "${data.directory.apiUrl}?limit=100"`);
 			</p>
 		{/if}
 	</Section>
+
+	<Section title="Passport issuing">
+		{#snippet description()}
+			Lets the app register new passport chips and get their keys. Requires admin approval.
+		{/snippet}
+
+		{#if data.passports.granted}
+			<p class="flex flex-wrap items-center gap-2">
+				<Badge color="lime">Granted</Badge>
+				<span class="font-mono text-[13px]">passports:issue</span>
+			</p>
+			<p>
+				Get a DPoP-bound token with <span class="font-mono">grant_type=client_credentials</span>,
+				<span class="font-mono">scope=passports:issue</span> and
+				<span class="font-mono">resource={data.passports.resource}</span>, then call
+				<span class="font-mono break-all">{data.passports.apiUrl}</span>. The README has the full
+				flow.
+			</p>
+		{:else}
+			{#if data.passports.requested && data.passports.decided}
+				<Notice>An admin did not let this app issue passports.</Notice>
+			{:else if data.passports.requested}
+				<p class="flex items-center gap-2">
+					<Badge color="yellow">Waiting</Badge> for an admin to approve.
+				</p>
+			{/if}
+			<form method="post" action="?/requestIssuing">
+				<Button type="submit">
+					{data.passports.requested ? 'Ask again' : 'Ask to issue passports'}
+				</Button>
+			</form>
+		{/if}
+	</Section>
 {/if}

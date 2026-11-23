@@ -19,19 +19,79 @@
 			: `Revoke all directory access for ${name}?`;
 		if (!confirm(message)) event.preventDefault();
 	}
+
+	function confirmIssuing(event: SubmitEvent, name: string) {
+		const granting = (event.submitter as HTMLButtonElement | null)?.value === 'true';
+		const message = granting
+			? `Let ${name} create passports and receive their chip keys?`
+			: `Stop ${name} from issuing passports?`;
+		if (!confirm(message)) event.preventDefault();
+	}
 </script>
 
 <svelte:head><title>App access - Purdue Hackers ID</title></svelte:head>
 
 <PageTitle title="App access">
-	Apps that asked to see every member, granting lets them list members and receive webhooks about
-	everyone.
+	Apps that asked to issue passports or to see every member. Directory access lets them list members
+	and receive webhooks about everyone.
 </PageTitle>
 
 {#if form && 'message' in form}
 	<Notice>{form.message}</Notice>
 {:else if form && 'notice' in form}
 	<Notice tone="success">{form.notice}</Notice>
+{/if}
+
+{#if data.issuers.length}
+	<h2 class="ph-subheadline text-[12px]">Passport issuing</h2>
+	<ul class="flex flex-col gap-4">
+		{#each data.issuers as app, i (app.clientId)}
+			{@const pending = !app.decidedAt || app.requestedAt > app.decidedAt}
+			<li class="flex enter flex-col gap-5 bg-card p-5 sm:p-6" style="--i: {i}">
+				<div class="flex items-start gap-4">
+					<span
+						class={[
+							'grid size-11 shrink-0 place-items-center',
+							swatch(app.clientId).bg,
+							swatch(app.clientId).fg
+						]}
+					>
+						<Identicon seed={app.clientId} class="size-6" />
+					</span>
+					<div class="flex min-w-0 flex-1 flex-col gap-0.5">
+						<span class="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[17px]">
+							{app.name ?? app.clientId}
+							{#if app.granted}<Badge color="lime">Issuing</Badge>
+							{:else if pending}<Badge color="yellow">Waiting</Badge>{/if}
+						</span>
+						<span class="font-mono text-[13px]">
+							@{app.ownerUsername ?? 'unknown'} · asked {when(app.requestedAt)}
+						</span>
+						<span class="font-mono text-[12px] break-all">{app.clientId}</span>
+					</div>
+				</div>
+
+				<form
+					method="post"
+					action="?/decideIssuing"
+					class="flex flex-wrap gap-3"
+					onsubmit={(event) => confirmIssuing(event, app.name ?? app.clientId)}
+				>
+					<input type="hidden" name="clientId" value={app.clientId} />
+					{#if !app.granted}
+						<Button type="submit" size="sm" name="grant" value="true">Let it issue passports</Button
+						>
+					{/if}
+					{#if app.granted || pending}
+						<Button type="submit" size="sm" variant="outline" name="grant" value="false">
+							{app.granted ? 'Revoke' : 'Deny'}
+						</Button>
+					{/if}
+				</form>
+			</li>
+		{/each}
+	</ul>
+	<h2 class="ph-subheadline text-[12px]">Directory access</h2>
 {/if}
 
 {#if data.apps.length === 0}

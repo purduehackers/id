@@ -9,6 +9,7 @@ import {
 	TAP_COOKIE,
 	approveLogin,
 	claimPassport,
+	recordSunTap,
 	recordTap,
 	signInHere,
 	tapState
@@ -25,10 +26,13 @@ const cookie = {
 export const load: PageServerLoad = async (event) => {
 	const id = event.url.searchParams.get('id');
 	const secret = event.url.searchParams.get('secret');
+	const picc = event.url.searchParams.get('p');
+	const mac = event.url.searchParams.get('c');
 
-	if (id && secret) {
+	if ((id && secret) || (picc && mac)) {
 		try {
-			event.cookies.set(TAP_COOKIE, await recordTap(id, secret), cookie);
+			const token = picc && mac ? await recordSunTap(picc, mac) : await recordTap(id!, secret!);
+			event.cookies.set(TAP_COOKIE, token, cookie);
 			event.cookies.set('passport_entrance', '1', { ...cookie, maxAge: 60 });
 		} catch (error) {
 			if (error instanceof PassportError)

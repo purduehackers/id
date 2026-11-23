@@ -9,7 +9,8 @@ export type Scope =
 	| 'user'
 	| 'apps'
 	| 'admin'
-	| DirectoryScope;
+	| DirectoryScope
+	| PassportScope;
 
 export type DirectoryScope =
 	'directory:roles' | 'directory:contact' | 'directory:discord' | 'directory:github';
@@ -20,6 +21,10 @@ export const DIRECTORY_SCOPES: DirectoryScope[] = [
 	'directory:github'
 ];
 export const DIRECTORY_RESOURCE = 'https://id.purduehackers.com/api/directory';
+
+export type PassportScope = 'passports:issue';
+export const PASSPORT_SCOPES: PassportScope[] = ['passports:issue'];
+export const PASSPORT_RESOURCE = 'https://id.purduehackers.com/api/passports';
 
 export const MCP_SCOPES: Scope[] = [
 	'openid',
@@ -44,7 +49,12 @@ export const MEMBER_CLIENT_SCOPES: Scope[] = [
 	'apps'
 ];
 
-export const SCOPES: Scope[] = [...MEMBER_CLIENT_SCOPES, 'admin', ...DIRECTORY_SCOPES];
+export const SCOPES: Scope[] = [
+	...MEMBER_CLIENT_SCOPES,
+	'admin',
+	...DIRECTORY_SCOPES,
+	...PASSPORT_SCOPES
+];
 
 export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 	openid: 'Confirm who you are',
@@ -60,9 +70,18 @@ export const SCOPE_DESCRIPTIONS: Record<string, string> = {
 	'directory:roles': "See every member's username, name, roles and public information",
 	'directory:contact': "See every member's email address and phone number",
 	'directory:discord': "See every member's linked Discord account",
-	'directory:github': "See every member's linked GitHub accounts"
+	'directory:github': "See every member's linked GitHub accounts",
+	'passports:issue': 'Issue new passports and program their chips'
 };
 
 export function isDirectoryScope(scope: string): scope is DirectoryScope {
 	return (DIRECTORY_SCOPES as string[]).includes(scope);
+}
+
+export function isPassportScope(scope: string): scope is PassportScope {
+	return (PASSPORT_SCOPES as string[]).includes(scope);
+}
+
+export function isAdminGrantedScope(scope: string) {
+	return isDirectoryScope(scope) || isPassportScope(scope);
 }

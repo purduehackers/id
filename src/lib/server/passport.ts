@@ -1,4 +1,4 @@
-import { and, count, eq, gt, isNotNull, isNull, lt, ne, type SQL } from 'drizzle-orm';
+import { and, count, eq, gt, isNotNull, isNull, lt, ne, or, type SQL } from 'drizzle-orm';
 import { constantTimeEqual } from 'better-auth/crypto';
 import { db } from '$lib/server/db';
 import {
@@ -11,6 +11,14 @@ import {
 	user
 } from '$lib/server/db/schema';
 import { uuidv7 } from '$lib/server/uuid';
+import {
+	SDM_FILE_READ_KEY,
+	decryptPiccData,
+	macMatches,
+	parseSunParams,
+	sdmMac
+} from '$lib/server/ntag424';
+import { keysForCard, metaReadKeys } from '$lib/server/passport-keys';
 import { idCardOwnerFields } from './id-card';
 
 export class PassportError extends Error {}
@@ -145,22 +153,67 @@ export async function cancelLogin(loginId: string | undefined) {
 	if (loginId) await db.delete(passportLogin).where(eq(passportLogin.id, loginId));
 }
 
-export async function recordTap(rawNumber: string, secret: string) {
-	const id = parseNumber(rawNumber);
-	const [found] = id ? await db.select().from(passport).where(eq(passport.id, id)).limit(1) : [];
-	if (!found?.activated || !constantTimeEqual(await sha256(secret), found.secretHash)) {
-		throw new PassportError('This passport could not be read. Try tapping it again.');
-	}
+const UNREADABLE = 'This passport could not be read. Try tapping it again.';
 
+async function startTap(passportId: number) {
 	const now = new Date();
 	await db.delete(passportTap).where(lt(passportTap.expiresAt, now));
 	const token = randomToken();
 	await db.insert(passportTap).values({
 		tokenHash: await sha256(token),
-		passportId: found.id,
+		passportId,
 		expiresAt: new Date(now.getTime() + TAP_TTL)
 	});
 	return token;
+}
+
+export async function recordTap(rawNumber: string, secret: string) {
+	const id = parseNumber(rawNumber);
+	const [found] = id ? await db.select().from(passport).where(eq(passport.id, id)).limit(1) : [];
+	if (
+		!found?.activated ||
+		!found.secretHash ||
+		!constantTimeEqual(await sha256(secret), found.secretHash)
+	) {
+		throw new PassportError(UNREADABLE);
+	}
+	return startTap(found.id);
+}
+
+export async function recordSunTap(rawPicc: string | null, rawMac: string | null) {
+	const sun = parseSunParams(rawPicc, rawMac);
+	if (!sun) throw new PassportError(UNREADABLE);
+
+	for (const { version, key } of metaReadKeys()) {
+		const picc = decryptPiccData(key, sun.picc);
+		if (!picc) continue;
+		const [found] = await db
+			.select({ id: passport.id, activated: passport.activated })
+			.from(passport)
+			.where(
+				and(
+					eq(passport.uid, picc.uid.toString('hex').toUpperCase()),
+					eq(passport.keyVersion, version)
+				)
+			)
+			.limit(1);
+		const keys = found?.activated ? keysForCard(version, picc.uid) : null;
+		if (!found || !keys || !macMatches(sdmMac(keys[SDM_FILE_READ_KEY], picc), sun.mac)) continue;
+
+		const [fresh] = await db
+			.update(passport)
+			.set({ readCounter: picc.counter })
+			.where(
+				and(
+					eq(passport.id, found.id),
+					or(isNull(passport.readCounter), lt(passport.readCounter, picc.counter))
+				)
+			)
+			.returning({ id: passport.id });
+		if (!fresh) throw new PassportError('This tap was already used. Tap your passport again.');
+		return startTap(found.id);
+	}
+	throw new PassportError(UNREADABLE);
 }
 
 async function tappedPassport(token: string | undefined) {

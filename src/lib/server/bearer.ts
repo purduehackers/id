@@ -4,6 +4,8 @@ import { issuerFor } from '$lib/server/origin';
 
 const jwksCacheKey = {};
 
+type JWTPayload = Awaited<ReturnType<typeof verifyJwsAccessToken>>;
+
 export type AccessToken = {
 	subject: string | undefined;
 	clientId: string;
@@ -15,14 +17,9 @@ export function bearerToken(request: Request) {
 	return request.headers.get('authorization')?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
 }
 
-export async function verifyAccessToken(
-	token: string,
-	url: URL,
-	audience: string
-): Promise<AccessToken | null> {
-	let payload;
+export async function verifyAccessTokenPayload(token: string, url: URL, audience: string) {
 	try {
-		payload = await verifyJwsAccessToken(token, {
+		return await verifyJwsAccessToken(token, {
 			jwksFetch: () => auth.api.getJwks(),
 			jwksCacheKey,
 			verifyOptions: {
@@ -33,7 +30,9 @@ export async function verifyAccessToken(
 	} catch {
 		return null;
 	}
+}
 
+export function describeAccessToken(payload: JWTPayload): AccessToken | null {
 	const clientId = payload.azp ?? payload.client_id;
 	if (typeof clientId !== 'string' || !clientId) return null;
 
@@ -47,4 +46,13 @@ export async function verifyAccessToken(
 		),
 		issuedAt: payload.iat ?? 0
 	};
+}
+
+export async function verifyAccessToken(
+	token: string,
+	url: URL,
+	audience: string
+): Promise<AccessToken | null> {
+	const payload = await verifyAccessTokenPayload(token, url, audience);
+	return payload ? describeAccessToken(payload) : null;
 }
