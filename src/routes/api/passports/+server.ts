@@ -5,8 +5,7 @@ import {
 	passportJson,
 	readJson
 } from '$lib/server/passport-api';
-import { issuePassport } from '$lib/server/passport-issuing';
-import { originFor } from '$lib/server/origin';
+import { createPassport } from '$lib/server/passport-issuing';
 
 export const POST: RequestHandler = async ({ request, url }) => {
 	const issuer = await authorizePassportRequest(request, url);
@@ -15,8 +14,7 @@ export const POST: RequestHandler = async ({ request, url }) => {
 	if (body instanceof Response) return body;
 
 	return handlePassportErrors(async () => {
-		const scanUrl = new URL('/scan', originFor(url));
-		const { created, body: passport } = await issuePassport(issuer, body.uid, scanUrl);
+		const { created, body: passport } = await createPassport(issuer, body);
 		return passportJson(passport, created ? 201 : 200);
 	});
 };

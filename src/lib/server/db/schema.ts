@@ -123,6 +123,7 @@ export const passport = sqliteTable(
 		keyVersion: integer('key_version'),
 		readCounter: integer('read_counter'),
 		issuedBy: text('issued_by').references(() => oauthClient.clientId, { onDelete: 'set null' }),
+		reference: text('reference'),
 		activated: integer('activated', { mode: 'boolean' }).default(false).notNull(),
 		activatedAt: integer('activated_at', { mode: 'timestamp_ms' }),
 		importedAt: integer('imported_at', { mode: 'timestamp_ms' })
@@ -132,7 +133,8 @@ export const passport = sqliteTable(
 	(table) => [
 		index('passport_userId_idx').on(table.userId),
 		index('passport_discordId_idx').on(table.discordId),
-		uniqueIndex('passport_uid_uidx').on(table.uid)
+		uniqueIndex('passport_uid_uidx').on(table.uid),
+		uniqueIndex('passport_issuedBy_reference_uidx').on(table.issuedBy, table.reference)
 	]
 );
 

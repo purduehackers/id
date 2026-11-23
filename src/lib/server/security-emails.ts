@@ -201,3 +201,13 @@ export function alertDeviceApproval(userId: string, userCode: string) {
 		});
 	});
 }
+
+export function alertPassportActivated(userId: string, passportId: number) {
+	inBackground(() =>
+		emailOwner(userId, `Passport ${passportId} is now active on your account`, [
+			`Passport ${passportId} is now linked to your Purdue Hackers ID.`,
+			'',
+			'If you did not ask for a passport, tell an organizer now.'
+		])
+	);
+}

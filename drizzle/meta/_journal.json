@@ -71,6 +71,13 @@
       "when": 1795465626339,
       "tag": "0009_passport_issuance",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "6",
+      "when": 1795469201669,
+      "tag": "0010_passport_reference",
+      "breakpoints": true
     }
   ]
 }
