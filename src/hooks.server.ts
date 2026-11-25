@@ -1,6 +1,7 @@
 import type { Handle } from '@sveltejs/kit';
 import { building, dev } from '$app/environment';
 import { auth } from '$lib/server/auth';
+import { followAuthorizeJson } from '$lib/server/authorize-redirect';
 import { isForbiddenFormSubmission, isServerOAuthPath } from '$lib/server/csrf';
 import { svelteKitHandler } from 'better-auth/svelte-kit';
 
@@ -24,7 +25,8 @@ const handleBetterAuth: Handle = async ({ event, resolve }) => {
 		event.locals.user = session.user;
 	}
 
-	return svelteKitHandler({ event, resolve, auth, building });
+	const response = await svelteKitHandler({ event, resolve, auth, building });
+	return followAuthorizeJson(event.request, response);
 };
 
 export const handle: Handle = handleBetterAuth;
